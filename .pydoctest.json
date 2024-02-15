@@ -1,0 +1,5 @@
+{
+    "include_paths": [ "cli_tool_audit/*.py" ],
+    "fail_on_missing_docstring": true,
+    "parser": "google"
+}

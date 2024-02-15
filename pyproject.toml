@@ -1,0 +1,274 @@
+[tool.poetry]
+name = "git_mirror"
+version = "0.1.0"
+description = "Clone, pull all repos from gitlab or github and other polyrepo workflows."
+authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
+keywords = ["packagin", "metadata", ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+include = [
+    "git_mirror/**/*.py",
+    "git_mirror/**/*.md",
+    "git_mirror/**/*.txt",
+    "git_mirror/**/*.html",
+    "git_mirror/**/*.jinja",
+    "git_mirror/py.typed",
+]
+exclude = [
+]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/matthewdeanmartin/git_mirror"
+homepage = "https://github.com/matthewdeanmartin/git_mirror"
+documentation = "https://matthewdeanmartin.github.io/git_mirror/git_mirror/index.html"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/matthewdeanmartin/git_mirror/issues"
+"Change Log" = "https://github.com/matthewdeanmartin/git_mirror/blob/main/CHANGELOG.md"
+
+[tool.poetry.scripts]
+git_mirror = 'git_mirror.__main__:main'
+gl_mirror = 'git_mirror.__main__:main_gitlab'
+gh_mirror = 'git_mirror.__main__:main_github'
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+# ui
+termcolor = "*"
+python-dotenv = "*"
+prettytable = "*"
+colorlog = ">=6.8.0"
+
+# git
+PyGithub="*"
+python-gitlab = "*"
+GitPython= "*"
+
+# api calls
+httpx = "*"
+
+# Config
+toml = ">=0.10.2"
+tomlkit = "*"
+
+# packaging cruft
+# packaging = ">=23.2"
+# importlib-metadata = { version = ">=7.0.1", python = "<3.8" }
+
+
+[tool.poetry.dev-dependencies]
+
+# build tools
+black = ">=23.11.0"
+pytest = ">=7.4.3"
+pytest-cov = ">=4.1.0"
+pytest-xdist =">=3.5.0"
+pytest-randomly=">=3.15.0"
+pytest-sugar =">=0.9.7"
+pytest-mock = "*"
+
+hypothesis = ">=6.96.0"
+tox = "*"
+pylint = ">=3.0.2"
+ruff = ">=0.1.9"
+
+# types
+mypy = ">=1.8.0"
+types-toml = "*"
+types-colorama = "*"
+types-tqdm = "*"
+
+# more testing
+# pytest-snapshot = ">=0.9.0"
+# pytest-asyncio = ">=0.23.2"
+#anyio = ">=4.2.0"
+#trio = ">=0.23.2"
+
+pre-commit = ">=3.5.0"
+
+# docs
+metametameta  = "*"
+interrogate = ">=1.5.0"
+pydoctest = ">=0.1.22"
+pdoc3 = ">=0.10.0"
+mdformat = ">=0.7.17"
+linkcheckmd = ">=1.4.0"
+codespell = ">=2.2.6"
+pyenchant = ">=3.2.2"
+#
+# contract
+# griffe = ">=0.38.1"
+
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
+
+# [tool.git-mirror]
+[tool.git-mirror.github]
+user_name = "matthewdeanmartin"
+pypi_owner_name = "Matthew Martin"
+target_dir = "e:/github/"
+include_private = false
+
+[tool.git-mirror.github.repos]
+
+[tool.git-mirror.gitlab]
+user_name = "matthewdeanmartin"
+pypi_owner_name = "Matthew Martin"
+target_dir = "e:/gitlab/"
+include_private = true
+include_forks = false
+
+[tool.git-mirror.gitlab.repos]
+
+
+
+
+[build-system]
+requires = ["poetry-core>=1.0.8"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "test",
+    "tests"
+]
+junit_family = "xunit1"
+norecursedirs = ["vendor", "scripts"]
+# don't know how to do this in toml
+#addopts = "--strict-markers"
+#markers =
+#	slow: marks tests as slow (deselect with '-m "not slow"')
+#	fast: marks tests as fast (deselect with '-m "not fast"')
+
+[tool.isort]
+default_section = "THIRDPARTY"
+force_grid_wrap = 0
+include_trailing_comma = true
+known_first_party = ["dedlin"]
+line_length = 120
+multi_line_output = 3
+use_parentheses = true
+
+[tool.ruff]
+line-length = 1000
+
+# Enable Pyflakes `E` and `F` codes by default.
+select = ["E", "F",
+    "D", # docs
+    "UP", # pyupgrade
+    "B", # bugbear
+]
+ignore = [
+    "D301", # messes with doctests
+    "E722",
+    # only track structural problems with docstrings, not whitespace, nor missing
+    "D200", "D212", "D415", "D411", "D205", "D102", "D103", "D100", "D107", "D101", "D104", "D105",
+    "UP007", "UP038", # Not sure if | is well supported in lowever versions of python
+]
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "dead_code",
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+per-file-ignores = { }
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Assume Python 3.10.
+target-version = "py311"
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.scriv]
+version = "literal: pyproject.toml: tool.poetry.version"
+format = "md"
+main_branches = "master, main, develop, dev"
+
+[mypy]
+warn_return_any = true
+warn_unused_configs = true
+strict = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+warn_redundant_casts = true
+warn_no_return = true
+
+mypy_path = [".", "$MYPY_CONFIG_FILE_DIR/typings", "typings"]
+files = ["git_mirror", "typings"]
+
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+]
+
+
