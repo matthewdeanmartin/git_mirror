@@ -39,6 +39,8 @@ def test_cli_clone_all(mock_main_github, cli_args):
         token="testtoken",
         pypi_owner_name=None,
         user_name="testuser",
+        domain="",
+        group_id=0,
     )
 
 

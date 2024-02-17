@@ -12,12 +12,12 @@ def create_initial_toml_file(toml_path, content):
 
 
 def test_write_repos_to_toml(tmp_path):
-    repos = ["repo1", "repo2"]
-    config_manager = ConfigManager(repos, "github")
     toml_path = tmp_path / "config.toml"
-    existing_config = {}
+    config_manager = ConfigManager(toml_path)
 
-    config_manager._write_repos_to_toml(repos, toml_path, existing_config)
+    existing_config = {}
+    repos = ["repo1", "repo2"]
+    config_manager._write_repos_to_toml(repos, existing_config)
 
     # Read back the file to check if it was written correctly
     with open(toml_path, encoding="utf-8") as file:
@@ -41,8 +41,8 @@ def test_load_and_sync_config(tmp_path):
 
     create_initial_toml_file(toml_path, initial_config)
 
-    config_manager = ConfigManager(["user/repo1", "user/repo2"], "github")
-    config = config_manager.load_and_sync_config(toml_path)
+    config_manager = ConfigManager(toml_path)
+    config = config_manager.load_and_sync_config("github", ["user/repo1", "user/repo2"])
 
     # Expected to remove old_repo and add repo1 and repo2 with their configs
     expected_config = tomlkit.document()

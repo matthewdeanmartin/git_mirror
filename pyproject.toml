@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "git_mirror"
-version = "0.1.0"
-description = "Clone, pull all repos from gitlab or github and other polyrepo workflows."
+version = "0.2.0"
+description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
-keywords = ["packagin", "metadata", ]
+keywords = ["git", "gitlab", "github", "polyrepo" ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -43,11 +43,17 @@ gh_mirror = 'git_mirror.__main__:main_github'
 
 [tool.poetry.dependencies]
 python = ">=3.9"
+
+# core
+python-dotenv = ">=1.0.1, <2"
+
 # ui
-termcolor = "*"
-python-dotenv = "*"
-prettytable = "*"
-colorlog = ">=6.8.0"
+termcolor = ">=2.4.0, <3"
+prettytable = "3.9.0, <4"
+colorlog = ">=6.8.0, <7"
+rich = ">=13.7.0, <14"
+inquirer = ">=3.2.3, <4"
+colorama = ">=0.4.6, <1"
 
 # git
 PyGithub="*"
@@ -55,11 +61,11 @@ python-gitlab = "*"
 GitPython= "*"
 
 # api calls
-httpx = "*"
+httpx = ">=0.26.0, <1"
 
 # Config
-toml = ">=0.10.2"
-tomlkit = "*"
+toml = ">=0.10.2, <1"
+tomlkit = ">=0.12.3, <1"
 
 # packaging cruft
 # packaging = ">=23.2"
@@ -133,24 +139,6 @@ exclude = '''
                      # the root of the project
 )
 '''
-
-# [tool.git-mirror]
-[tool.git-mirror.github]
-user_name = "matthewdeanmartin"
-pypi_owner_name = "Matthew Martin"
-target_dir = "e:/github/"
-include_private = false
-
-[tool.git-mirror.github.repos]
-
-[tool.git-mirror.gitlab]
-user_name = "matthewdeanmartin"
-pypi_owner_name = "Matthew Martin"
-target_dir = "e:/gitlab/"
-include_private = true
-include_forks = false
-
-[tool.git-mirror.gitlab.repos]
 
 
 

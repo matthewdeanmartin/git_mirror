@@ -5,6 +5,8 @@ Mypy types.
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
+from rich.table import Table
+
 
 class SourceHost(Protocol):
     """Just the methods that are common among hosters.
@@ -50,4 +52,14 @@ class SourceHost(Protocol):
 
         Returns:
             List[str]: A list of repository names.
+        """
+
+    def list_repos(self) -> Optional[Table]:
+        """
+        Fetches and prints beautifully formatted information about the user's GitHub repositories.
+        """
+
+    def print_user_summary(self) -> None:
+        """
+        Fetches and prints a summary of the user's GitHub account.
         """

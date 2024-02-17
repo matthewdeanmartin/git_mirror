@@ -14,6 +14,8 @@ import gitlab
 from dotenv import load_dotenv
 from gitlab.base import RESTObject, RESTObjectList
 from gitlab.v4.objects import Project
+from rich.console import Console
+from rich.table import Table
 from termcolor import colored
 
 from git_mirror.manage_git import extract_repo_name
@@ -28,7 +30,13 @@ LOGGER = logging.getLogger(__name__)
 
 class GitlabRepoManager(SourceHost):
     def __init__(
-        self, token: str, base_dir: Path, user_login: str, include_private: bool = True, include_forks: bool = False
+        self,
+        token: str,
+        base_dir: Path,
+        user_login: str,
+        include_private: bool = True,
+        include_forks: bool = False,
+        host_domain: str = "https://gitlab.com",
     ):
         """
         Initializes the RepoManager with a GitLab token and a base directory for cloning repositories.
@@ -39,18 +47,16 @@ class GitlabRepoManager(SourceHost):
             user_login (str): The GitLab username.
             include_private (bool): Whether to include private repositories.
             include_forks (bool): Whether to include forked repositories.
+            host_domain (str): The GitLab host domain.
         """
-        self.gitlab = gitlab.Gitlab("https://gitlab.com", private_token=token)
+        self.gitlab = gitlab.Gitlab(host_domain, private_token=token)
         self.base_dir = base_dir
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
         self.user: Optional[RESTObject] = None
-        print(
-            f"Initial config with include_private:{include_private} :include_forks{include_forks} {user_login} {base_dir}"
-        )
 
-    def _get_user_repos(self) -> list[gitlab.v4.objects.Project]:
+    def _get_user_repos(self) -> list[Project]:
         """
         Fetches the user's repositories from GitLab, optionally including private repositories and forks.
 
@@ -83,27 +89,133 @@ class GitlabRepoManager(SourceHost):
             return []
 
     def clone_all(self):
+        """
+        Clones all repositories for a user.
+        """
         repos = self._get_user_repos()
         print(f"Cloning {len(repos)} repositories.")
         for repo in repos:
             self._clone_repo(repo)
 
-    def _clone_repo(self, project: Project) -> None:
+    def clone_group(self, group_id: int):
         """
-        Clones the given GitLab project into the target directory.
+        Clones all repositories for a user or all repositories within a group.
 
         Args:
-            project (Project): The GitLab project to clone.
+            group_id (int): The ID of the group to clone repositories from.
+        """
+        self._clone_group_repos(group_id)
+
+    def _clone_group_repos(self, group_id: int) -> None:
+        """
+        Clones all repositories within a specified group, including subgroups.
+
+        Args:
+            group_id (int): The ID of the group.
+        """
+        groups_to_process = [group_id]
+
+        while groups_to_process:
+            current_group_id = groups_to_process.pop(0)
+            group = self._get_group_by_id(current_group_id)
+            # subgroups = self._get_subgroups(group)
+            repos = self._get_repos(group)
+
+            for repo in repos:
+                self._clone_repo(repo, extra_path=group.full_path)
+
+            # for subgroup in subgroups:
+            #     groups_to_process.append(subgroup.id)
+
+    def _clone_repo(self, project, extra_path: str = "") -> None:
+        """
+        Clones the given project into the target directory, respecting group/subgroup structure.
+
+        Args:
+            project: The project to clone.
+            extra_path (str): Additional path components for group/subgroup structure.
         """
         try:
-            repo_path = self.base_dir / project.path
+            repo_path = self.base_dir / extra_path / project.path
             if not repo_path.exists():
                 LOGGER.info(f"Cloning {project.web_url} into {repo_path}")
+                repo_path.parent.mkdir(parents=True, exist_ok=True)
                 g.Repo.clone_from(project.http_url_to_repo, repo_path)
             else:
                 LOGGER.info(f"Project {project.path} already exists locally. Skipping clone.")
         except g.GitCommandError as e:
             LOGGER.error(f"Failed to clone {project.path}: {e}")
+
+    def _get_group_by_id(self, group_id: int):
+        """
+        Fetches a GitLab group by its ID using the python-gitlab library.
+
+        Args:
+            group_id (int): The ID of the group to fetch.
+
+        Returns:
+            gitlab.v4.objects.Group: The GitLab Group object.
+        """
+        try:
+            # Fetch the group by ID
+            group = self.gitlab.groups.get(group_id)
+            return group
+        except gitlab.exceptions.GitlabGetError as e:
+            LOGGER.error(f"Failed to get group with ID {group_id}: {e}")
+            return None
+
+    def _get_subgroups(self, group):
+        """
+        Fetches all subgroups for a given GitLab group.
+
+        Args:
+            group (gitlab.v4.objects.Group): The GitLab Group object.
+
+        Returns:
+            List[gitlab.v4.objects.Group]: A list of GitLab Subgroup objects.
+        """
+        try:
+            subgroups = group.projects.list(all=True, include_subgroups=True)
+            return subgroups
+        except gitlab.exceptions.GitlabListError as e:
+            LOGGER.error(f"Failed to list subgroups for group {group.id}: {e}")
+            return []
+
+    def _get_repos(self, group):
+        """
+        Fetches all repositories (projects) for a given GitLab group, including those in its subgroups.
+
+        Args:
+            group (gitlab.v4.objects.Group): The GitLab Group object.
+
+        Returns:
+            List[gitlab.v4.objects.Project]: A list of GitLab Project objects.
+        """
+        try:
+            # Retrieve all projects for the group, including those in subgroups
+            projects = group.projects.list(include_subgroups=True, all=True)
+            return projects
+        except gitlab.exceptions.GitlabListError as e:
+            LOGGER.error(f"Failed to list projects for group {group.id}: {e}")
+            return []
+
+    #
+    # def _clone_repo(self, project: Project) -> None:
+    #     """
+    #     Clones the given GitLab project into the target directory.
+    #
+    #     Args:
+    #         project (Project): The GitLab project to clone.
+    #     """
+    #     try:
+    #         repo_path = self.base_dir / project.path
+    #         if not repo_path.exists():
+    #             LOGGER.info(f"Cloning {project.web_url} into {repo_path}")
+    #             g.Repo.clone_from(project.http_url_to_repo, repo_path)
+    #         else:
+    #             LOGGER.info(f"Project {project.path} already exists locally. Skipping clone.")
+    #     except g.GitCommandError as e:
+    #         LOGGER.error(f"Failed to clone {project.path}: {e}")
 
     def pull_all(self):
         for repo_dir in self.base_dir.iterdir():
@@ -282,3 +394,51 @@ class GitlabRepoManager(SourceHost):
             List[str]: A list of repository names.
         """
         return [project.name for project in self._get_user_repos()]
+
+    def list_repos(self) -> Optional[Table]:
+        """
+        Fetches and prints beautifully formatted information about the user's GitHub repositories.
+        """
+        try:
+            table = Table(title="Gitlab Repositories")
+
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Description", style="magenta")
+            table.add_column("URL", style="green")
+            table.add_column("Private", style="red")
+            table.add_column("Fork", style="blue")
+
+            kwargs: dict[str, Union[bool, str]] = {"owned": True}
+            if not self.include_private:
+                kwargs["visibility"] = "public"
+            projects = self.gitlab.projects.list(**kwargs)
+            projects = [self.gitlab.projects.get(id=project.id) for project in projects]
+
+            for project in projects:
+
+                if hasattr(project, "forked_from_project") and project.forked_from_project:
+                    forked = True
+                else:
+                    forked = False
+
+                if (self.include_private or project.visibility == "public") and (self.include_forks or not forked):
+                    table.add_row(
+                        project.name,
+                        project.description or "No description",
+                        project.web_url,
+                        project.visibility,
+                        "Yes" if forked else "No",
+                    )
+
+            console = Console()
+            console.print(table)
+            return table
+        except gitlab.exceptions.GitlabError as e:
+            print(f"An error occurred: {e}")
+        return None
+
+    def print_user_summary(self) -> None:
+        """
+        Fetches and prints a summary of the user's GitHub account.
+        """
+        print("not implemented yet")

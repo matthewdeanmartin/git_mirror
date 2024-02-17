@@ -15,6 +15,10 @@ import github.AuthenticatedUser as ghau
 import github.NamedUser as ghnu
 import github.Repository as ghr
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 from termcolor import colored
 
 from git_mirror.manage_git import extract_repo_name
@@ -48,7 +52,7 @@ class GithubRepoManager(SourceHost):
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
-        print(
+        LOGGER.debug(
             f"GithubRepoManager initialized with user_login: {user_login}, include_private: {include_private}, include_forks: {include_forks}"
         )
 
@@ -262,3 +266,64 @@ class GithubRepoManager(SourceHost):
             List[str]: A list of repository names.
         """
         return [repo.full_name for repo in self._get_user_repos()]
+
+    def list_repos(self) -> Optional[Table]:
+        """
+        Fetches and prints beautifully formatted information about the user's GitHub repositories.
+        """
+        try:
+            user = self.github.get_user(self.user_login)
+            repos = user.get_repos()
+            table = Table(title="GitHub Repositories")
+
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Description", style="magenta")
+            # table.add_column("URL", style="green")
+            table.add_column("Private", style="red")
+            table.add_column("Fork", style="blue")
+
+            for repo in repos:
+                if (self.include_private or not repo.private) and (self.include_forks or not repo.fork):
+                    table.add_row(
+                        repo.name,
+                        repo.description or "No description",
+                        # repo.html_url, # doesn't fit
+                        "Yes" if repo.private else "No",
+                        "Yes" if repo.fork else "No",
+                    )
+
+            console = Console()
+            console.print(table)
+            return table
+        except gh.GithubException as e:
+            print(f"An error occurred: {e}")
+        return None
+
+    def print_user_summary(self) -> None:
+        """
+        Fetches and prints a summary of the user's GitHub account.
+        """
+        console = Console()
+        try:
+            user = self.github.get_user(self.user_login)
+            summary = Text.assemble(
+                ("Username: ", "bold cyan"),
+                f"{user.login}\n",
+                ("Name: ", "bold cyan"),
+                f"{user.name}\n",
+                ("Bio: ", "bold cyan"),
+                f"{user.bio or 'No bio available'}\n",
+                ("Public Repositories: ", "bold cyan"),
+                f"{user.public_repos}\n",
+                ("Followers: ", "bold cyan"),
+                f"{user.followers}\n",
+                ("Following: ", "bold cyan"),
+                f"{user.following}\n",
+                ("Location: ", "bold cyan"),
+                f"{user.location or 'Not specified'}\n",
+                ("Company: ", "bold cyan"),
+                f"{user.company or 'Not specified'}",
+            )
+            console.print(Panel(summary, title="GitHub User Summary", subtitle=user.login))
+        except gh.GithubException as e:
+            console.print(f"An error occurred: {e}", style="bold red")

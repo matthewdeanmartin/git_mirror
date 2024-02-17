@@ -37,6 +37,8 @@ def test_main_github_commands(command, expected_method, manager):
         git_manager_instance = MagicMock()
         MockGitManager.return_value = git_manager_instance
         config_manager_instance = MagicMock()
+        repo_list = []
+        github_manager_instance.list_repo_names.return_value = repo_list
         MockConfigManager.return_value = config_manager_instance
 
         main_github(
@@ -74,7 +76,7 @@ def test_main_github_commands(command, expected_method, manager):
         if command == "pypi-status":
             github_manager_instance.check_pypi_publish_status.assert_called_with(pypi_owner_name=pypi_owner_name)
         elif command == "sync-config":
-            config_manager_instance.load_and_sync_config.assert_called_with(toml_path=config_path)
+            config_manager_instance.load_and_sync_config.assert_called_with("github", [])
 
 
 # Test for an unknown command which should not result in any manager method being called
