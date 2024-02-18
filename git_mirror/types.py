@@ -2,10 +2,18 @@
 Mypy types.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
 from rich.table import Table
+
+
+@dataclass
+class UpdateBranchArgs:
+    repo_path: Path
+    github_repo_full_name: str
+    prefer_rebase: bool
 
 
 class SourceHost(Protocol):
@@ -13,13 +21,13 @@ class SourceHost(Protocol):
     By convention, other methods are underscored and treated as private
     """
 
-    def clone_all(self):
+    def clone_all(self, single_threaded: bool = False):
         pass
 
-    def pull_all(self):
+    def pull_all(self, single_threaded: bool = False):
         pass
 
-    def pull_repo(self, repo_path: Path) -> None:
+    def pull_repo(self, repo_path: Path) -> str:
         """
         Performs a git pull operation on the repository at the given path.
 
@@ -62,4 +70,14 @@ class SourceHost(Protocol):
     def print_user_summary(self) -> None:
         """
         Fetches and prints a summary of the user's GitHub account.
+        """
+
+    def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
+        """
+        Updates each local branch with the latest changes from the main/master branch on Source Host.
+        """
+
+    def prune_all(self):
+        """
+        Loops through all local branches, checks if they exist on GitHub, and prompts the user for deletion if they don't.
         """

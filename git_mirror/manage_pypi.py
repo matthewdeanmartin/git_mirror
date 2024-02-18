@@ -2,6 +2,7 @@
 Pure pypi actions.
 """
 
+import asyncio
 import logging
 import os
 from datetime import datetime
@@ -9,11 +10,12 @@ from typing import Any, Optional, Union
 
 import colorama
 import httpx
-from dotenv import load_dotenv
 from prettytable import PrettyTable
 from prettytable.colortable import ColorTable, Themes
 
-load_dotenv()  # Load environment variables from a .env file, if present
+from git_mirror.safe_env import load_env
+
+load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
@@ -73,14 +75,36 @@ class PyPiManager:
 
     def __init__(self, pypi_owner_name: Optional[str] = None):
         self.pypi_owner_name = pypi_owner_name
-        self.client = httpx.Client()
+        self.client = httpx.AsyncClient()
 
-    def get_info(self, package_name):
+    async def get_info(self, package_name: str) -> tuple[dict[str, Any], int]:
+        """
+        Asynchronously get package information from PyPI.
+
+        Args:
+            package_name (str): The name of the package to retrieve information for.
+
+        Returns:
+            Tuple[Dict[str, Any], int]: A tuple containing the package information and the HTTP status code.
+        """
         pypi_url = f"https://pypi.org/pypi/{package_name}/json"
-
-        response = self.client.get(pypi_url)
+        response = await self.client.get(pypi_url)
         data = response.json()
         return data, response.status_code
+
+    async def get_infos(self, package_names: list[str]) -> dict[str, tuple[dict[str, Any], int]]:
+        """
+        Asynchronously get information for multiple packages from PyPI.
+
+        Args:
+            package_names (List[str]): A list of package names to retrieve information for.
+
+        Returns:
+            Dict[str, Tuple[Dict[str, Any], int]]: A dictionary where keys are package names and values are tuples containing the package information and the HTTP status code.
+        """
+        tasks = [self.get_info(package_name) for package_name in package_names]
+        results = await asyncio.gather(*tasks)
+        return {package_names[i]: result for i, result in enumerate(results)}
 
     @classmethod
     def _get_latest_pypi_release_date(self, pypi_data: dict) -> datetime:

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git_mirror"
-version = "0.2.0"
+version = "0.3.0"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
 keywords = ["git", "gitlab", "github", "polyrepo" ]
@@ -40,6 +40,7 @@ documentation = "https://matthewdeanmartin.github.io/git_mirror/git_mirror/index
 git_mirror = 'git_mirror.__main__:main'
 gl_mirror = 'git_mirror.__main__:main_gitlab'
 gh_mirror = 'git_mirror.__main__:main_github'
+sh_mirror = 'git_mirror.__main__:main_selfhosted'
 
 [tool.poetry.dependencies]
 python = ">=3.9"
@@ -56,9 +57,10 @@ inquirer = ">=3.2.3, <4"
 colorama = ">=0.4.6, <1"
 
 # git
-PyGithub="*"
-python-gitlab = "*"
-GitPython= "*"
+PyGithub=">=2.2.0"
+python-gitlab = ">=4.4.0"
+# needs git >=1.7.*
+GitPython= ">=3.1.42"
 
 # api calls
 httpx = ">=0.26.0, <1"
@@ -66,11 +68,6 @@ httpx = ">=0.26.0, <1"
 # Config
 toml = ">=0.10.2, <1"
 tomlkit = ">=0.12.3, <1"
-
-# packaging cruft
-# packaging = ">=23.2"
-# importlib-metadata = { version = ">=7.0.1", python = "<3.8" }
-
 
 [tool.poetry.dev-dependencies]
 

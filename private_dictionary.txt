@@ -38,3 +38,17 @@ git_mirror
 nworld
 filesystem
 hoc
+Repo
+repo
+github
+gitlab
+Github
+Gitlab
+hosters
+hoster
+repos
+pipx
+pypi
+mypy
+Mypy
+rebasing

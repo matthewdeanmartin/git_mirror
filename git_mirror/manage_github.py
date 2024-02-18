@@ -4,8 +4,12 @@ Public interface with github.
 This should use manage_config, manage_git, manage_pypi for things that are not github specific.
 """
 
+import asyncio
 import logging
+import multiprocessing
+import sys
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -14,7 +18,7 @@ import github as gh
 import github.AuthenticatedUser as ghau
 import github.NamedUser as ghnu
 import github.Repository as ghr
-from dotenv import load_dotenv
+import inquirer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -23,9 +27,10 @@ from termcolor import colored
 
 from git_mirror.manage_git import extract_repo_name
 from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
-from git_mirror.types import SourceHost
+from git_mirror.safe_env import load_env
+from git_mirror.types import SourceHost, UpdateBranchArgs
 
-load_dotenv()  # Load environment variables from a .env file, if present
+load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
@@ -83,46 +88,83 @@ class GithubRepoManager(SourceHost):
             LOGGER.error(f"Failed to fetch repositories: {e}")
             return []
 
-    def clone_all(self):
+    def clone_all(self, single_threaded: bool = False):
         repos = self._get_user_repos()
-        for repo in repos:
-            self._clone_repo(repo)
+        print(f"Cloning {len(repos)} repositories.")
+        if single_threaded or len(repos) < 4:
+            for repo in repos:
+                print(self._clone_repo(repo))
+        else:
+            with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                results = pool.map(self._clone_repo, repos)
+                for output in results:
+                    print(output, end="")
 
-    def _clone_repo(self, repo: ghr.Repository) -> None:
+    def _clone_repo(self, repo: ghr.Repository) -> str:
         """
         Clones the given repository into the target directory.
 
         Args:
             repo (Repository): The repository to clone.
+
+        Returns:
+        str: The captured print output.
         """
+        # Redirect stdout to capture print output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
         try:
             if not (self.base_dir / repo.name).exists():
-                LOGGER.info(f"Cloning {repo.html_url} into {self.base_dir}")
+                message = f"Cloning {repo.html_url} into {self.base_dir}"
+                print(message)
                 g.Repo.clone_from(f"{repo.html_url}.git", self.base_dir / repo.name)
             else:
-                LOGGER.info(f"Repository {repo.name} already exists locally. Skipping clone.")
+                message = f"Repository {repo.name} already exists locally. Skipping clone."
+                print(message)
         except g.GitCommandError as e:
-            LOGGER.error(f"Failed to clone {repo.name}: {e}")
+            message = f"Failed to clone {repo.name}: {e}"
+            print(message)
+        finally:
+            # Restore stdout
+            sys.stdout = old_stdout
+        return captured_output.getvalue()
 
-    def pull_all(self):
-        for repo_dir in self.base_dir.iterdir():
-            if repo_dir.is_dir():
+    def pull_all(self, single_threaded: bool = False):
+        directories = list(repo_dir for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir())
+        print(f"Pulling {len(directories)} repositories.")
+        if single_threaded or len(directories) < 4:
+            for repo_dir in directories:
                 self.pull_repo(repo_dir)
+        else:
+            with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                results = pool.map(self.pull_repo, (print(repo_dir) or repo_dir for repo_dir in directories))
+                for output in results:
+                    print(output, end="")
 
-    def pull_repo(self, repo_path: Path) -> None:
+    def pull_repo(self, repo_path: Path) -> str:
         """
         Performs a git pull operation on the repository at the given path.
 
         Args:
             repo_path (Path): The path to the repository.
+
+        Returns:
+            str: The captured print output.
         """
+        # Redirect stdout to capture print output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
-            LOGGER.info(f"Pulling latest changes in {repo_path}")
+            print(f"Pulling latest changes in {repo_path}")
             origin.pull()
         except Exception as e:
-            LOGGER.error(f"Failed to pull repo at {repo_path}: {e}")
+            print(f"Failed to pull repo at {repo_path}: {e}")
+        finally:
+            # Restore stdout
+            sys.stdout = old_stdout
+        return captured_output.getvalue()
 
     def not_repo(self) -> tuple[int, int, int, int]:
         """
@@ -144,7 +186,7 @@ class GithubRepoManager(SourceHost):
                     remotes = repo.remotes
                     if not remotes:
                         no_remote += 1
-                        LOGGER.info(f"{repo_dir} has no remote repositories defined.")
+                        print(f"{repo_dir} has no remote repositories defined.")
                         continue
 
                     remote_url = remotes[0].config_reader.get("url")
@@ -152,18 +194,18 @@ class GithubRepoManager(SourceHost):
 
                     if repo_name not in user_repos:
                         not_found += 1
-                        LOGGER.info(f"{repo_dir} is not found in your GitHub account.")
+                        print(f"{repo_dir} is not found in your GitHub account.")
                         continue
 
                     github_repo = user_repos[repo_name]
                     if github_repo.fork:
                         is_fork += 1
-                        LOGGER.info(f"{repo_dir} is a fork of another repository.")
+                        print(f"{repo_dir} is a fork of another repository.")
                         continue
 
                 except g.InvalidGitRepositoryError:
                     not_repo += 1
-                    LOGGER.info(f"{repo_dir} is not a valid Git repository.")
+                    print(f"{repo_dir} is not a valid Git repository.")
         return no_remote, not_found, is_fork, not_repo
 
     def list_repo_builds(self) -> list[tuple[str, str]]:
@@ -210,14 +252,21 @@ class GithubRepoManager(SourceHost):
         results = []
         if pypi_owner_name:
             pypi_owner_name = pypi_owner_name.strip().lower()
-        pypi_manager = PyPiManager()
+
+        async def get_infos_async(package_names):
+            pypi_manager = PyPiManager()
+            return await pypi_manager.get_infos(package_names)
+
+        package_names = [repo_dir.name for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir()]
+        package_infos = asyncio.run(get_infos_async(package_names))
+
         for repo_dir in self.base_dir.iterdir():
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
                     package_name = repo_dir.name  # Assuming the repo name is the package name
 
-                    pypi_data, status_code = pypi_manager.get_info(package_name)
+                    pypi_data, status_code = package_infos[package_name]
                     any_owner_is_fine = pypi_owner_name is None
                     i_am_owner = pypi_owner_name == pypi_data.get("info", {}).get("author", "").strip().lower()
 
@@ -327,3 +376,116 @@ class GithubRepoManager(SourceHost):
             console.print(Panel(summary, title="GitHub User Summary", subtitle=user.login))
         except gh.GithubException as e:
             console.print(f"An error occurred: {e}", style="bold red")
+
+    def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
+        """
+        Updates each local branch with the latest changes from the main/master branch on GitHub.
+
+        Args:
+            single_threaded (bool): Whether to run the operation in a single thread.
+            prefer_rebase (bool): Whether to prefer rebasing instead of merging.
+        """
+        directories = list(repo_dir for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir())
+        print(f"Merging/rebasing {len(directories)} main to local repositories.")
+        if single_threaded or len(directories) < 4:
+            for repo_dir in directories:
+                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase))
+        else:
+            with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                results = pool.map(
+                    self._update_local_branches,
+                    (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase) for repo_dir in directories),
+                )
+                for output in results:
+                    print(output, end="")
+
+    # def _update_local_branches(self, repo_path: Path, github_repo_full_name: str, prefer_rebase: bool = False):
+    def _update_local_branches(self, args: UpdateBranchArgs):
+        """
+        Updates each local branch with the latest changes from the main/master branch on GitHub.
+
+        Args:
+            args: UpdateBranchArgs
+        """
+        repo_path, github_repo_full_name, prefer_rebase = args.repo_path, args.github_repo_full_name, args.prefer_rebase
+        repo = g.Repo(str(repo_path))
+        github_repo = self.github.get_repo(github_repo_full_name)
+
+        # Get the default branch name from GitHub
+        default_branch = github_repo.default_branch
+
+        # Fetch all changes from remote
+        origin = repo.remotes.origin
+        origin.fetch()
+
+        # Update each local branch
+        for branch in repo.heads:  # branches, but mypy doesn't like the alias
+            try:
+                # Checkout the branch
+                repo.git.checkout(branch)
+                # Ensure the branch is up to date with its upstream
+                repo.git.pull()
+
+                if prefer_rebase:
+                    # Perform rebase
+                    repo.git.rebase(f"origin/{default_branch}")
+                else:
+                    # Perform merge
+                    repo.git.merge(f"origin/{default_branch}")
+
+                print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+            except g.exc.GitCommandError as e:
+                print(f"Failed to update branch '{branch}': {e}")
+
+    def prune_all(self):
+        for repo_dir in self.base_dir.iterdir():
+            if repo_dir.is_dir():
+                self._delete_local_branches_if_not_on_github(repo_dir, f"{self.user_login}/{repo_dir.name}")
+
+    def _delete_local_branches_if_not_on_github(self, repo_path: Path, github_repo_full_name: str):
+        """
+        Loops through all local branches, checks if they exist on GitHub, and prompts the user for deletion if they don't.
+
+        Args:
+            repo_path (Path): The file system path to the local git repository.
+            github_repo_full_name (str): The full name of the GitHub repository (e.g., "owner/repo").
+        """
+        # Initialize GitHub client and GitPython Repo
+        try:
+            repo = g.Repo(str(repo_path))
+        except g.InvalidGitRepositoryError:
+            print(f"{repo_path} is not a valid Git repository.")
+            return
+        github_repo = self.github.get_repo(github_repo_full_name)
+
+        # Get a list of all branch names on GitHub
+        remote_branches = [branch.name for branch in github_repo.get_branches()]
+
+        # Get a list of all local branch names
+        local_branches = [branch.name for branch in repo.heads]  # alias to branches
+
+        # Determine branches that are local but not on GitHub
+        branches_to_consider = [branch for branch in local_branches if branch not in remote_branches]
+
+        if not branches_to_consider:
+            print("No local branches exist that are missing on GitHub.")
+            return
+
+        # Prompt user for each branch that doesn't exist on GitHub
+        for branch in branches_to_consider:
+            question = [
+                inquirer.Confirm(
+                    "delete", message=f"The branch '{branch}' does not exist on GitHub. Delete locally?", default=False
+                )
+            ]
+            answer = inquirer.prompt(question)
+
+            if answer["delete"]:
+                try:
+                    # Safely delete the branch
+                    repo.git.branch("-d", branch)
+                    print(f"Deleted branch '{branch}' locally.")
+                except g.exc.GitCommandError as e:
+                    print(f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}")
+            else:
+                print(f"Skipped deletion of branch '{branch}'.")

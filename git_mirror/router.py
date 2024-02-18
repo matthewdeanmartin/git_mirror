@@ -6,21 +6,20 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
-
 import git_mirror.manage_config as mc
 import git_mirror.manage_git as mg
 import git_mirror.manage_github as mgh
 import git_mirror.manage_gitlab as mgl
+from git_mirror.safe_env import load_env
 from git_mirror.types import SourceHost
 
-load_dotenv()  # Load environment variables from a .env file, if present
+load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
 
 
-def main_github(
+def route_to_command(
     command: str,
     user_name: str,
     target_dir: Path,
@@ -111,6 +110,10 @@ def main_github(
             manager.check_pypi_publish_status(pypi_owner_name=pypi_owner_name)
         elif command == "list-repos":
             manager.list_repos()
+        elif command == "update-from-main":
+            manager.update_all_branches()
+        elif command == "prune-all":
+            manager.prune_all()
         elif command == "show-account":
             manager.print_user_summary()
         elif command == "sync-config":

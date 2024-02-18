@@ -3,6 +3,7 @@ Pure interactions with config file.
 """
 
 import logging
+import os
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Optional
@@ -10,13 +11,14 @@ from typing import Any, Optional
 import inquirer
 import toml
 import tomlkit
-from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from tomlkit import TOMLDocument
 
-load_dotenv()  # Load environment variables from a .env file, if present
+from git_mirror.safe_env import load_env
+
+load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
@@ -190,6 +192,9 @@ class ConfigManager:
                 raise ValueError(
                     f"Configuration for {config_section.host_type} " f"already exists in {self.config_path.resolve()}"
                 )
+            if config_section.target_dir and not config_section.target_dir.exists():
+                print(f"Creating directory {config_section.target_dir}")
+                os.makedirs(config_section.target_dir)
             section = {
                 "host_type": config_section.host_type,
                 "host_url": config_section.host_url,
@@ -208,16 +213,21 @@ class ConfigManager:
         return already_configured
 
     def load_config(self, host: str) -> Optional[ConfigData]:
+        if not host:
+            raise ValueError("Host name (gitlab, github, selfhosted) is required.")
         LOGGER.debug(f"Loading configuration for {host} from {self.config_path.resolve()}")
         if self.config_path and self.config_path.exists():
             config = tomlkit.loads(self.config_path.read_text(encoding="utf-8"))
-            config.get("tool", {}).get("git-mirror", {}).get("redirect")
+            # config.get("tool", {}).get("git-mirror", {}).get("redirect")
             tool_config = config.get("tool", {}).get("git-mirror", {}).get(host, {})
 
             target_dir = tool_config.get("target_dir")
             if not target_dir:
                 raise ValueError(f"target_dir not found in config file at {self.config_path.resolve()}")
 
+            if target_dir and not Path(target_dir).exists():
+                print(f"Creating directory {target_dir}")
+                os.makedirs(target_dir)
             data = ConfigData(
                 host,
                 tool_config.get("host_type", host),
@@ -277,7 +287,7 @@ class ConfigManager:
 
         config["tool"]["git-mirror"][host]["repos"] = git_mirror  # type: ignore
 
-        LOGGER.info(f"Syncing configuration with {len(repos)} repositories to {self.config_path.resolve()}")
+        print(f"Syncing configuration with {len(repos)} repositories to {self.config_path.resolve()}")
         with open(self.config_path, "w", encoding="utf-8") as file:
             file.write(tomlkit.dumps(config))
 

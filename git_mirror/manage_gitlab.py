@@ -4,14 +4,17 @@ Interface with gitlab.
 This should use manage_config, manage_git, manage_pypi for things that are not gitlab specific.
 """
 
+import asyncio
 import logging
+import multiprocessing
+import sys
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any, Optional, Union, cast
 
 import git as g
 import gitlab
-from dotenv import load_dotenv
 from gitlab.base import RESTObject, RESTObjectList
 from gitlab.v4.objects import Project
 from rich.console import Console
@@ -20,9 +23,11 @@ from termcolor import colored
 
 from git_mirror.manage_git import extract_repo_name
 from git_mirror.manage_pypi import PyPiManager
+from git_mirror.safe_env import load_env
 from git_mirror.types import SourceHost
 
-load_dotenv()  # Load environment variables from a .env file, if present
+load_env()
+
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
@@ -88,14 +93,20 @@ class GitlabRepoManager(SourceHost):
             LOGGER.error(f"Failed to fetch repositories: {e}")
             return []
 
-    def clone_all(self):
+    def clone_all(self, single_threaded: bool = False):
         """
         Clones all repositories for a user.
         """
         repos = self._get_user_repos()
         print(f"Cloning {len(repos)} repositories.")
-        for repo in repos:
-            self._clone_repo(repo)
+        if single_threaded or len(repos) < 4:
+            for repo in repos:
+                print(self._clone_repo(repo))
+        else:
+            with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                results = pool.map(self._clone_repo, repos)
+                for output in results:
+                    print(output, end="")
 
     def clone_group(self, group_id: int):
         """
@@ -127,7 +138,7 @@ class GitlabRepoManager(SourceHost):
             # for subgroup in subgroups:
             #     groups_to_process.append(subgroup.id)
 
-    def _clone_repo(self, project, extra_path: str = "") -> None:
+    def _clone_repo(self, project, extra_path: str = "") -> str:
         """
         Clones the given project into the target directory, respecting group/subgroup structure.
 
@@ -135,16 +146,23 @@ class GitlabRepoManager(SourceHost):
             project: The project to clone.
             extra_path (str): Additional path components for group/subgroup structure.
         """
+        # Redirect stdout to capture print output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
         try:
             repo_path = self.base_dir / extra_path / project.path
             if not repo_path.exists():
-                LOGGER.info(f"Cloning {project.web_url} into {repo_path}")
+                print(f"Cloning {project.web_url} into {repo_path}")
                 repo_path.parent.mkdir(parents=True, exist_ok=True)
                 g.Repo.clone_from(project.http_url_to_repo, repo_path)
             else:
-                LOGGER.info(f"Project {project.path} already exists locally. Skipping clone.")
+                print(f"Project {project.path} already exists locally. Skipping clone.")
         except g.GitCommandError as e:
-            LOGGER.error(f"Failed to clone {project.path}: {e}")
+            print(f"Failed to clone {project.path}: {e}")
+        finally:
+            # Restore stdout
+            sys.stdout = old_stdout
+        return captured_output.getvalue()
 
     def _get_group_by_id(self, group_id: int):
         """
@@ -210,32 +228,45 @@ class GitlabRepoManager(SourceHost):
     #     try:
     #         repo_path = self.base_dir / project.path
     #         if not repo_path.exists():
-    #             LOGGER.info(f"Cloning {project.web_url} into {repo_path}")
+    #             print(f"Cloning {project.web_url} into {repo_path}")
     #             g.Repo.clone_from(project.http_url_to_repo, repo_path)
     #         else:
-    #             LOGGER.info(f"Project {project.path} already exists locally. Skipping clone.")
+    #             print(f"Project {project.path} already exists locally. Skipping clone.")
     #     except g.GitCommandError as e:
-    #         LOGGER.error(f"Failed to clone {project.path}: {e}")
+    #         print(f"Failed to clone {project.path}: {e}")
 
-    def pull_all(self):
-        for repo_dir in self.base_dir.iterdir():
-            if repo_dir.is_dir():
+    def pull_all(self, single_threaded: bool = False):
+        directories = list(repo_dir for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir())
+        print(f"Pulling {len(directories)} repositories.")
+        if single_threaded or len(directories) < 4:
+            for repo_dir in directories:
                 self.pull_repo(repo_dir)
+        else:
+            with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                results = pool.map(self.pull_repo, (print(repo_dir) or repo_dir for repo_dir in directories))
+                for output in results:
+                    print(output, end="")
 
-    def pull_repo(self, repo_path: Path) -> None:
+    def pull_repo(self, repo_path: Path) -> str:
         """
         Performs a git pull operation on the repository at the given path.
 
         Args:
             repo_path (Path): The path to the repository.
         """
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
-            LOGGER.info(f"Pulling latest changes in {repo_path}")
+            print(f"Pulling latest changes in {repo_path}")
             origin.pull()
         except Exception as e:
             LOGGER.error(f"Failed to pull repo at {repo_path}: {e}")
+        finally:
+            # Restore stdout
+            sys.stdout = old_stdout
+        return captured_output.getvalue()
 
     def not_repo(self) -> tuple[int, int, int, int]:
         """
@@ -263,7 +294,7 @@ class GitlabRepoManager(SourceHost):
                     remotes = repo.remotes
                     if not remotes:
                         no_remote += 1
-                        LOGGER.info(f"{repo_dir} has no remote repositories defined.")
+                        print(f"{repo_dir} has no remote repositories defined.")
                         continue
 
                     remote_url = remotes[0].config_reader.get("url")
@@ -271,7 +302,7 @@ class GitlabRepoManager(SourceHost):
 
                     if repo_name not in user_projects:
                         not_found += 1
-                        LOGGER.info(f"{repo_dir} is not found in your GitLab account.")
+                        print(f"{repo_dir} is not found in your GitLab account.")
                         continue
 
                     gitlab_project = user_projects[repo_name]
@@ -281,12 +312,12 @@ class GitlabRepoManager(SourceHost):
                         forked = False
                     if not forked:
                         is_fork += 1
-                        LOGGER.info(f"{repo_dir} is a fork of another repository.")
+                        print(f"{repo_dir} is a fork of another repository.")
                         continue
 
                 except g.InvalidGitRepositoryError:
                     not_repo += 1
-                    LOGGER.info(f"{repo_dir} is not a valid Git repository.")
+                    print(f"{repo_dir} is not a valid Git repository.")
         return no_remote, not_found, is_fork, not_repo
 
     def list_repo_builds(self) -> list[tuple[str, str]]:
@@ -343,7 +374,14 @@ class GitlabRepoManager(SourceHost):
         """
         print("Checking if your gitlab repos have been published to pypi.")
         results = []
-        pypi_manager = PyPiManager(pypi_owner_name)
+
+        async def get_infos_async(package_names):
+            pypi_manager = PyPiManager()
+            return await pypi_manager.get_infos(package_names)
+
+        package_names = [repo_dir.name for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir()]
+        package_infos = asyncio.run(get_infos_async(package_names))
+
         found = 0
         for repo_dir in self.base_dir.iterdir():
             LOGGER.debug(f"Checking {repo_dir}")
@@ -352,7 +390,7 @@ class GitlabRepoManager(SourceHost):
                     repo = g.Repo(repo_dir)
                     package_name = repo_dir.name  # Assuming the repo name is the package name
 
-                    pypi_data, status_code = pypi_manager.get_info(package_name)
+                    pypi_data, status_code = package_infos[package_name]
                     if status_code == 200:
                         pypi_owner = pypi_data.get("info", {}).get("author", "").strip().lower()
                         any_owner_is_fine = pypi_owner_name is None
@@ -441,4 +479,10 @@ class GitlabRepoManager(SourceHost):
         """
         Fetches and prints a summary of the user's GitHub account.
         """
+        print("not implemented yet")
+
+    def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
+        print("not implemented yet")
+
+    def prune_all(self):
         print("not implemented yet")

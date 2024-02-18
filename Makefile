@@ -34,7 +34,7 @@ test: clean poetry.lock
 	$(VENV) pytest --doctest-modules git_mirror
 	# $(VENV) python -m unittest discover
 	$(VENV) py.test tests -vv -n 2 --cov=git_mirror --cov-report=html --cov-fail-under 60
-	$(VENV) bash basic_test.sh
+	$(VENV) bash basic_help.sh
 
 
 .build_history:

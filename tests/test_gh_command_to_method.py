@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from git_mirror.router import main_github
+from git_mirror.router import route_to_command
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ def test_main_github_commands(command, expected_method, manager):
         github_manager_instance.list_repo_names.return_value = repo_list
         MockConfigManager.return_value = config_manager_instance
 
-        main_github(
+        route_to_command(
             command=command,
             user_name=user_name,
             target_dir=target_dir,
@@ -89,7 +89,7 @@ def test_main_github_unknown_command():
         MockManager.return_value = manager_instance
 
         unknown_command = "unknown-command"
-        main_github(
+        route_to_command(
             command=unknown_command,
             user_name="user",
             target_dir=Path("/fake/path"),

@@ -38,7 +38,7 @@ def test_check_pypi_publish_status(github_repo_manager, tmp_path, pypi_owner_nam
     }
 
     # Mock httpx.Client.get to return the predefined PyPI response
-    with patch.object(httpx.Client, "get", return_value=httpx.Response(200, json=pypi_response_data)):
+    with patch.object(httpx.AsyncClient, "get", return_value=httpx.Response(200, json=pypi_response_data)):
         results = github_repo_manager.check_pypi_publish_status(pypi_owner_name)
 
     # Determine if the package should appear in the results based on the owner name filter

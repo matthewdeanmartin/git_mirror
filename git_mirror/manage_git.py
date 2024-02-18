@@ -6,10 +6,11 @@ import logging
 from pathlib import Path
 
 import git as g
-from dotenv import load_dotenv
 from termcolor import colored
 
-load_dotenv()  # Load environment variables from a .env file, if present
+from git_mirror.safe_env import load_env
+
+load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
