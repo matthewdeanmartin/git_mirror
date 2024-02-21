@@ -27,7 +27,7 @@ def call_pypi_with_version_check(package_name: str, current_version: str) -> tup
 
 
 # Example usage
-def display_version_check_message():
+def display_version_check_message() -> None:
     try:
         package_name = "git_mirror"
         available, new_version = call_pypi_with_version_check(package_name, __version__)

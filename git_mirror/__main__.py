@@ -13,6 +13,7 @@ from git_mirror.__about__ import __description__, __version__
 from git_mirror.manage_config import ConfigManager, default_config_path
 from git_mirror.menu import get_command_info
 from git_mirror.safe_env import load_env
+from git_mirror.version_check import display_version_check_message
 
 # Assuming RepoManager and other necessary imports are defined elsewhere
 
@@ -272,6 +273,7 @@ def main(
         group_id=group_id,
         logging_level=args.verbose,
     )
+    display_version_check_message()
     return 0
 
 
