@@ -55,8 +55,8 @@ def read_config(config_path: Path, key: str) -> Optional[str]:
 
 @dataclass
 class ConfigData:
-    host_name: str  # github, gitlab or name of self hosted
-    host_type: str  # github, gitlab
+    host_name: str  # github, gitlab
+    host_type: str  # github, gitlab or name of self hosted
     host_url: str  # API endpoint
     user_name: str
     target_dir: Optional[Path]
@@ -74,48 +74,62 @@ def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
     for host in already_configured:
         choices.remove(host)
 
-    questions = [
+    first_questions = [
         inquirer.List(
             "host_type",
             message="Choose the host type",
             choices=choices,
         ),
         inquirer.Text("user_name", message="Enter your username"),
-        inquirer.Text("target_dir", message="Enter the target directory for cloning"),
+        inquirer.Text("target_dir", message="What folder should the repositories be cloned to?"),
+
         inquirer.Confirm("include_private", message="Include private repositories?", default=False),
         inquirer.Confirm("include_forks", message="Include forks?", default=False),
     ]
 
-    answers = inquirer.prompt(questions)
+    answers = inquirer.prompt(first_questions)
+
+    target_dir = Path(answers["target_dir"]).expanduser()
+    while not target_dir.exists():
+        answer = inquirer.prompt([inquirer.Confirm("create_target_dir","Target directory does not exist. Create it?", default=True)])
+        print(answer)
+        if answer["create_target_dir"]:
+            os.makedirs(target_dir)
+        else:
+            target_dir_answer = inquirer.prompt([inquirer.Text("target_dir", message="Enter the target directory")])
+            target_dir = Path(target_dir_answer).expanduser()
 
     host_type = answers["host_type"]
     host_name = host_type  # Default to host_type, override if selfhosted
     host_url = ""
-    group_id = 0
+    group_id_answer = None
 
     if host_type == "selfhosted":
-        host_name = inquirer.prompt([inquirer.Text("host_name", message="Enter the name of your self-hosted service")])[
+        host_name = inquirer.prompt([inquirer.List("host_name", message="Is this self hosted github or gitlab?",
+                                                   choices=["github", "gitlab"])])[
             "host_name"
         ]
         host_url = inquirer.prompt([inquirer.Text("host_url", message="Enter your self-hosted Git server URL")])[
             "host_url"
         ]
-        group_id = inquirer.prompt(
-            inquirer.Text("target_dir", message="Group id to clone a group instead of your personal namespace")
+        group_id_answer = inquirer.prompt(
+            [inquirer.Text("group_id", message="Group id to clone a group instead of your personal namespace")]
         )
     elif host_type == "github":
         host_url = "https://api.github.com"
     elif host_type == "gitlab":
         host_url = "https://gitlab.com/api/v4"
-        group_id = inquirer.prompt(
-            inquirer.Text("target_dir", message="Group id to clone a group instead of your personal namespace")
+        group_id_answer = inquirer.prompt(
+            [inquirer.Text("group_id", message="Group id to clone a group instead of your personal namespace")]
         )
     else:
         raise ValueError(f"Unknown host type: {host_type}")
 
-    target_dir = Path(answers["target_dir"]).expanduser()
     try:
-        group_id = int(group_id)
+        if group_id_answer:
+            group_id = int(group_id_answer["group_id"])
+        else:
+            group_id = 0
     except ValueError:
         group_id = 0
 
@@ -163,16 +177,20 @@ class ConfigManager:
     def __init__(self, config_path: Optional[Path] = None):
         self.config_path = config_path or default_config_path()
 
-    def list_config(self):
+    def list_config(self) -> None:
+        found = 0
         for host_type in ["selfhosted", "gitlab", "github"]:
             data = self.load_config(host_type)
             if data:
+                found += 1
                 display_config(data)
+        if not found:
+            print("No configuration found. Run `git-mirror init` to create a new configuration.")
 
     def initialize_config(self) -> list[str]:
         already_configured: list[str] = []
         while len(already_configured) < 3:
-            toml_config, git_mirror = self.load_if_exists()
+            toml_config, git_mirror_section = self.load_if_exists()
 
             def already(gm) -> list[str]:
                 # so that these variables don't persist.
@@ -182,7 +200,7 @@ class ConfigManager:
                         already_done.append(host_type)
                 return already_done
 
-            already_configured = already(git_mirror)
+            already_configured = already(git_mirror_section)
             print(f"Already configured: {already_configured}")
             config_section = ask_for_section(already_configured)
             if not config_section:
@@ -203,6 +221,8 @@ class ConfigManager:
                 "include_private": config_section.include_private,
                 "include_forks": config_section.include_forks,
             }
+            if config_section.group_id:
+                section["group_id"] = config_section.group_id
             toml_config["tool"]["git-mirror"][config_section.host_type] = section  # type: ignore
 
             with open(self.config_path, "w", encoding="utf-8") as file:
@@ -213,14 +233,22 @@ class ConfigManager:
         return already_configured
 
     def load_config(self, host: str) -> Optional[ConfigData]:
+        """
+        Loads the configuration for the specified host from the TOML file.
+        Args:
+            host (str): The host name (github, gitlab, selfhosted).
+        Returns:
+            Optional[ConfigData]: The configuration data if found, else None.
+        """
+        LOGGER.debug(f"Loading configuration for {host} from {self.config_path.resolve()}")
         if not host:
             raise ValueError("Host name (gitlab, github, selfhosted) is required.")
-        LOGGER.debug(f"Loading configuration for {host} from {self.config_path.resolve()}")
         if self.config_path and self.config_path.exists():
             config = tomlkit.loads(self.config_path.read_text(encoding="utf-8"))
             # config.get("tool", {}).get("git-mirror", {}).get("redirect")
             tool_config = config.get("tool", {}).get("git-mirror", {}).get(host, {})
-
+            if not tool_config:
+                return None
             target_dir = tool_config.get("target_dir")
             if not target_dir:
                 raise ValueError(f"target_dir not found in config file at {self.config_path.resolve()}")
@@ -298,13 +326,13 @@ class ConfigManager:
             LOGGER.debug(f"Loading config from {self.config_path.resolve()}")
             with open(self.config_path, encoding="utf-8") as file:
                 config = tomlkit.parse(file.read())
-            git_mirror = config.get("tool", {}).get("git-mirror", {})
+            git_mirror_section = config.get("tool", {}).get("git-mirror", {})
         else:
             LOGGER.debug(f"Config file {self.config_path.resolve()} does not exist. Creating a new one.")
             config = tomlkit.document()
             config["tool"] = {"git-mirror": {}}
-            git_mirror = config["tool"]["git-mirror"]  # type: ignore
-        return config, git_mirror
+            git_mirror_section = config["tool"]["git-mirror"]  # type: ignore
+        return config, git_mirror_section
 
 
 if __name__ == "__main__":
