@@ -21,7 +21,6 @@ load_env()
 LOGGER = logging.getLogger(__name__)
 
 
-
 def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     config_manager = ConfigManager(args.config_path)
     invalid_or_missing_host = not args.host or args.host not in ("github", "gitlab", "selfhosted")

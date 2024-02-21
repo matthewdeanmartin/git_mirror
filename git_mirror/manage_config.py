@@ -82,7 +82,6 @@ def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
         ),
         inquirer.Text("user_name", message="Enter your username"),
         inquirer.Text("target_dir", message="What folder should the repositories be cloned to?"),
-
         inquirer.Confirm("include_private", message="Include private repositories?", default=False),
         inquirer.Confirm("include_forks", message="Include forks?", default=False),
     ]
@@ -91,7 +90,9 @@ def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
 
     target_dir = Path(answers["target_dir"]).expanduser()
     while not target_dir.exists():
-        answer = inquirer.prompt([inquirer.Confirm("create_target_dir","Target directory does not exist. Create it?", default=True)])
+        answer = inquirer.prompt(
+            [inquirer.Confirm("create_target_dir", "Target directory does not exist. Create it?", default=True)]
+        )
         print(answer)
         if answer["create_target_dir"]:
             os.makedirs(target_dir)
@@ -105,10 +106,9 @@ def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
     group_id_answer = None
 
     if host_type == "selfhosted":
-        host_name = inquirer.prompt([inquirer.List("host_name", message="Is this self hosted github or gitlab?",
-                                                   choices=["github", "gitlab"])])[
-            "host_name"
-        ]
+        host_name = inquirer.prompt(
+            [inquirer.List("host_name", message="Is this self hosted github or gitlab?", choices=["github", "gitlab"])]
+        )["host_name"]
         host_url = inquirer.prompt([inquirer.Text("host_url", message="Enter your self-hosted Git server URL")])[
             "host_url"
         ]
@@ -237,6 +237,7 @@ class ConfigManager:
         Loads the configuration for the specified host from the TOML file.
         Args:
             host (str): The host name (github, gitlab, selfhosted).
+
         Returns:
             Optional[ConfigData]: The configuration data if found, else None.
         """

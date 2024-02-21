@@ -1,9 +1,10 @@
+import httpx
 from packaging import version
 from packaging.version import Version
-import httpx
 
 # Import the current version of your package
 from git_mirror.__about__ import __version__
+
 
 def call_pypi_with_version_check(package_name: str, current_version: str) -> tuple[bool, Version]:
     """
@@ -24,6 +25,7 @@ def call_pypi_with_version_check(package_name: str, current_version: str) -> tup
 
     return version.parse(latest_version) > version.parse(current_version), version.parse(latest_version)
 
+
 # Example usage
 def display_version_check_message():
     try:
@@ -34,5 +36,6 @@ def display_version_check_message():
     except httpx.HTTPError as e:
         print(f"An error occurred while checking the latest version: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     display_version_check_message()
