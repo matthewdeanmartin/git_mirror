@@ -34,11 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.env` file support doesn't work in all shells, now keeps going if it fails.
 - User info is printed, not just logged
 
-## [0.3.0] - 2024-02-18
+## [0.3.1] - 2024-02-18
 
 ### Added
 - Display message if no config file or sections found.
 
 ### Fixed
 - group_id config shouldn't blow up.
-- 
+- Gitlab and self hosted works better

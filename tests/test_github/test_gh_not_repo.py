@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @patch("git.Repo")
-@patch("pathlib.Path.iterdir")
+@patch("git_mirror.manage_git.find_git_repos")
 def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
     # Mock setup
     base_dir = tmp_path
@@ -26,7 +26,11 @@ def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
     mock_iterdir.return_value = [base_dir / "repo1", base_dir / "not_a_repo", base_dir / "fork_repo"]
 
     os.makedirs(str(tmp_path / "repo1"))
+    os.makedirs(str(tmp_path / "repo1" / ".git"))
+
     os.makedirs(str(tmp_path / "fork_repo"))
+    os.makedirs(str(tmp_path / "fork_repo" / ".git"))
+
     os.makedirs(str(tmp_path / "not_a_repo"))
 
     # Simulate valid and invalid git repositories

@@ -55,6 +55,7 @@ def test_clone_all(mock_get_user_repos, mock_clone_from, github_repo_manager, mo
 def test_clone_repo_already_exists(mock_clone_from, github_repo_manager, mock_github_repo, tmp_path):
     # Setup: Create a directory with the same name as the repo to simulate its existence
     (tmp_path / mock_github_repo.name).mkdir()
+    (tmp_path / mock_github_repo.name / ".git").mkdir()
 
     # Execute
     github_repo_manager._clone_repo(mock_github_repo)

@@ -15,16 +15,19 @@ from typing import Any, Optional, Union, cast
 
 import git as g
 import gitlab
+import inquirer
 from gitlab.base import RESTObject, RESTObjectList
 from gitlab.v4.objects import Project
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from termcolor import colored
 
-from git_mirror.manage_git import extract_repo_name
+import git_mirror.manage_git as mg
 from git_mirror.manage_pypi import PyPiManager
 from git_mirror.safe_env import load_env
-from git_mirror.types import SourceHost
+from git_mirror.types import SourceHost, UpdateBranchArgs
 
 load_env()
 
@@ -42,6 +45,8 @@ class GitlabRepoManager(SourceHost):
         include_private: bool = True,
         include_forks: bool = False,
         host_domain: str = "https://gitlab.com",
+        group_id: Optional[int] = None,
+        logging_level: int = 1,
     ):
         """
         Initializes the RepoManager with a GitLab token and a base directory for cloning repositories.
@@ -53,13 +58,19 @@ class GitlabRepoManager(SourceHost):
             include_private (bool): Whether to include private repositories.
             include_forks (bool): Whether to include forked repositories.
             host_domain (str): The GitLab host domain.
+            group_id (int): The ID of the group to clone repositories from.
+            logging_level (int): The logging level.
         """
         self.gitlab = gitlab.Gitlab(host_domain, private_token=token)
+        if logging_level >= 2:
+            self.gitlab.enable_debug()
         self.base_dir = base_dir
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
         self.user: Optional[RESTObject] = None
+        self.group_id = group_id
+        self.verbose_logging = logging_level
 
     def _get_user_repos(self) -> list[Project]:
         """
@@ -69,13 +80,13 @@ class GitlabRepoManager(SourceHost):
             List[gitlab.v4.objects.Project]: A list of Project objects.
         """
         if not self.user:
-            self.user = self.gitlab.users.list(username=self.user_login)[0]  # type: ignore
+            self.user = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
 
         try:
             kwargs: dict[str, Union[bool, str]] = {"owned": True}
             if not self.include_private:
                 kwargs["visibility"] = "public"
-            projects = self.gitlab.projects.list(**kwargs)
+            projects = self.gitlab.projects.list(**kwargs, get_all=True)
             projects = [self.gitlab.projects.get(id=project.id) for project in projects]
 
             filtered_projects = []
@@ -90,7 +101,7 @@ class GitlabRepoManager(SourceHost):
 
             return filtered_projects  # type: ignore
         except gitlab.exceptions.GitlabError as e:
-            LOGGER.error(f"Failed to fetch repositories: {e}")
+            print(f"Failed to fetch repositories: {e}")
             return []
 
     def clone_all(self, single_threaded: bool = False):
@@ -115,6 +126,7 @@ class GitlabRepoManager(SourceHost):
         Args:
             group_id (int): The ID of the group to clone repositories from.
         """
+        print(f"Cloning all repositories for group with ID {group_id}")
         self._clone_group_repos(group_id)
 
     def _clone_group_repos(self, group_id: int) -> None:
@@ -133,6 +145,7 @@ class GitlabRepoManager(SourceHost):
             repos = self._get_repos(group)
 
             for repo in repos:
+                print(".", end="")
                 self._clone_repo(repo, extra_path=group.full_path)
 
             # for subgroup in subgroups:
@@ -179,7 +192,7 @@ class GitlabRepoManager(SourceHost):
             group = self.gitlab.groups.get(group_id)
             return group
         except gitlab.exceptions.GitlabGetError as e:
-            LOGGER.error(f"Failed to get group with ID {group_id}: {e}")
+            print(f"Failed to get group with ID {group_id}: {e}")
             return None
 
     def _get_subgroups(self, group):
@@ -196,7 +209,7 @@ class GitlabRepoManager(SourceHost):
             subgroups = group.projects.list(all=True, include_subgroups=True)
             return subgroups
         except gitlab.exceptions.GitlabListError as e:
-            LOGGER.error(f"Failed to list subgroups for group {group.id}: {e}")
+            print(f"Failed to list subgroups for group {group.id}: {e}")
             return []
 
     def _get_repos(self, group):
@@ -214,7 +227,7 @@ class GitlabRepoManager(SourceHost):
             projects = group.projects.list(include_subgroups=True, all=True)
             return projects
         except gitlab.exceptions.GitlabListError as e:
-            LOGGER.error(f"Failed to list projects for group {group.id}: {e}")
+            print(f"Failed to list projects for group {group.id}: {e}")
             return []
 
     #
@@ -236,7 +249,7 @@ class GitlabRepoManager(SourceHost):
     #         print(f"Failed to clone {project.path}: {e}")
 
     def pull_all(self, single_threaded: bool = False):
-        directories = list(repo_dir for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir())
+        directories = mg.find_git_repos(self.base_dir)
         print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
@@ -262,7 +275,7 @@ class GitlabRepoManager(SourceHost):
             print(f"Pulling latest changes in {repo_path}")
             origin.pull()
         except Exception as e:
-            LOGGER.error(f"Failed to pull repo at {repo_path}: {e}")
+            print(f"Failed to pull repo at {repo_path}: {e}")
         finally:
             # Restore stdout
             sys.stdout = old_stdout
@@ -276,7 +289,7 @@ class GitlabRepoManager(SourceHost):
         Returns:
             tuple: Counts of no_remote, not_found, is_fork, not_repo scenarios.
         """
-        kwargs: dict[str, Union[str, bool]] = {"owned": True}
+        kwargs: dict[str, Union[str, bool]] = {"owned": True, "get_all": True}
         if not self.include_private:
             kwargs["visibility"] = "public"
         user_projects = {
@@ -287,7 +300,7 @@ class GitlabRepoManager(SourceHost):
         not_found = 0
         is_fork = 0
         not_repo = 0
-        for repo_dir in self.base_dir.iterdir():
+        for repo_dir in mg.find_git_repos(self.base_dir):
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
@@ -298,7 +311,7 @@ class GitlabRepoManager(SourceHost):
                         continue
 
                     remote_url = remotes[0].config_reader.get("url")
-                    repo_name = extract_repo_name(remote_url)
+                    repo_name = mg.extract_repo_name(remote_url)
 
                     if repo_name not in user_projects:
                         not_found += 1
@@ -379,11 +392,11 @@ class GitlabRepoManager(SourceHost):
             pypi_manager = PyPiManager()
             return await pypi_manager.get_infos(package_names)
 
-        package_names = [repo_dir.name for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir()]
+        package_names = [path.name for path in mg.find_git_repos(self.base_dir)]
         package_infos = asyncio.run(get_infos_async(package_names))
 
         found = 0
-        for repo_dir in self.base_dir.iterdir():
+        for repo_dir in mg.find_git_repos(self.base_dir):
             LOGGER.debug(f"Checking {repo_dir}")
             if repo_dir.is_dir():
                 try:
@@ -414,9 +427,9 @@ class GitlabRepoManager(SourceHost):
                     # else:
                     #     LOGGER.debug(f"{package_name} is not a pypi package name.")
                 except g.InvalidGitRepositoryError:
-                    LOGGER.warning(f"{repo_dir} is not a valid Git repository.")
+                    print(f"{repo_dir} is not a valid Git repository.")
                 except Exception as e:
-                    LOGGER.error(f"Error checking {repo_dir}: {e}")
+                    print(f"Error checking {repo_dir}: {e}")
         if found == 0:
             print(
                 "None of your repositories are published on PyPI under the project name and "
@@ -435,7 +448,7 @@ class GitlabRepoManager(SourceHost):
 
     def list_repos(self) -> Optional[Table]:
         """
-        Fetches and prints beautifully formatted information about the user's GitHub repositories.
+        Fetches and prints beautifully formatted information about the user's Gitlab repositories.
         """
         try:
             table = Table(title="Gitlab Repositories")
@@ -446,7 +459,7 @@ class GitlabRepoManager(SourceHost):
             table.add_column("Private", style="red")
             table.add_column("Fork", style="blue")
 
-            kwargs: dict[str, Union[bool, str]] = {"owned": True}
+            kwargs: dict[str, Union[bool, str]] = {"owned": True, "get_all": True}
             if not self.include_private:
                 kwargs["visibility"] = "public"
             projects = self.gitlab.projects.list(**kwargs)
@@ -477,12 +490,155 @@ class GitlabRepoManager(SourceHost):
 
     def print_user_summary(self) -> None:
         """
-        Fetches and prints a summary of the user's GitHub account.
+        Fetches and prints a summary of the user's Gitlab account.
         """
-        print("not implemented yet")
+        try:
+            if not self.user:
+                list_info = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
+                self.user = self.gitlab.users.get(list_info.id)
+            print(self.user)
+
+            summary = Text.assemble(
+                ("Username: ", "bold cyan"),
+                f"{self.user.username}\n",
+                ("Name: ", "bold cyan"),
+                f"{self.user.name}\n",
+                ("Bio: ", "bold cyan"),
+                f"{self.user.bio or 'No bio available'}\n",
+                ("Public Email: ", "bold cyan"),
+                f"{self.user.public_email or 'N/A'}\n",
+                # I don't think Gitlab has following, followers.
+                ("Location: ", "bold cyan"),
+                f"{self.user.location or 'Not specified'}\n",
+                ("Company: ", "bold cyan"),
+                f"{self.user.organization or 'Not specified'}",
+            )
+            console = Console()
+            console.print(Panel(summary, title="GitLab User Summary", subtitle=self.user.username))
+        except Exception as e:
+            print("Failed to fetch GitLab user info: %s", str(e))
 
     def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
-        print("not implemented yet")
+        """
+        Updates each local branch with the latest changes from the main/master branch on Gitlab.
+
+        Args:
+            single_threaded (bool): Whether to run the operation in a single thread.
+            prefer_rebase (bool): Whether to prefer rebasing instead of merging.
+        """
+        directories = mg.find_git_repos(self.base_dir)
+        print(f"Merging/rebasing {len(directories)} main to local repositories.")
+        if single_threaded or len(directories) < 4:
+            for repo_dir in directories:
+                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase))
+        else:
+            with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                results = pool.map(
+                    self._update_local_branches,
+                    (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase) for repo_dir in directories),
+                )
+                for output in results:
+                    print(output, end="")
+
+    def _update_local_branches(self, args: UpdateBranchArgs):
+        """
+        Updates each local branch with the latest changes from the main/master branch on Gitlab.
+
+        Args:
+            args: UpdateBranchArgs
+        """
+        repo_path, project_name, prefer_rebase = args.repo_path, args.github_repo_full_name, args.prefer_rebase
+        repo = g.Repo(str(repo_path))
+
+        # Search for the project using the namespace and project name
+        projects = self.gitlab.projects.list(search=project_name, owned=True)[0]  # type: ignore
+        # for project in projects:
+        #     if project.path_with_namespace == f"{self.user_login}/{project_name}":
+        #         return project.default_branch
+
+        # Get the default branch name from Gitlab
+        default_branch = projects.default_branch
+
+        # Fetch all changes from remote
+        origin = repo.remotes.origin
+        origin.fetch()
+
+        # Update each local branch
+        for branch in repo.heads:  # branches, but mypy doesn't like the alias
+            try:
+                if branch == default_branch:
+                    continue
+                # Checkout the branch
+                repo.git.checkout(branch)
+                # Ensure the branch is up to date with its upstream
+                repo.git.pull()
+
+                if prefer_rebase:
+                    # Perform rebase
+                    repo.git.rebase(f"origin/{default_branch}")
+                else:
+                    # Perform merge
+                    repo.git.merge(f"origin/{default_branch}")
+
+                print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+            except g.exc.GitCommandError as e:
+                print(f"Failed to update branch '{branch}': {e}")
 
     def prune_all(self):
-        print("not implemented yet")
+        for repo_dir in mg.find_git_repos(self.base_dir):
+            if repo_dir.is_dir():
+                self._delete_local_branches_if_not_on_host(repo_dir, f"{self.user_login}/{repo_dir.name}")
+
+    def _delete_local_branches_if_not_on_host(self, repo_path: Path, project_name: str):
+        """
+        Loops through all local branches, checks if they exist on Gitlab, and prompts the user for deletion if they don't.
+
+        Args:
+            repo_path (Path): The file system path to the local git repository.
+            project_name (str): The name of the project on Gitlab.
+        """
+        try:
+            repo = g.Repo(str(repo_path))
+        except g.InvalidGitRepositoryError:
+            print(f"{repo_path} is not a valid Git repository.")
+            return
+        project = self.gitlab.projects.list(search=project_name, owned=True)[0]  # type: ignore
+
+        # Get a list of all branch names on Gitlab
+        remote_branches = [branch.name for branch in project.get_branches()]
+
+        # Get a list of all local branch names
+        local_branches = [branch.name for branch in repo.heads]  # alias to branches
+
+        # Determine branches that are local but not on Gitlab
+        branches_to_consider = [branch for branch in local_branches if branch not in remote_branches]
+
+        if not branches_to_consider:
+            print("No local branches exist that are missing on Gitlab.")
+            return
+
+        # Prompt user for each branch that doesn't exist on Gitlab
+        for branch in branches_to_consider:
+            question = [
+                inquirer.Confirm(
+                    "delete", message=f"The branch '{branch}' does not exist on Gitlab. Delete locally?", default=False
+                )
+            ]
+            answer = inquirer.prompt(question)
+
+            if answer["delete"]:
+                try:
+                    # Safely delete the branch
+                    repo.git.branch("-d", branch)
+                    print(f"Deleted branch '{branch}' locally.")
+                except g.exc.GitCommandError as e:
+                    print(f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}")
+            else:
+                print(f"Skipped deletion of branch '{branch}'.")
+
+    def version_info(self) -> dict[str, Any]:
+        """
+        Return API version information.
+        """
+        version, revision = self.gitlab.version()
+        return {"version": version, "revision": revision}

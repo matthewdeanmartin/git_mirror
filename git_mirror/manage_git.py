@@ -16,6 +16,25 @@ load_env()
 LOGGER = logging.getLogger(__name__)
 
 
+def find_git_repos(base_dir: Path) -> list[Path]:
+    """
+    Recursively finds all Git repositories in the given base directory.
+
+    Args:
+        base_dir (Path): The base directory to search for Git repositories.
+
+    Returns:
+        List[Path]: A list of Paths representing the Git repositories found.
+    """
+    git_repos = []
+
+    for path in base_dir.rglob("*"):
+        if path.name == ".git" and path.is_dir():
+            git_repos.append(path.parent)  # Add the parent directory of '.git'
+
+    return git_repos
+
+
 def extract_repo_name(remote_url: str) -> str:
     """
     Extracts the repository name from its remote URL.
@@ -58,13 +77,15 @@ class GitManager:
         Checks all local repositories for uncommitted changes or commits that haven't been pushed to the remote.
         """
         messages = []
-        for repo_dir in self.base_dir.iterdir():
+        have_uncommitted = 0
+        for repo_dir in find_git_repos(self.base_dir):
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
                     conclusion = ""
                     if repo.is_dirty(untracked_files=True):
                         conclusion = f"{repo_dir} has uncommitted changes."
+                        have_uncommitted += 1
                     else:
                         LOGGER.debug(f"{repo_dir} has no uncommitted changes.")
 
@@ -81,6 +102,8 @@ class GitManager:
                     message = f"Error checking {repo_dir}: {e}"
                     messages.append(message)
                     LOGGER.error(message)
+        if have_uncommitted == 0:
+            print(colored("All repositories are clean, no uncommitted changes.", "green"))
         return messages
 
     def _check_for_unpushed_commits(self, repo: g.Repo, repo_dir: Path) -> list[str]:

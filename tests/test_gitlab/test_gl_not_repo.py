@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @patch("git.Repo")
-@patch("pathlib.Path.iterdir")
+@patch("git_mirror.manage_git.find_git_repos")
 def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
     # Mock setup
     base_dir = tmp_path

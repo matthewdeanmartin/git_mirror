@@ -74,7 +74,7 @@ def test_get_user_repos_handles_gitlab_exception(gitlab_repo_manager, mock_gitla
     # Assertions
     assert repos == []
     # {'owned': True, 'visibility': 'private'}
-    gitlab_repo_manager.gitlab.projects.list.assert_called_once_with(owned=True)
+    gitlab_repo_manager.gitlab.projects.list.assert_called_once_with(owned=True, get_all=True)
 
 
 if __name__ == "__main__":

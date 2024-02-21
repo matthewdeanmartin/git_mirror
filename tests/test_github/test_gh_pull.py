@@ -21,6 +21,7 @@ def github_repo_manager(tmp_path):
 def create_fake_repo(tmp_path, repo_name):
     """Helper function to create a fake repo directory."""
     (tmp_path / repo_name).mkdir()
+    (tmp_path / repo_name / ".git").mkdir()
 
 
 @patch("git.Repo")

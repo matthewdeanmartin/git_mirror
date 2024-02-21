@@ -18,6 +18,7 @@ import github as gh
 import github.AuthenticatedUser as ghau
 import github.NamedUser as ghnu
 import github.Repository as ghr
+import httpx
 import inquirer
 from rich.console import Console
 from rich.panel import Panel
@@ -25,7 +26,7 @@ from rich.table import Table
 from rich.text import Text
 from termcolor import colored
 
-from git_mirror.manage_git import extract_repo_name
+import git_mirror.manage_git as mg
 from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
 from git_mirror.safe_env import load_env
 from git_mirror.types import SourceHost, UpdateBranchArgs
@@ -38,7 +39,13 @@ LOGGER = logging.getLogger(__name__)
 
 class GithubRepoManager(SourceHost):
     def __init__(
-        self, token: str, base_dir: Path, user_login: str, include_private: bool = True, include_forks: bool = False
+        self,
+        token: str,
+        base_dir: Path,
+        user_login: str,
+        include_private: bool = True,
+        include_forks: bool = False,
+        host_domain: str = "https://github.com",
     ):
         """
         Initializes the RepoManager with a GitHub token and a base directory for cloning repositories.
@@ -49,6 +56,7 @@ class GithubRepoManager(SourceHost):
             user_login (str): The GitHub username.
             include_private (bool): Whether to include private repositories.
             include_forks (bool): Whether to include forked repositories.
+            host_domain (str): The domain of the GitHub instance.
         """
         self.github = gh.Github(token)
         self.base_dir = base_dir
@@ -57,6 +65,7 @@ class GithubRepoManager(SourceHost):
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
+        self.host_domain = host_domain
         LOGGER.debug(
             f"GithubRepoManager initialized with user_login: {user_login}, include_private: {include_private}, include_forks: {include_forks}"
         )
@@ -130,7 +139,7 @@ class GithubRepoManager(SourceHost):
         return captured_output.getvalue()
 
     def pull_all(self, single_threaded: bool = False):
-        directories = list(repo_dir for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir())
+        directories = mg.find_git_repos(self.base_dir)
         print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
@@ -179,7 +188,7 @@ class GithubRepoManager(SourceHost):
         not_found = 0
         is_fork = 0
         not_repo = 0
-        for repo_dir in self.base_dir.iterdir():
+        for repo_dir in mg.find_git_repos(self.base_dir):
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
@@ -190,7 +199,7 @@ class GithubRepoManager(SourceHost):
                         continue
 
                     remote_url = remotes[0].config_reader.get("url")
-                    repo_name = extract_repo_name(remote_url)
+                    repo_name = mg.extract_repo_name(remote_url)
 
                     if repo_name not in user_repos:
                         not_found += 1
@@ -257,10 +266,10 @@ class GithubRepoManager(SourceHost):
             pypi_manager = PyPiManager()
             return await pypi_manager.get_infos(package_names)
 
-        package_names = [repo_dir.name for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir()]
+        package_names = [path.name for path in mg.find_git_repos(self.base_dir)]
         package_infos = asyncio.run(get_infos_async(package_names))
 
-        for repo_dir in self.base_dir.iterdir():
+        for repo_dir in mg.find_git_repos(self.base_dir):
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
@@ -385,7 +394,7 @@ class GithubRepoManager(SourceHost):
             single_threaded (bool): Whether to run the operation in a single thread.
             prefer_rebase (bool): Whether to prefer rebasing instead of merging.
         """
-        directories = list(repo_dir for repo_dir in self.base_dir.iterdir() if repo_dir.is_dir())
+        directories = mg.find_git_repos(self.base_dir)
         print(f"Merging/rebasing {len(directories)} main to local repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
@@ -421,6 +430,8 @@ class GithubRepoManager(SourceHost):
         # Update each local branch
         for branch in repo.heads:  # branches, but mypy doesn't like the alias
             try:
+                if branch == default_branch:
+                    continue
                 # Checkout the branch
                 repo.git.checkout(branch)
                 # Ensure the branch is up to date with its upstream
@@ -437,8 +448,8 @@ class GithubRepoManager(SourceHost):
             except g.exc.GitCommandError as e:
                 print(f"Failed to update branch '{branch}': {e}")
 
-    def prune_all(self):
-        for repo_dir in self.base_dir.iterdir():
+    def prune_all(self) -> None:
+        for repo_dir in mg.find_git_repos(self.base_dir):
             if repo_dir.is_dir():
                 self._delete_local_branches_if_not_on_github(repo_dir, f"{self.user_login}/{repo_dir.name}")
 
@@ -489,3 +500,14 @@ class GithubRepoManager(SourceHost):
                     print(f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}")
             else:
                 print(f"Skipped deletion of branch '{branch}'.")
+
+    def version_info(self) -> dict[str, Any]:
+        """
+        Return API version information.
+        """
+        # pygithub doesn't support this endpoint?
+        response = httpx.get(f"{self.host_domain}/versions")
+        response.raise_for_status()  # Raises an exception for 4XX/5XX responses
+        data = response.json()
+        versions_supported = data["info"]["version"]
+        return {"version": versions_supported}

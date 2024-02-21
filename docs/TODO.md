@@ -1,9 +1,17 @@
+## Non-pypi version audit
+- depends on git - min version too low to care about?
+- github API - has version endpoint
+- gitlab API (v3)
+
+## Performance
+- Many steps are slow/not parallel, provide no UI when waiting.
+
 ## Host support
 
 - Private Gitlab
   - Need to disambiguate the gitlabs (currently, just "selfhosted")
-  - Check if any non-github hosts are github api compatible (probably not)
-- Bitbucket
+- Private Github
+  - Need to load url from config.
 
 ## TODO
 

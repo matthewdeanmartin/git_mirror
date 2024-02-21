@@ -31,6 +31,7 @@ def route_to_command(
     pypi_owner_name: Optional[str] = None,
     domain: Optional[str] = None,
     group_id: Optional[int] = None,
+    logging_level: int = 1,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -47,6 +48,7 @@ def route_to_command(
         pypi_owner_name (str): The PyPI owner name to filter the results.
         domain (str): The GitLab domain.
         group_id (int): The GitLab group id.
+        logging_level (int): The logging level.
     """
     LOGGER.debug(
         f"Routing... {command} {user_name} {target_dir} {token} {host} {include_private} {include_forks} {config_path} {pypi_owner_name}"
@@ -83,6 +85,7 @@ def route_to_command(
                 include_private=include_private,
                 include_forks=include_forks,
                 host_domain=domain or "https://gitlab.com",
+                logging_level=logging_level,
             )
         else:
             raise ValueError(f"Unknown host: {host}")
@@ -96,6 +99,7 @@ def route_to_command(
                 include_private=include_private,
                 include_forks=include_forks,
                 host_domain=domain or "https://gitlab.com",
+                logging_level=logging_level,
             )
             gl_manager.clone_group(group_id)
         elif command == "clone-all":

@@ -213,6 +213,9 @@ class ConfigManager:
             if config_section.target_dir and not config_section.target_dir.exists():
                 print(f"Creating directory {config_section.target_dir}")
                 os.makedirs(config_section.target_dir)
+
+            if config_section.host_type not in ("github", "gitlab"):
+                raise ValueError(f"host_type must be github or gitlab even if self hosted. {config_section.host_type}")
             section = {
                 "host_type": config_section.host_type,
                 "host_url": config_section.host_url,
@@ -246,7 +249,6 @@ class ConfigManager:
             raise ValueError("Host name (gitlab, github, selfhosted) is required.")
         if self.config_path and self.config_path.exists():
             config = tomlkit.loads(self.config_path.read_text(encoding="utf-8"))
-            # config.get("tool", {}).get("git-mirror", {}).get("redirect")
             tool_config = config.get("tool", {}).get("git-mirror", {}).get(host, {})
             if not tool_config:
                 return None

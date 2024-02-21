@@ -35,6 +35,7 @@ def test_cli_clone_all(mock_main_github, cli_args):
         host="github",
         include_forks=False,
         include_private=False,
+        logging_level=0,
         target_dir=ANY,
         token="testtoken",
         pypi_owner_name=None,

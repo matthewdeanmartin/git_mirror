@@ -22,6 +22,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
+    """
+    Get token from env or raise a helpful messag.e
+
+    Args:
+        args (argparse.Namespace): The parsed arguments.
+
+    Returns:
+        tuple[Optional[str], int]: The token and return value.
+    """
+    # HACK: This needs to be redone somehow.
     config_manager = ConfigManager(args.config_path)
     invalid_or_missing_host = not args.host or args.host not in ("github", "gitlab", "selfhosted")
     needs_host = args.command not in ("init", "list-config")
@@ -37,7 +47,13 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     # github or self hosted github
     selfhosted_type_is_github = args.host == "selfhosted" and config_data and config_data.host_type == "github"
     selfhosted_type_is_gitlab = args.host == "selfhosted" and config_data and config_data.host_type == "gitlab"
-    if args.host == "github" or selfhosted_type_is_github:
+    # SELFHOSTED_ACCESS_TOKEN
+    if selfhosted_type_is_github or selfhosted_type_is_gitlab:
+        token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
+        if not token:
+            print("Self hosted access token must be provided through SELFHOSTED_ACCESS_TOKEN environment variable.")
+            return "", 1
+    elif args.host == "github" or selfhosted_type_is_github:
         token = os.getenv("GITHUB_ACCESS_TOKEN")
         if not token:
             print("GitHub access token must be provided through GITHUB_ACCESS_TOKEN environment variable.")
@@ -86,12 +102,8 @@ def validate_parse_args(args: argparse.Namespace, first_time_init, use_github) -
                 args.include_forks = config_data.include_forks
             if not use_github and not args.domain:
                 domain = config_data.host_url
-                print(f"Using domain from config: {domain}")
             if not use_github and not args.group_id:
                 group_id = config_data.group_id
-                if group_id:
-                    print(f"Using group id from config: {args.group_id}")
-
     if (
         (not args.user_name or not args.target_dir)
         and not first_time_init
@@ -104,11 +116,8 @@ def validate_parse_args(args: argparse.Namespace, first_time_init, use_github) -
 
 def enable_logging(args):
     # No logging above this line!
-    if args.verbose == 1:
-        config = logging_config.generate_config(level="DEBUG")
-        logging.config.dictConfig(config)
-    elif args.verbose == 2:
-        config = logging_config.generate_config(level="DEBUG", double_verbose=True)
+    if args.verbose > 0:
+        config = logging_config.generate_config(level="DEBUG", logging_level=args.verbose)
         logging.config.dictConfig(config)
     else:
         # Essentially, quiet mode
@@ -261,6 +270,7 @@ def main(
         pypi_owner_name=args.pypi_owner_name,
         domain=domain,
         group_id=group_id,
+        logging_level=args.verbose,
     )
     return 0
 

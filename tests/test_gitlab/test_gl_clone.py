@@ -62,6 +62,7 @@ def test_clone_all(mock_get_user_repos, mock_clone_from, gitlab_repo_manager, mo
 def test_clone_repo_already_exists(mock_clone_from, gitlab_repo_manager, mock_gitlab_repo, tmp_path):
     # Setup: Create a directory with the same name as the repo to simulate its existence
     (tmp_path / mock_gitlab_repo.path).mkdir()
+    (tmp_path / mock_gitlab_repo.path / ".git").mkdir()
 
     # Execute
     gitlab_repo_manager._clone_repo(mock_gitlab_repo)

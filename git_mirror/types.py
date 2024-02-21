@@ -81,3 +81,8 @@ class SourceHost(Protocol):
         """
         Loops through all local branches, checks if they exist on GitHub, and prompts the user for deletion if they don't.
         """
+
+    def version_info(self) -> dict[str, Any]:
+        """
+        Return API version information.
+        """
