@@ -3,13 +3,14 @@ import os
 import traceback
 from typing import Optional
 
-from github import Github, GithubException
+import github as gh
 from github.Issue import Issue
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
 LOGGER = logging.getLogger(__name__)
+
 
 class BugReporter:
     def __init__(self, token: str, repository_name: str) -> None:
@@ -20,7 +21,7 @@ class BugReporter:
             token (str): The GitHub API token.
             repository_name (str): The full name of the repository (e.g., "user/repo").
         """
-        self.github = Github(token)
+        self.github = gh.Github(token)
         self.repository_name = repository_name
         self.repo = self.github.get_repo(repository_name)
         self.user = self.github.get_user()
@@ -35,10 +36,10 @@ class BugReporter:
         Returns:
             str: The masked text.
         """
-        token_names = ("GITHUB_ACCESS_TOKEN","GITLAB_ACCESS_TOKEN","SELFHOSTED_ACCESS_TOKEN")
+        token_names = ("GITHUB_ACCESS_TOKEN", "GITLAB_ACCESS_TOKEN", "SELFHOSTED_ACCESS_TOKEN")
         for token in token_names:
             if os.environ.get(token):
-                secret = os.environ.get(token, "") # default to make mypy happy
+                secret = os.environ.get(token, "")  # default to make mypy happy
                 text = text.replace(secret, "****")
 
         return text
@@ -52,10 +53,10 @@ class BugReporter:
             issue_body (str): The body text of the issue, providing details.
         """
         try:
-            issue:Issue = self.repo.create_issue(title=issue_title, body=issue_body)
+            issue: Issue = self.repo.create_issue(title=issue_title, body=issue_body)
             print(f"Issue titled '{issue_title}' created in {self.repository_name}.")
             return issue
-        except GithubException as e:
+        except gh.GithubException as e:
             print(f"Failed to create issue in {self.repository_name}: {e}")
         return None
 
@@ -104,9 +105,11 @@ class BugReporter:
         )
         console.print(Panel(summary, title="Github Issue"))
 
-        response = input("An error occurred. Would you like to report this bug? "
-                         "It will be posted as a public issue using your gitlab token as credentials. (yes/no): ")
-        if response.lower().startswith('y'):
+        response = input(
+            "An error occurred. Would you like to report this bug? "
+            "It will be posted as a public issue using your gitlab token as credentials. (yes/no): "
+        )
+        if response.lower().startswith("y"):
             issue = self.report_issue(issue_title, issue_body)
             if issue:
                 print(f"Bug report created at: {issue.html_url}")

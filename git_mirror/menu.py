@@ -24,7 +24,7 @@ class CommandInfo:
 
 
 def get_command_info(args: argparse.Namespace) -> None:
-    commands:list[tuple[str,str]] = [
+    commands: list[tuple[str, str]] = [
         ("Initialize Configuration", "init"),
         ("Show Account Info", "show-account"),
         ("List repositories", "list-repos"),
@@ -41,13 +41,13 @@ def get_command_info(args: argparse.Namespace) -> None:
         ("Main Menu", "Main Menu"),
     ]
 
-    categories:dict[str, list[str]] = {
+    categories: dict[str, list[str]] = {
         "Repository Commands": ["list-repos", "clone-all", "pull-all", "local-changes", "not-repo", "Main Menu"],
         "Branch Commands": ["update-from-main", "prune-all", "Main Menu"],
         "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
         "PyPI Commands": ["pypi-status", "Main Menu"],
         "Source Control Host Commands": ["show-account", "Main Menu"],
-        "Exit" :[]
+        "Exit": [],
     }
 
     # Convert commands list to a dictionary for easier lookup
@@ -82,7 +82,7 @@ def get_command_info(args: argparse.Namespace) -> None:
     return
 
 
-def handle_control_c(answer:Any)->None:
+def handle_control_c(answer: Any) -> None:
     if answer is None:
         print("Exiting.")
         # This happens when the user hits control-C

@@ -21,7 +21,8 @@ def temporary_env_var(key, value):
         else:
             os.environ[key] = original_value
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Usage in tests
     with temporary_env_var("ENV_VAR_NAME", "new_value"):
         assert os.environ["ENV_VAR_NAME"] == "new_value"

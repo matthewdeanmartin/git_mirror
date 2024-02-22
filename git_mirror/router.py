@@ -77,7 +77,7 @@ def route_to_command(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
-                dry_run= dry_run
+                dry_run=dry_run,
             )
         elif host in ("gitlab", "selfhosted"):
             base_path = Path(target_dir).expanduser()
@@ -89,7 +89,7 @@ def route_to_command(
                 include_forks=include_forks,
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
-                dry_run=dry_run
+                dry_run=dry_run,
             )
         else:
             raise ValueError(f"Unknown host: {host}")
@@ -104,7 +104,7 @@ def route_to_command(
                 include_forks=include_forks,
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
-                dry_run=dry_run
+                dry_run=dry_run,
             )
             gl_manager.clone_group(group_id)
         elif command == "clone-all":
