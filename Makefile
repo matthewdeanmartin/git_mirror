@@ -126,10 +126,6 @@ check_changelog:
 
 check_all: check_docs check_md check_spelling check_changelog
 
-check_own_ver:
-	# Can it verify itself?
-	$(VENV) python dog_food_check.py
-
 #audit:
 #	# $(VENV) python -m git_mirror audit
 #	$(VENV) tool_audit single git_mirror --version=">=2.0.0"

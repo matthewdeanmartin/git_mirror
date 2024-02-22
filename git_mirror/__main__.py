@@ -10,6 +10,7 @@ from typing import Optional
 import git_mirror.router as router
 from git_mirror import logging_config
 from git_mirror.__about__ import __description__, __version__
+from git_mirror.bug_report import BugReporter
 from git_mirror.manage_config import ConfigManager, default_config_path
 from git_mirror.menu import get_command_info
 from git_mirror.safe_env import load_env
@@ -24,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     """
-    Get token from env or raise a helpful messag.e
+    Get token from env or raise a helpful message.
 
     Args:
         args (argparse.Namespace): The parsed arguments.
@@ -259,6 +260,10 @@ def main(
     domain, group_id, return_value = validate_parse_args(args, first_time_init, use_github)
     if return_value != 0:
         return return_value
+
+    if os.environ.get("GITHUB_ACCESS_TOKEN") and token and "PYTEST_CURRENT_TEST" not in os.environ:
+        reporter = BugReporter(token, "matthewdeanmartin/git_mirror")
+        sys.excepthook = reporter.handle_exception_and_report
 
     router.route_to_command(
         command=args.command,

@@ -52,3 +52,6 @@ pypi
 mypy
 Mypy
 rebasing
+env
+selfhosted
+ConfigData

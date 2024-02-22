@@ -1,9 +1,8 @@
-import sys
-
 import argparse
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any, Optional
 
 import inquirer
 
@@ -25,7 +24,7 @@ class CommandInfo:
 
 
 def get_command_info(args: argparse.Namespace) -> None:
-    commands = [
+    commands:list[tuple[str,str]] = [
         ("Initialize Configuration", "init"),
         ("Show Account Info", "show-account"),
         ("List repositories", "list-repos"),
@@ -42,7 +41,7 @@ def get_command_info(args: argparse.Namespace) -> None:
         ("Main Menu", "Main Menu"),
     ]
 
-    categories = {
+    categories:dict[str, list[str]] = {
         "Repository Commands": ["list-repos", "clone-all", "pull-all", "local-changes", "not-repo", "Main Menu"],
         "Branch Commands": ["update-from-main", "prune-all", "Main Menu"],
         "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
