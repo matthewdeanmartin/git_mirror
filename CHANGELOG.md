@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.env` file support doesn't work in all shells, now keeps going if it fails.
 - User info is printed, not just logged
 
-## [0.3.1] - 2024-02-18
+## [0.3.1] - 2024-02-20
 
 ### Added
 - Display message if no config file or sections found.
@@ -42,3 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - group_id config shouldn't blow up.
 - Gitlab and self hosted works better
+
+## [0.3.2] - 2024-02-21
+
+### Added
+- `--dry-run` to simulate read-write events.
+
+### Fixed
+- menu now has exit, loop to main menu and better control-c handling

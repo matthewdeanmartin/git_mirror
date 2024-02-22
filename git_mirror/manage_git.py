@@ -63,12 +63,14 @@ class GitManager:
     def __init__(
         self,
         base_dir: Path,
+        dry_run: bool = False,
     ):
         """
         Initializes base directory for git operations.
 
         Args:
             base_dir (Path): Base directory path where repositories will be cloned.
+            dry_run (bool): Flag to determine whether the operation should be a dry run.
         """
         self.base_dir = base_dir
 

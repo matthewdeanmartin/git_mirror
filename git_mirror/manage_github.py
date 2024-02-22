@@ -46,6 +46,7 @@ class GithubRepoManager(SourceHost):
         include_private: bool = True,
         include_forks: bool = False,
         host_domain: str = "https://github.com",
+        dry_run: bool = False,
     ):
         """
         Initializes the RepoManager with a GitHub token and a base directory for cloning repositories.
@@ -57,6 +58,7 @@ class GithubRepoManager(SourceHost):
             include_private (bool): Whether to include private repositories.
             include_forks (bool): Whether to include forked repositories.
             host_domain (str): The domain of the GitHub instance.
+            dry_run (bool): Whether to perform a dry run.
         """
         self.github = gh.Github(token)
         self.base_dir = base_dir
@@ -66,6 +68,7 @@ class GithubRepoManager(SourceHost):
         self.include_private = include_private
         self.include_forks = include_forks
         self.host_domain = host_domain
+        self.dry_run = dry_run
         LOGGER.debug(
             f"GithubRepoManager initialized with user_login: {user_login}, include_private: {include_private}, include_forks: {include_forks}"
         )
@@ -77,7 +80,7 @@ class GithubRepoManager(SourceHost):
         Fetches the user's repositories from GitHub, optionally including private repositories and forks.
 
         Returns:
-            List[Repository]: A list of Repository objects.
+            list[Repository]: A list of Repository objects.
         """
         if not self.user:
             self.user = self.github.get_user()
@@ -124,9 +127,13 @@ class GithubRepoManager(SourceHost):
         sys.stdout = captured_output = StringIO()
         try:
             if not (self.base_dir / repo.name).exists():
-                message = f"Cloning {repo.html_url} into {self.base_dir}"
-                print(message)
-                g.Repo.clone_from(f"{repo.html_url}.git", self.base_dir / repo.name)
+                if not self.dry_run:
+                    message = f"Cloning {repo.html_url} into {self.base_dir}"
+                    print(message)
+                    g.Repo.clone_from(f"{repo.html_url}.git", self.base_dir / repo.name)
+                else:
+                    message = f"Would have cloned {repo.html_url} into {self.base_dir}"
+                    print(message)
             else:
                 message = f"Repository {repo.name} already exists locally. Skipping clone."
                 print(message)
@@ -166,8 +173,11 @@ class GithubRepoManager(SourceHost):
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
-            print(f"Pulling latest changes in {repo_path}")
-            origin.pull()
+            if not self.dry_run:
+                print(f"Pulling latest changes in {repo_path}")
+                origin.pull()
+            else:
+                print(f"Would have pulled latest changes in {repo_path}")
         except Exception as e:
             print(f"Failed to pull repo at {repo_path}: {e}")
         finally:
@@ -493,9 +503,12 @@ class GithubRepoManager(SourceHost):
 
             if answer["delete"]:
                 try:
-                    # Safely delete the branch
-                    repo.git.branch("-d", branch)
-                    print(f"Deleted branch '{branch}' locally.")
+                    if not self.dry_run:
+                        # Safely delete the branch
+                        repo.git.branch("-d", branch)
+                        print(f"Deleted branch '{branch}' locally.")
+                    else:
+                        print(f"Would have deleted branch '{branch}' locally.")
                 except g.exc.GitCommandError as e:
                     print(f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}")
             else:

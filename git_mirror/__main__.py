@@ -230,6 +230,7 @@ def main(
     parser.add_argument("--target-dir", type=Path, help="The directory where repositories will be cloned or pulled.")
     parser.add_argument("--include-forks", action="store_true", help="Include forked repositories.")
     parser.add_argument("--include-private", action="store_true", help="Include private repositories.")
+    parser.add_argument("--dry-rn", action="store_true", help="Don't change anything.")
     parser.add_argument("--config-path", type=Path, default=default_config_path(), help="Path to the TOML config file.")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Verbose output, repeat for more verbose")
 
@@ -272,6 +273,7 @@ def main(
         domain=domain,
         group_id=group_id,
         logging_level=args.verbose,
+        dry_run=args.dry_rn,
     )
     display_version_check_message()
     return 0

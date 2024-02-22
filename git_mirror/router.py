@@ -32,6 +32,7 @@ def route_to_command(
     domain: Optional[str] = None,
     group_id: Optional[int] = None,
     logging_level: int = 1,
+    dry_run: bool = False,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -49,6 +50,7 @@ def route_to_command(
         domain (str): The GitLab domain.
         group_id (int): The GitLab group id.
         logging_level (int): The logging level.
+        dry_run (bool): Flag to determine whether the operation should be a dry run.
     """
     LOGGER.debug(
         f"Routing... {command} {user_name} {target_dir} {token} {host} {include_private} {include_forks} {config_path} {pypi_owner_name}"
@@ -58,7 +60,7 @@ def route_to_command(
 
     if command == "local-changes":
         base_path = Path(target_dir).expanduser()
-        git_manager = mg.GitManager(base_path)
+        git_manager = mg.GitManager(base_path, dry_run)
         git_manager.check_for_uncommitted_or_unpushed_changes()
     elif command == "init":
         config_manager = mc.ConfigManager(config_path=config_path)
@@ -75,6 +77,7 @@ def route_to_command(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
+                dry_run= dry_run
             )
         elif host in ("gitlab", "selfhosted"):
             base_path = Path(target_dir).expanduser()
@@ -86,6 +89,7 @@ def route_to_command(
                 include_forks=include_forks,
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
+                dry_run=dry_run
             )
         else:
             raise ValueError(f"Unknown host: {host}")
@@ -100,6 +104,7 @@ def route_to_command(
                 include_forks=include_forks,
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
+                dry_run=dry_run
             )
             gl_manager.clone_group(group_id)
         elif command == "clone-all":

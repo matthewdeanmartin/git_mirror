@@ -6,15 +6,16 @@ Supports
 
 - clone all
 - pull all
-- prune unnecessary branches (PENDING)
-- update branch from main (PENDING)
-- checking for unpushed changes.
+- prune unnecessary branches
+- update branch from main
+- checking for unpushed changes
+- copy template files to all repos (PENDING)
 
 Does not support running arbitrary scripts in each repo.
 
 Goal is for tools to be built-in, to be easy.
 
-Also supports parallel execution.  (PENDING)
+Also supports parallel execution for some commands.
 
 ## Installation
 

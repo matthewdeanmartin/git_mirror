@@ -1,7 +1,9 @@
+import sys
+
 import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 import inquirer
 
@@ -26,7 +28,6 @@ def get_command_info(args: argparse.Namespace) -> None:
     commands = [
         ("Initialize Configuration", "init"),
         ("Show Account Info", "show-account"),
-        # ("menu", ""),
         ("List repositories", "list-repos"),
         ("Clone all repositories", "clone-all"),
         ("Run pull for all repositories", "pull-all"),
@@ -38,14 +39,16 @@ def get_command_info(args: argparse.Namespace) -> None:
         ("Report unpublished pypi packages", "pypi-status"),
         ("Update all branches from main", "update-from-main"),
         ("Prune all branches", "prune-all"),
+        ("Main Menu", "Main Menu"),
     ]
 
     categories = {
-        "Repository Commands": ["list-repos", "clone-all", "pull-all", "local-changes", "not-repo"],
-        "Branch Commands": ["update-from-main", "prune-all"],
-        "Configuration Commands": ["init", "sync-config", "list-config"],
-        "PyPI Commands": ["pypi-status"],
-        "Source Control Host Commands": ["show-account"],
+        "Repository Commands": ["list-repos", "clone-all", "pull-all", "local-changes", "not-repo", "Main Menu"],
+        "Branch Commands": ["update-from-main", "prune-all", "Main Menu"],
+        "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
+        "PyPI Commands": ["pypi-status", "Main Menu"],
+        "Source Control Host Commands": ["show-account", "Main Menu"],
+        "Exit" :[]
     }
 
     # Convert commands list to a dictionary for easier lookup
@@ -53,34 +56,35 @@ def get_command_info(args: argparse.Namespace) -> None:
 
     # Category selection
     category_questions = [inquirer.List("category", message="Choose a category", choices=list(categories.keys()))]
-    category_answer = inquirer.prompt(category_questions)
-    selected_category = category_answer["category"]
+    while True:
+        category_answer = inquirer.prompt(category_questions)
+        handle_control_c(category_answer)
+        selected_category = category_answer["category"]
+        if selected_category == "Exit":
+            sys.exit()
 
-    # Command selection within the chosen category
-    command_questions = [
-        inquirer.List(
-            "command",
-            message="Choose a command",
-            choices=[cmd for cmd in commands if cmd[1] in categories[selected_category]],
-        )
-    ]
-    command_answer = inquirer.prompt(command_questions)
-    selected_command = command_answer["command"]
-
-    args.command = selected_command
-
+        # Command selection within the chosen category
+        command_questions = [
+            inquirer.List(
+                "command",
+                message="Choose a command",
+                choices=[cmd for cmd in commands if cmd[1] in categories[selected_category]],
+            )
+        ]
+        command_answer = inquirer.prompt(command_questions)
+        handle_control_c(command_answer)
+        selected_command = command_answer["command"]
+        if selected_command == "Main Menu":
+            continue
+        args.command = selected_command
+        break
     # Right now everything else should come from config and
     # user shouldn't be re-entering all that config on every command.
     return
-    # # Depending on the command, prompt for additional arguments
-    # # This example shows a generic approach; customize it based on your command's needs
-    # args_questions = []
-    # if selected_command in ["init", "clone-all"]:
-    #     args_questions.append(inquirer.Text('user_name', message="Enter your username"))
-    #     # Add other argument prompts as needed
-    #
-    # args_answers = inquirer.prompt(args_questions)
-    #
-    # for key, value in args_answers.items():
-    #     print(key, value)
-    #     setattr(args, key, value)
+
+
+def handle_control_c(answer:Any)->None:
+    if answer is None:
+        print("Exiting.")
+        # This happens when the user hits control-C
+        sys.exit()

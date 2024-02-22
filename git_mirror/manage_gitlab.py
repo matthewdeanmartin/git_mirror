@@ -47,6 +47,7 @@ class GitlabRepoManager(SourceHost):
         host_domain: str = "https://gitlab.com",
         group_id: Optional[int] = None,
         logging_level: int = 1,
+        dry_run: bool = False,
     ):
         """
         Initializes the RepoManager with a GitLab token and a base directory for cloning repositories.
@@ -60,6 +61,7 @@ class GitlabRepoManager(SourceHost):
             host_domain (str): The GitLab host domain.
             group_id (int): The ID of the group to clone repositories from.
             logging_level (int): The logging level.
+            dry_run (bool): Whether the operation should be a dry run.
         """
         self.gitlab = gitlab.Gitlab(host_domain, private_token=token)
         if logging_level >= 2:
@@ -71,6 +73,7 @@ class GitlabRepoManager(SourceHost):
         self.user: Optional[RESTObject] = None
         self.group_id = group_id
         self.verbose_logging = logging_level
+        self.dry_run = dry_run
 
     def _get_user_repos(self) -> list[Project]:
         """
@@ -165,9 +168,12 @@ class GitlabRepoManager(SourceHost):
         try:
             repo_path = self.base_dir / extra_path / project.path
             if not repo_path.exists():
-                print(f"Cloning {project.web_url} into {repo_path}")
-                repo_path.parent.mkdir(parents=True, exist_ok=True)
-                g.Repo.clone_from(project.http_url_to_repo, repo_path)
+                if self.dry_run:
+                    print(f"Would clone {project.web_url} into {repo_path}")
+                else:
+                    print(f"Cloning {project.web_url} into {repo_path}")
+                    repo_path.parent.mkdir(parents=True, exist_ok=True)
+                    g.Repo.clone_from(project.http_url_to_repo, repo_path)
             else:
                 print(f"Project {project.path} already exists locally. Skipping clone.")
         except g.GitCommandError as e:
@@ -230,24 +236,6 @@ class GitlabRepoManager(SourceHost):
             print(f"Failed to list projects for group {group.id}: {e}")
             return []
 
-    #
-    # def _clone_repo(self, project: Project) -> None:
-    #     """
-    #     Clones the given GitLab project into the target directory.
-    #
-    #     Args:
-    #         project (Project): The GitLab project to clone.
-    #     """
-    #     try:
-    #         repo_path = self.base_dir / project.path
-    #         if not repo_path.exists():
-    #             print(f"Cloning {project.web_url} into {repo_path}")
-    #             g.Repo.clone_from(project.http_url_to_repo, repo_path)
-    #         else:
-    #             print(f"Project {project.path} already exists locally. Skipping clone.")
-    #     except g.GitCommandError as e:
-    #         print(f"Failed to clone {project.path}: {e}")
-
     def pull_all(self, single_threaded: bool = False):
         directories = mg.find_git_repos(self.base_dir)
         print(f"Pulling {len(directories)} repositories.")
@@ -272,8 +260,11 @@ class GitlabRepoManager(SourceHost):
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
-            print(f"Pulling latest changes in {repo_path}")
-            origin.pull()
+            if not self.dry_run:
+                print(f"Pulling latest changes in {repo_path}")
+                origin.pull()
+            else:
+                print(f"Would have pulled latest changes in {repo_path}")
         except Exception as e:
             print(f"Failed to pull repo at {repo_path}: {e}")
         finally:
@@ -561,17 +552,19 @@ class GitlabRepoManager(SourceHost):
 
         # Fetch all changes from remote
         origin = repo.remotes.origin
-        origin.fetch()
+        if not self.dry_run:
+            origin.fetch()
 
         # Update each local branch
         for branch in repo.heads:  # branches, but mypy doesn't like the alias
             try:
                 if branch == default_branch:
                     continue
-                # Checkout the branch
-                repo.git.checkout(branch)
-                # Ensure the branch is up to date with its upstream
-                repo.git.pull()
+                if not self.dry_run:
+                    # Checkout the branch
+                    repo.git.checkout(branch)
+                    # Ensure the branch is up to date with its upstream
+                    repo.git.pull()
 
                 if prefer_rebase:
                     # Perform rebase
@@ -579,8 +572,10 @@ class GitlabRepoManager(SourceHost):
                 else:
                     # Perform merge
                     repo.git.merge(f"origin/{default_branch}")
-
-                print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+                if not self.dry_run:
+                    print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+                else:
+                    print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
             except g.exc.GitCommandError as e:
                 print(f"Failed to update branch '{branch}': {e}")
 
@@ -628,9 +623,12 @@ class GitlabRepoManager(SourceHost):
 
             if answer["delete"]:
                 try:
-                    # Safely delete the branch
-                    repo.git.branch("-d", branch)
-                    print(f"Deleted branch '{branch}' locally.")
+                    if not self.dry_run:
+                        # Safely delete the branch
+                        repo.git.branch("-d", branch)
+                        print(f"Deleted branch '{branch}' locally.")
+                    else:
+                        print(f"Would have deleted branch '{branch}' locally.")
                 except g.exc.GitCommandError as e:
                     print(f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}")
             else:
