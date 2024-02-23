@@ -25,9 +25,10 @@ from rich.text import Text
 from termcolor import colored
 
 import git_mirror.manage_git as mg
+from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.manage_pypi import PyPiManager
 from git_mirror.safe_env import load_env
-from git_mirror.types import SourceHost, UpdateBranchArgs
+from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 
 load_env()
 
@@ -640,3 +641,12 @@ class GitlabRepoManager(SourceHost):
         """
         version, revision = self.gitlab.version()
         return {"version": version, "revision": revision}
+
+    def cross_repo_sync_report(self,template_dir:Path):
+        """
+        Reports differences between the template directory and the target directories.
+        """
+        # right now just the easy case of all repos need to match 1 template_dir
+        syncer = TemplateSync(template_dir)
+        directories = mg.find_git_repos(self.base_dir)
+        syncer.report_content_differences(directories)

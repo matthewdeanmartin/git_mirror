@@ -106,6 +106,8 @@ def validate_parse_args(args: argparse.Namespace, first_time_init, use_github) -
                 domain = config_data.host_url
             if not use_github and not args.group_id:
                 group_id = config_data.group_id
+            if not args.global_template_dir:
+                args.global_template_dir = config_data.global_template_dir
     if (
         (not args.user_name or not args.target_dir)
         and not first_time_init
@@ -192,6 +194,9 @@ def main(
         "list-config",
         # Pypi
         "pypi-status",
+        # Template/Cross Repo Sync
+        "cross-repo-report",
+        "cross-repo-sync",
     ]
     parser.add_argument("command", choices=choices, help="The command to execute.")
     host_choices = ["gitlab", "github"]
@@ -233,6 +238,7 @@ def main(
     parser.add_argument("--include-private", action="store_true", help="Include private repositories.")
     parser.add_argument("--dry-rn", action="store_true", help="Don't change anything.")
     parser.add_argument("--config-path", type=Path, default=default_config_path(), help="Path to the TOML config file.")
+    parser.add_argument("--global-template-dir", type=Path, help="Templates for syncing files across repos.")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Verbose output, repeat for more verbose")
 
     # UX - help user who doesn't enter any specific command and is likely just starting out
@@ -279,6 +285,7 @@ def main(
         group_id=group_id,
         logging_level=args.verbose,
         dry_run=args.dry_rn,
+        template_dir=args.global_template_dir,
     )
     display_version_check_message()
     return 0

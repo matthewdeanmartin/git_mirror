@@ -11,7 +11,7 @@ import git_mirror.manage_git as mg
 import git_mirror.manage_github as mgh
 import git_mirror.manage_gitlab as mgl
 from git_mirror.safe_env import load_env
-from git_mirror.types import SourceHost
+from git_mirror.custom_types import SourceHost
 
 load_env()
 
@@ -33,6 +33,7 @@ def route_to_command(
     group_id: Optional[int] = None,
     logging_level: int = 1,
     dry_run: bool = False,
+    template_dir: Optional[Path] = None,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -128,7 +129,12 @@ def route_to_command(
         elif command == "sync-config":
             config_manager = mc.ConfigManager(config_path=config_path)
             config_manager.load_and_sync_config(host, manager.list_repo_names())
+        elif command == "cross-repo-report":
+            manager.cross_repo_sync_report(Path(template_dir))
+        elif command == "cross-repo-sync":
+            raise NotImplementedError("cross-repo-sync is not implemented yet.")
+            # manager.cross_repo_sync(template_dir)
         else:
-            LOGGER.error(f"Unknown command: {command}")
+            print(f"Unknown command: {command}")
     else:
-        LOGGER.error(f"Unknown host: {host}")
+        print(f"Unknown host: {host}")

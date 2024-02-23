@@ -47,6 +47,7 @@ def get_command_info(args: argparse.Namespace) -> None:
         "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
         "PyPI Commands": ["pypi-status", "Main Menu"],
         "Source Control Host Commands": ["show-account", "Main Menu"],
+        "Template Sync": [ "cross-repo-report", "cross-repo-sync","Main Menu"],
         "Exit": [],
     }
 
@@ -83,6 +84,12 @@ def get_command_info(args: argparse.Namespace) -> None:
 
 
 def handle_control_c(answer: Any) -> None:
+    """
+    Handle control-C exit.
+
+    Args:
+        answer (Any): The answer from the user.
+    """
     if answer is None:
         print("Exiting.")
         # This happens when the user hits control-C

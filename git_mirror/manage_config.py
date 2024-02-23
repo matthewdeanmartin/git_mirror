@@ -64,6 +64,7 @@ class ConfigData:
     include_private: bool = False
     include_forks: bool = False
     group_id: int = 0
+    global_template_dir: Optional[Path] = None
 
 
 def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
@@ -223,6 +224,8 @@ class ConfigManager:
                 "target_dir": str(config_section.target_dir),
                 "include_private": config_section.include_private,
                 "include_forks": config_section.include_forks,
+                "pypi_owner_name": config_section.pypi_owner_name,
+                "global_template_dir": config_section.global_template_dir,
             }
             if config_section.group_id:
                 section["group_id"] = config_section.group_id
@@ -269,6 +272,7 @@ class ConfigManager:
                 tool_config.get("include_private", False),
                 tool_config.get("include_forks", False),
                 tool_config.get("group_id", 0),
+                tool_config.get("global_template_dir", None),
             )
             return data
         return None

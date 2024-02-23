@@ -27,9 +27,10 @@ from rich.text import Text
 from termcolor import colored
 
 import git_mirror.manage_git as mg
+from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
 from git_mirror.safe_env import load_env
-from git_mirror.types import SourceHost, UpdateBranchArgs
+from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 
 load_env()
 
@@ -524,3 +525,17 @@ class GithubRepoManager(SourceHost):
         data = response.json()
         versions_supported = data["info"]["version"]
         return {"version": versions_supported}
+
+    def cross_repo_sync_report(self,template_dir:Path)->None:
+        """
+        Reports differences between the template directory and the target directories.
+        """
+        if not template_dir or not template_dir.exists():
+            print(f"Template directory {template_dir} does not exist.")
+            return
+        # right now just the easy case of all repos need to match 1 template_dir
+        print(f"Reporting differences between the template directory and the target directories.")
+        syncer = TemplateSync(template_dir)
+        directories = mg.find_git_repos(self.base_dir)
+        print(f"Found {len(directories)} repositories.")
+        syncer.report_content_differences(directories)

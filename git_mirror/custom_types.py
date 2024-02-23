@@ -86,3 +86,8 @@ class SourceHost(Protocol):
         """
         Return API version information.
         """
+
+    def cross_repo_sync_report(self,template_dir:Path):
+        """
+        Compares the template directory to the target directories and reports differences.
+        """
