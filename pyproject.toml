@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git_mirror"
-version = "0.3.2"
+version = "0.3.3"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
 keywords = ["git", "gitlab", "github", "polyrepo" ]

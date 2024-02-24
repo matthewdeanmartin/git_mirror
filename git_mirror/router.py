@@ -11,6 +11,7 @@ import git_mirror.manage_git as mg
 import git_mirror.manage_github as mgh
 import git_mirror.manage_gitlab as mgl
 from git_mirror.custom_types import SourceHost
+from git_mirror.manage_poetry import PoetryManager
 from git_mirror.safe_env import load_env
 
 load_env()
@@ -96,7 +97,9 @@ def route_to_command(
         else:
             raise ValueError(f"Unknown host: {host}")
 
-        if command == "clone-all" and host in ("gitlab", "selfhosted") and group_id is not None:
+        if command == "clone-all" and host in ("gitlab", "selfhosted") and group_id is not None and group_id != 0:
+            # TODO: confusion with clone all by user name and by group id.
+            # If they are both filled in, then what does the user want?
             # hack until I support cloning by github org or something.
             gl_manager = mgl.GitlabRepoManager(
                 token,
@@ -145,6 +148,18 @@ def route_to_command(
                 print("Template directory is required for cross-repo-init")
                 return
             manager.cross_repo_init(template_dir)
+        elif command == "poetry-relock":
+            git_manager = mg.GitManager(base_path, dry_run)
+            poetry_manager = PoetryManager(manager)
+            for repo in git_manager.local_repos_with_file_in_root("pyproject.toml"):
+                poetry_manager.update_dependencies(
+                    main_branch="TODO-lookup",
+                    dependency_update_branch="poetry-update",
+                    reviewer="TODO-config",
+                    project_id=0,  # TODO- config
+                    repo_name=repo.name,  # Github only
+                    user="TODO-lookup",
+                )
         else:
             print(f"Unknown command: {command}")
     else:

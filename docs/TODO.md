@@ -1,3 +1,8 @@
+## DX
+- always output some sort of command, unless `--quiet`
+- support a `-y` flag for auto yes
+- 
+
 ## New commands
 
 - cross-repo-* sync etc. based on 2nd config

@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-
 from git_mirror.manage_config import ConfigData, ask_for_section
 
 # Mock responses for inquirer.prompt to simulate user input

@@ -111,7 +111,8 @@ class GithubRepoManager(SourceHost):
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 results = pool.map(self._clone_repo, repos)
                 for output in results:
-                    print(output, end="")
+                    if output:
+                        print(output, end="")
 
     def _clone_repo(self, repo: ghr.Repository) -> str:
         """
@@ -156,7 +157,8 @@ class GithubRepoManager(SourceHost):
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 results = pool.map(self.pull_repo, (print(repo_dir) or repo_dir for repo_dir in directories))
                 for output in results:
-                    print(output, end="")
+                    if output:
+                        print(output, end="")
 
     def pull_repo(self, repo_path: Path) -> str:
         """
@@ -417,7 +419,9 @@ class GithubRepoManager(SourceHost):
                     (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase) for repo_dir in directories),
                 )
                 for output in results:
-                    print(output, end="")
+                    if output:
+                        if output:
+                            print(output, end="")
 
     # def _update_local_branches(self, repo_path: Path, github_repo_full_name: str, prefer_rebase: bool = False):
     def _update_local_branches(self, args: UpdateBranchArgs):
@@ -428,34 +432,42 @@ class GithubRepoManager(SourceHost):
             args: UpdateBranchArgs
         """
         repo_path, github_repo_full_name, prefer_rebase = args.repo_path, args.github_repo_full_name, args.prefer_rebase
+        github_repo_full_name = self.user_login + "/" + github_repo_full_name
         repo = g.Repo(str(repo_path))
-        github_repo = self.github.get_repo(github_repo_full_name)
-
+        try:
+            github_repo = self.github.get_repo(github_repo_full_name)
+        except gh.GithubException as e:
+            print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}")
+            return
         # Get the default branch name from GitHub
         default_branch = github_repo.default_branch
 
         # Fetch all changes from remote
         origin = repo.remotes.origin
-        origin.fetch()
+        if not self.dry_run:
+            origin.fetch()
 
         # Update each local branch
         for branch in repo.heads:  # branches, but mypy doesn't like the alias
             try:
-                if branch == default_branch:
+                if branch.name == default_branch:
                     continue
-                # Checkout the branch
-                repo.git.checkout(branch)
-                # Ensure the branch is up to date with its upstream
-                repo.git.pull()
+                if not self.dry_run:
+                    # Checkout the branch
+                    repo.git.checkout(branch)
+                    # Ensure the branch is up to date with its upstream
+                    repo.git.pull()
 
-                if prefer_rebase:
-                    # Perform rebase
-                    repo.git.rebase(f"origin/{default_branch}")
+                    if prefer_rebase:
+                        # Perform rebase
+                        repo.git.rebase(f"origin/{default_branch}")
+                    else:
+                        # Perform merge
+                        repo.git.merge(f"origin/{default_branch}")
+
+                    print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
                 else:
-                    # Perform merge
-                    repo.git.merge(f"origin/{default_branch}")
-
-                print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+                    print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
             except g.exc.GitCommandError as e:
                 print(f"Failed to update branch '{branch}': {e}")
 
@@ -478,7 +490,11 @@ class GithubRepoManager(SourceHost):
         except g.InvalidGitRepositoryError:
             print(f"{repo_path} is not a valid Git repository.")
             return
-        github_repo = self.github.get_repo(github_repo_full_name)
+        try:
+            github_repo = self.github.get_repo(github_repo_full_name)
+        except gh.GithubException as e:
+            print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}")
+            return
 
         # Get a list of all branch names on GitHub
         remote_branches = [branch.name for branch in github_repo.get_branches()]
@@ -490,7 +506,7 @@ class GithubRepoManager(SourceHost):
         branches_to_consider = [branch for branch in local_branches if branch not in remote_branches]
 
         if not branches_to_consider:
-            print("No local branches exist that are missing on GitHub.")
+            print(f"For {github_repo_full_name}, no local branches exist that are missing on GitHub.")
             return
 
         # Prompt user for each branch that doesn't exist on GitHub

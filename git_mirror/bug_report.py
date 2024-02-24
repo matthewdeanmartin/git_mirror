@@ -84,6 +84,8 @@ class BugReporter:
         to report it as a bug, and creates an issue on GitHub if permission is granted and no
         existing report is found.
         """
+        if isinstance(exc_value, KeyboardInterrupt):
+            return
         # exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
         issue_body = self.mask_secrets(f"An exception occurred:\n{''.join(traceback_details)}")

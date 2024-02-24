@@ -121,7 +121,8 @@ class GitlabRepoManager(SourceHost):
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 results = pool.map(self._clone_repo, repos)
                 for output in results:
-                    print(output, end="")
+                    if output:
+                        print(output, end="")
 
     def clone_group(self, group_id: int):
         """
@@ -130,6 +131,8 @@ class GitlabRepoManager(SourceHost):
         Args:
             group_id (int): The ID of the group to clone repositories from.
         """
+        if group_id == 0:
+            raise ValueError("Group ID cannot be 0.")
         print(f"Cloning all repositories for group with ID {group_id}")
         self._clone_group_repos(group_id)
 
@@ -140,12 +143,17 @@ class GitlabRepoManager(SourceHost):
         Args:
             group_id (int): The ID of the group.
         """
+        if group_id == 0:
+            raise ValueError("Group ID cannot be 0.")
+
         groups_to_process = [group_id]
 
         while groups_to_process:
             current_group_id = groups_to_process.pop(0)
             group = self._get_group_by_id(current_group_id)
             # subgroups = self._get_subgroups(group)
+            if not group:
+                print(f"Group with ID {current_group_id} not found. Skipping.")
             repos = self._get_repos(group)
 
             for repo in repos:
@@ -219,7 +227,7 @@ class GitlabRepoManager(SourceHost):
             print(f"Failed to list subgroups for group {group.id}: {e}")
             return []
 
-    def _get_repos(self, group):
+    def _get_repos(self, group: gitlab.v4.objects.Group) -> list[gitlab.v4.objects.Project]:
         """
         Fetches all repositories (projects) for a given GitLab group, including those in its subgroups.
 
@@ -232,7 +240,7 @@ class GitlabRepoManager(SourceHost):
         try:
             # Retrieve all projects for the group, including those in subgroups
             projects = group.projects.list(include_subgroups=True, all=True)
-            return projects
+            return projects  # type: ignore
         except gitlab.exceptions.GitlabListError as e:
             print(f"Failed to list projects for group {group.id}: {e}")
             return []
@@ -247,7 +255,8 @@ class GitlabRepoManager(SourceHost):
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 results = pool.map(self.pull_repo, (print(repo_dir) or repo_dir for repo_dir in directories))
                 for output in results:
-                    print(output, end="")
+                    if output:
+                        print(output, end="")
 
     def pull_repo(self, repo_path: Path) -> str:
         """
@@ -536,7 +545,8 @@ class GitlabRepoManager(SourceHost):
                     (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase) for repo_dir in directories),
                 )
                 for output in results:
-                    print(output, end="")
+                    if output:
+                        print(output, end="")
 
     def _update_local_branches(self, args: UpdateBranchArgs):
         """
@@ -565,7 +575,7 @@ class GitlabRepoManager(SourceHost):
         # Update each local branch
         for branch in repo.heads:  # branches, but mypy doesn't like the alias
             try:
-                if branch == default_branch:
+                if branch.name == default_branch:
                     continue
                 if not self.dry_run:
                     # Checkout the branch

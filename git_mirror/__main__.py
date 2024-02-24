@@ -237,7 +237,7 @@ def main(
     parser.add_argument("--target-dir", type=Path, help="The directory where repositories will be cloned or pulled.")
     parser.add_argument("--include-forks", action="store_true", help="Include forked repositories.")
     parser.add_argument("--include-private", action="store_true", help="Include private repositories.")
-    parser.add_argument("--dry-rn", action="store_true", help="Don't change anything.")
+    parser.add_argument("--dry-run", action="store_true", help="Don't change anything.")
     parser.add_argument("--config-path", type=Path, default=default_config_path(), help="Path to the TOML config file.")
     parser.add_argument("--global-template-dir", type=Path, help="Templates for syncing files across repos.")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Verbose output, repeat for more verbose")
@@ -268,8 +268,9 @@ def main(
     if return_value != 0:
         return return_value
 
-    if os.environ.get("GITHUB_ACCESS_TOKEN") and token and "PYTEST_CURRENT_TEST" not in os.environ:
-        reporter = BugReporter(token, "matthewdeanmartin/git_mirror")
+    if os.environ.get("GITHUB_ACCESS_TOKEN") and "PYTEST_CURRENT_TEST" not in os.environ:
+        # TODO: make this lazy.
+        reporter = BugReporter(os.environ.get("GITHUB_ACCESS_TOKEN", ""), "matthewdeanmartin/git_mirror")
         sys.excepthook = reporter.handle_exception_and_report
 
     router.route_to_command(
@@ -285,7 +286,7 @@ def main(
         domain=domain,
         group_id=group_id,
         logging_level=args.verbose,
-        dry_run=args.dry_rn,
+        dry_run=args.dry_run,
         template_dir=args.global_template_dir,
     )
     display_version_check_message()

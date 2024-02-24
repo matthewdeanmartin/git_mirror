@@ -74,6 +74,25 @@ class GitManager:
         """
         self.base_dir = base_dir
 
+    def local_repos_with_file_in_root(self, file_name: str) -> list[Path]:
+        """
+        Finds local git repositories within the base directory that have a specific file in their root.
+
+        Args:
+            file_name (str): The name of the file to search for in the root of each repository.
+
+        Returns:
+            List[Path]: A list of Paths to the repositories that contain the specified file in their root directory.
+        """
+        found_repos = []
+        for repo_dir in self.base_dir.iterdir():
+            if repo_dir.is_dir() and (repo_dir / ".git").exists():
+                target_file_path = repo_dir / file_name
+                if target_file_path.exists():
+                    LOGGER.info(f"Found {file_name} in {repo_dir}")
+                    found_repos.append(repo_dir)
+        return found_repos
+
     def check_for_uncommitted_or_unpushed_changes(self) -> list[str]:
         """
         Checks all local repositories for uncommitted changes or commits that haven't been pushed to the remote.
