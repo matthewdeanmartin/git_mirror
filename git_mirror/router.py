@@ -10,8 +10,8 @@ import git_mirror.manage_config as mc
 import git_mirror.manage_git as mg
 import git_mirror.manage_github as mgh
 import git_mirror.manage_gitlab as mgl
-from git_mirror.safe_env import load_env
 from git_mirror.custom_types import SourceHost
+from git_mirror.safe_env import load_env
 
 load_env()
 
@@ -52,6 +52,7 @@ def route_to_command(
         group_id (int): The GitLab group id.
         logging_level (int): The logging level.
         dry_run (bool): Flag to determine whether the operation should be a dry run.
+        template_dir (Path): The directory containing the templates to sync.
     """
     LOGGER.debug(
         f"Routing... {command} {user_name} {target_dir} {token} {host} {include_private} {include_forks} {config_path} {pypi_owner_name}"
@@ -130,10 +131,20 @@ def route_to_command(
             config_manager = mc.ConfigManager(config_path=config_path)
             config_manager.load_and_sync_config(host, manager.list_repo_names())
         elif command == "cross-repo-report":
-            manager.cross_repo_sync_report(Path(template_dir))
+            if not template_dir:
+                print("Template directory is required for cross-repo-report")
+                return
+            manager.cross_repo_sync_report(template_dir)
         elif command == "cross-repo-sync":
-            raise NotImplementedError("cross-repo-sync is not implemented yet.")
-            # manager.cross_repo_sync(template_dir)
+            if not template_dir:
+                print("Template directory is required for cross-repo-sync")
+                return
+            manager.cross_repo_sync(template_dir)
+        elif command == "cross-repo-init":
+            if not template_dir:
+                print("Template directory is required for cross-repo-init")
+                return
+            manager.cross_repo_init(template_dir)
         else:
             print(f"Unknown command: {command}")
     else:

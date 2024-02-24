@@ -87,7 +87,18 @@ class SourceHost(Protocol):
         Return API version information.
         """
 
-    def cross_repo_sync_report(self,template_dir:Path):
+    def cross_repo_sync_report(self, template_dir: Path):
         """
         Compares the template directory to the target directories and reports differences.
         """
+
+    def cross_repo_init(self, template_dir: Path):
+        pass
+
+    def cross_repo_sync(self, template_dir: Path):
+        pass
+
+    def merge_request(
+        self, source_branch: str, target_branch: str, title: str, reviewer: str, project_id: int, repo_name: str
+    ):
+        pass

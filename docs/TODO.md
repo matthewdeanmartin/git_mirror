@@ -1,8 +1,10 @@
 ## New commands
 
-- copy-templates (needs functioning tagging)
+- cross-repo-* sync etc. based on 2nd config
 - merge-each (to prod-in-flight branch)
 - push-release-tag-to-all (e.g. for big bang release)
+- poetry re-lock/update
+- rebuild-all (with time delay?)
 
 ## Status command
 

@@ -38,6 +38,9 @@ def get_command_info(args: argparse.Namespace) -> None:
         ("Report unpublished pypi packages", "pypi-status"),
         ("Update all branches from main", "update-from-main"),
         ("Prune all branches", "prune-all"),
+        ("Cross-repo report", "cross-repo-report"),
+        ("Cross-repo sync", "cross-repo-sync"),
+        ("Cross-repo Template Initialization", "cross-repo-init"),
         ("Main Menu", "Main Menu"),
     ]
 
@@ -47,7 +50,7 @@ def get_command_info(args: argparse.Namespace) -> None:
         "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
         "PyPI Commands": ["pypi-status", "Main Menu"],
         "Source Control Host Commands": ["show-account", "Main Menu"],
-        "Template Sync": [ "cross-repo-report", "cross-repo-sync","Main Menu"],
+        "Template Sync": ["cross-repo-report", "cross-repo-sync", "cross-repo-init", "Main Menu"],
         "Exit": [],
     }
 

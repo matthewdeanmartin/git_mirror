@@ -26,9 +26,9 @@ from termcolor import colored
 
 import git_mirror.manage_git as mg
 from git_mirror.cross_repo_sync import TemplateSync
+from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 from git_mirror.manage_pypi import PyPiManager
 from git_mirror.safe_env import load_env
-from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 
 load_env()
 
@@ -485,9 +485,8 @@ class GitlabRepoManager(SourceHost):
         Fetches and prints a summary of the user's Gitlab account.
         """
         try:
-            if not self.user:
-                list_info = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
-                self.user = self.gitlab.users.get(list_info.id)
+            # double assign to make mypy happy
+            self.user = self.load_user()
             print(self.user)
 
             summary = Text.assemble(
@@ -509,6 +508,13 @@ class GitlabRepoManager(SourceHost):
             console.print(Panel(summary, title="GitLab User Summary", subtitle=self.user.username))
         except Exception as e:
             print("Failed to fetch GitLab user info: %s", str(e))
+
+    def load_user(self) -> RESTObject:
+        if not self.user:
+            list_info = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
+            self.user = self.gitlab.users.get(list_info.id)
+        # to make mypy happy
+        return self.user
 
     def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
         """
@@ -642,11 +648,55 @@ class GitlabRepoManager(SourceHost):
         version, revision = self.gitlab.version()
         return {"version": version, "revision": revision}
 
-    def cross_repo_sync_report(self,template_dir:Path):
+    def cross_repo_sync_report(self, template_dir: Path) -> None:
         """
         Reports differences between the template directory and the target directories.
         """
+        if not template_dir or not template_dir.exists():
+            print(f"Template directory {template_dir} does not exist.")
+            return
         # right now just the easy case of all repos need to match 1 template_dir
+        print("Reporting differences between the template directory and the target directories.")
         syncer = TemplateSync(template_dir)
         directories = mg.find_git_repos(self.base_dir)
+        print(f"Found {len(directories)} repositories.")
         syncer.report_content_differences(directories)
+
+    def cross_repo_init(self, template_dir: Path):
+        if not template_dir or not template_dir.exists():
+            print(f"Template directory {template_dir} does not exist.")
+            return
+        syncer = TemplateSync(template_dir, use_default=True)
+        directories = mg.find_git_repos(self.base_dir)
+        print(f"Found {len(directories)} repositories.")
+        syncer.write_template_map(directories)
+        print(f"Initialized template map for {len(directories)} repositories.")
+
+    def cross_repo_sync(self, template_dir: Path):
+        if not template_dir or not template_dir.exists():
+            print(f"Template directory {template_dir} does not exist.")
+            return
+        syncer = TemplateSync(template_dir, use_default=True)
+        directories = mg.find_git_repos(self.base_dir)
+        print(f"Found {len(directories)} repositories.")
+        syncer.sync_template(directories)
+        print(f"Synchronized {len(directories)} repositories with the template directory.")
+
+    def merge_request(
+        self, source_branch: str, target_branch: str, title: str, reviewer: str, project_id: int, repo_name: str
+    ):
+        if not self.user:
+            self.user = self.load_user()
+        project = self.gitlab.projects.get(project_id)
+        reviewer_object = self.gitlab.users.list(username=reviewer, get_all=True)[0]  # type: ignore
+        mr = project.mergerequests.create(
+            {
+                "source_branch": source_branch,
+                "target_branch": target_branch,
+                "title": title,
+                "remove_source_branch": True,
+                "assignee_ids": [self.user.id],
+                "reviewer_ids": [reviewer_object.id],
+            }
+        )
+        mr.merge(merge_when_pipeline_succeeds=True, should_remove_source_branch=True, squash=True)

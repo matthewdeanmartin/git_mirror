@@ -197,6 +197,7 @@ def main(
         # Template/Cross Repo Sync
         "cross-repo-report",
         "cross-repo-sync",
+        "cross-repo-init",
     ]
     parser.add_argument("command", choices=choices, help="The command to execute.")
     host_choices = ["gitlab", "github"]

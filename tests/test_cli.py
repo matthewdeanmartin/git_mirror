@@ -29,6 +29,7 @@ def test_cli_clone_all(mock_main_github, cli_args):
     argv = ["clone-all"] + cli_args
     with patch("sys.argv", ["git_mirror"] + argv):
         assert main() == 0
+    # This test is brittle and fails every time this signature changes
     mock_main_github.assert_called_once_with(
         command="clone-all",
         config_path=ANY,
@@ -37,6 +38,7 @@ def test_cli_clone_all(mock_main_github, cli_args):
         include_private=False,
         logging_level=0,
         target_dir=ANY,
+        template_dir=None,
         token="testtoken",
         pypi_owner_name=None,
         user_name="testuser",

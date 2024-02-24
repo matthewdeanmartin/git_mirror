@@ -28,9 +28,9 @@ from termcolor import colored
 
 import git_mirror.manage_git as mg
 from git_mirror.cross_repo_sync import TemplateSync
+from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
 from git_mirror.safe_env import load_env
-from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 
 load_env()
 
@@ -526,7 +526,7 @@ class GithubRepoManager(SourceHost):
         versions_supported = data["info"]["version"]
         return {"version": versions_supported}
 
-    def cross_repo_sync_report(self,template_dir:Path)->None:
+    def cross_repo_sync_report(self, template_dir: Path) -> None:
         """
         Reports differences between the template directory and the target directories.
         """
@@ -534,8 +534,64 @@ class GithubRepoManager(SourceHost):
             print(f"Template directory {template_dir} does not exist.")
             return
         # right now just the easy case of all repos need to match 1 template_dir
-        print(f"Reporting differences between the template directory and the target directories.")
+        print("Reporting differences between the template directory and the target directories.")
         syncer = TemplateSync(template_dir)
         directories = mg.find_git_repos(self.base_dir)
         print(f"Found {len(directories)} repositories.")
         syncer.report_content_differences(directories)
+
+    def cross_repo_init(self, template_dir: Path):
+        if not template_dir or not template_dir.exists():
+            print(f"Template directory {template_dir} does not exist.")
+            return
+        syncer = TemplateSync(template_dir, use_default=True)
+        directories = mg.find_git_repos(self.base_dir)
+        print(f"Found {len(directories)} repositories.")
+        syncer.write_template_map(directories)
+        print(f"Initialized template map for {len(directories)} repositories.")
+
+    def cross_repo_sync(self, template_dir: Path):
+        if not template_dir or not template_dir.exists():
+            print(f"Template directory {template_dir} does not exist.")
+            return
+        syncer = TemplateSync(template_dir, use_default=True)
+        directories = mg.find_git_repos(self.base_dir)
+        print(f"Found {len(directories)} repositories.")
+        syncer.sync_template(directories)
+        print(f"Synchronized {len(directories)} repositories with the template directory.")
+
+    def merge_request(
+        self, source_branch: str, target_branch: str, title: str, reviewer: str, project_id: int, repo_name: str
+    ) -> None:
+        """
+        Create a pull request on GitHub and assign a reviewer.
+
+        Args:
+            source_branch: The name of the source branch for the pull request.
+            target_branch: The name of the target branch for the pull request.
+            title: The title of the pull request.
+            reviewer: GitHub username of the reviewer.
+            project_id: The ID of the GitLab project (unused here).
+            repo_name: The name of the repository, e.g., "user/repo".
+
+        Returns:
+            None
+        """
+        repo = self.github.get_repo(repo_name)
+        if not self.user:
+            self.user = self.github.get_user()
+
+        # Create pull request
+        pull_request = repo.create_pull(
+            title=title,
+            body=title,  # Customize the body message as needed
+            head=source_branch,
+            base=target_branch,
+            maintainer_can_modify=True,  # Allows maintainer to modify the PR if needed
+        )
+
+        # Assign user and request a review
+        pull_request.assignees.append(self.user)  # type: ignore
+        pull_request.create_review_request(reviewers=[reviewer])
+
+        print(f"Pull request created: {pull_request.html_url}")

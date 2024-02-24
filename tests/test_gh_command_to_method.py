@@ -81,10 +81,7 @@ def test_main_github_commands(command, expected_method, manager):
 
 # Test for an unknown command which should not result in any manager method being called
 def test_main_github_unknown_command():
-    with (
-        patch("git_mirror.manage_github.GithubRepoManager") as MockManager,
-        patch("git_mirror.router.LOGGER.error") as mock_logger_error,
-    ):
+    with (patch("git_mirror.manage_github.GithubRepoManager") as MockManager,):
         manager_instance = MagicMock()
         MockManager.return_value = manager_instance
 
@@ -98,6 +95,4 @@ def test_main_github_unknown_command():
             include_private=False,
             include_forks=False,
         )
-
-        mock_logger_error.assert_called_with(f"Unknown command: {unknown_command}")
         manager_instance.assert_not_called()

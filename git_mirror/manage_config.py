@@ -92,7 +92,7 @@ def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
     target_dir = Path(answers["target_dir"]).expanduser()
     while not target_dir.exists():
         answer = inquirer.prompt(
-            [inquirer.Confirm("create_target_dir", "Target directory does not exist. Create it?", default=True)]
+            [inquirer.Confirm("create_target_dir", message="Target directory does not exist. Create it?", default=True)]
         )
         print(answer)
         if answer["create_target_dir"]:
