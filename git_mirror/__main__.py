@@ -42,9 +42,10 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     Returns:
         tuple[Optional[str], int]: The token and return value.
     """
+    host = args.host if hasattr(args, "host") else None
     # HACK: This needs to be redone somehow.
     config_manager = ConfigManager(args.config_path)
-    invalid_or_missing_host = not args.host or args.host not in ("github", "gitlab", "selfhosted")
+    invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
     needs_host = args.command not in ("init", "list-config")
     if invalid_or_missing_host and needs_host:
         print(

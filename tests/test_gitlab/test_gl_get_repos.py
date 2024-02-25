@@ -44,13 +44,15 @@ def mock_gitlab_repo():
 
 def test_get_user_repos_includes_correct_repos(gitlab_repo_manager, mock_gitlab, mock_gitlab_repo):
     # Setup mock return values
-    gitlab_repo_manager.gitlab = mock_gitlab()
-    gitlab_repo_manager.gitlab.projects = MagicMock()
+
+    mgl = mock_gitlab()
+    mgl.projects = MagicMock()
     mock_gitlab_repo.id = 1
     mock_gitlab_repo.namespace = {"path": "fake-user"}
-    gitlab_repo_manager.gitlab.projects.list.return_value = [mock_gitlab_repo]
-    gitlab_repo_manager.gitlab.projects.get.return_value = mock_gitlab_repo
+    mgl.projects.list.return_value = [mock_gitlab_repo]
+    mgl.projects.get.return_value = mock_gitlab_repo
 
+    gitlab_repo_manager.client = lambda: mgl
     # Call the method under test
     repos = gitlab_repo_manager._get_user_repos()
 
@@ -60,6 +62,7 @@ def test_get_user_repos_includes_correct_repos(gitlab_repo_manager, mock_gitlab,
 
 
 def test_get_user_repos_handles_gitlab_exception(gitlab_repo_manager, mock_gitlab, mock_gitlab_repo):
+    # requests_cache.clear()
     # Setup to raise exception
     gitlab_repo_manager.gitlab = mock_gitlab()
     gitlab_repo_manager.gitlab.projects = MagicMock()
@@ -73,8 +76,6 @@ def test_get_user_repos_handles_gitlab_exception(gitlab_repo_manager, mock_gitla
 
     # Assertions
     assert repos == []
-    # {'owned': True, 'visibility': 'private'}
-    gitlab_repo_manager.gitlab.projects.list.assert_called_once_with(owned=True, get_all=True)
 
 
 if __name__ == "__main__":

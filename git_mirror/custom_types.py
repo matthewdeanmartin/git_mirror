@@ -4,7 +4,7 @@ Mypy types.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Protocol
+from typing import Any, ContextManager, Optional, Protocol
 
 from rich.table import Table
 
@@ -14,6 +14,7 @@ class UpdateBranchArgs:
     repo_path: Path
     github_repo_full_name: str
     prefer_rebase: bool
+    lock: ContextManager[Any]
 
 
 class SourceHost(Protocol):
@@ -27,12 +28,12 @@ class SourceHost(Protocol):
     def pull_all(self, single_threaded: bool = False):
         pass
 
-    def pull_repo(self, repo_path: Path) -> str:
+    def pull_repo(self, args: tuple[Path, ContextManager[Any]]) -> None:
         """
         Performs a git pull operation on the repository at the given path.
 
         Args:
-            repo_path (Path): The path to the repository.
+            args (tuple[Path, ContextManager[Any]]): A tuple containing the path to the repository and a lock.
         """
 
     def not_repo(self) -> tuple[int, int, int, int]:

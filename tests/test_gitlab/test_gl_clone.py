@@ -4,6 +4,7 @@ import pytest
 from git.exc import GitCommandError
 from gitlab.v4.objects import Project
 
+from git_mirror.dummies import Dummy
 from git_mirror.manage_gitlab import GitlabRepoManager
 
 
@@ -65,7 +66,9 @@ def test_clone_repo_already_exists(mock_clone_from, gitlab_repo_manager, mock_gi
     (tmp_path / mock_gitlab_repo.path / ".git").mkdir()
 
     # Execute
-    gitlab_repo_manager._clone_repo(mock_gitlab_repo)
+
+    mock_gitlab_repo = gitlab_repo_manager._thread_safe_repos([mock_gitlab_repo])[0]
+    gitlab_repo_manager._clone_repo((mock_gitlab_repo, Dummy()))
 
     # Assert
     mock_clone_from.assert_not_called()
@@ -74,18 +77,20 @@ def test_clone_repo_already_exists(mock_clone_from, gitlab_repo_manager, mock_gi
 @patch("git.Repo.clone_from")
 def test_clone_repo_clone_success(mock_clone_from, gitlab_repo_manager, mock_gitlab_repo):
     # Execute
-    gitlab_repo_manager._clone_repo(mock_gitlab_repo)
+    mock_gitlab_repo = gitlab_repo_manager._thread_safe_repos([mock_gitlab_repo])[0]
+    gitlab_repo_manager._clone_repo((mock_gitlab_repo, Dummy()))
 
     # Assert
     mock_clone_from.assert_called_once_with(
-        f"{mock_gitlab_repo.html_url}", gitlab_repo_manager.base_dir / mock_gitlab_repo.path
+        f"{mock_gitlab_repo['http_url_to_repo']}", gitlab_repo_manager.base_dir / mock_gitlab_repo["path"]
     )
 
 
 @patch("git.Repo.clone_from", side_effect=GitCommandError("clone", "error"))
 def test_clone_repo_clone_failure(mock_clone_from, gitlab_repo_manager, mock_gitlab_repo):
     # Execute
-    gitlab_repo_manager._clone_repo(mock_gitlab_repo)
+    mock_gitlab_repo = gitlab_repo_manager._thread_safe_repos([mock_gitlab_repo])[0]
+    gitlab_repo_manager._clone_repo((mock_gitlab_repo, Dummy()))
 
     # Assert
     mock_clone_from.assert_called_once()

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git_mirror"
-version = "0.3.4"
+version = "0.3.5"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
 keywords = ["git", "gitlab", "github", "polyrepo" ]
@@ -187,6 +187,7 @@ ignore = [
     # only track structural problems with docstrings, not whitespace, nor missing
     "D200", "D212", "D415", "D411", "D205", "D102", "D103", "D100", "D107", "D101", "D104", "D105",
     "UP007", "UP038", # Not sure if | is well supported in lowever versions of python
+    "UP035"
 ]
 
 # Exclude a variety of commonly ignored directories.

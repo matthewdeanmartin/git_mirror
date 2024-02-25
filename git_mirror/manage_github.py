@@ -7,11 +7,9 @@ This should use manage_config, manage_git, manage_pypi for things that are not g
 import asyncio
 import logging
 import multiprocessing
-import sys
 from datetime import datetime
-from io import StringIO
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, ContextManager, Optional, Union
 
 import git as g
 import github as gh
@@ -29,6 +27,7 @@ from termcolor import colored
 import git_mirror.manage_git as mg
 from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
+from git_mirror.dummies import Dummy
 from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
 from git_mirror.safe_env import load_env
 
@@ -61,7 +60,8 @@ class GithubRepoManager(SourceHost):
             host_domain (str): The domain of the GitHub instance.
             dry_run (bool): Whether to perform a dry run.
         """
-        self.github = gh.Github(token)
+        # self.client() = gh.Github(token)
+        self.token = token
         self.base_dir = base_dir
         # cache user
         self.user: Optional[Union[ghnu.NamedUser, ghau.AuthenticatedUser]] = None
@@ -74,6 +74,23 @@ class GithubRepoManager(SourceHost):
             f"GithubRepoManager initialized with user_login: {user_login}, include_private: {include_private}, include_forks: {include_forks}"
         )
 
+    def client(self) -> gh.Github:
+        return gh.Github(self.token)
+
+    def _thread_safe_repos(self, data: list[ghr.Repository]) -> list[dict[str, Any]]:
+        repos = []
+        for repo in data:
+            repos.append(
+                {
+                    "name": repo.name,
+                    "description": repo.description or "No description",
+                    "private": "Yes" if repo.private else "No",
+                    "fork": "Yes" if repo.fork else "No",
+                    "html_url": repo.html_url,
+                }
+            )
+        return repos
+
     def _get_user_repos(
         self,
     ) -> list[ghr.Repository]:
@@ -84,7 +101,7 @@ class GithubRepoManager(SourceHost):
             list[Repository]: A list of Repository objects.
         """
         if not self.user:
-            self.user = self.github.get_user()
+            self.user = self.client().get_user()
 
         try:
             repos = []
@@ -104,89 +121,88 @@ class GithubRepoManager(SourceHost):
     def clone_all(self, single_threaded: bool = False):
         repos = self._get_user_repos()
         print(f"Cloning {len(repos)} repositories.")
-        if single_threaded or len(repos) < 4:
-            for repo in repos:
-                print(self._clone_repo(repo))
+        if single_threaded or len(repos) < 4:  # or features.CACHING:
+            for repo in self._thread_safe_repos(repos):
+                self._clone_repo((repo, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-                results = pool.map(self._clone_repo, repos)
+                manager = multiprocessing.Manager()
+                lock = manager.Lock()
+                results = pool.map(self._clone_repo, [(repo, lock) for repo in self._thread_safe_repos(repos)])
                 for output in results:
                     if output:
                         print(output, end="")
 
-    def _clone_repo(self, repo: ghr.Repository) -> str:
+    def _clone_repo(self, repo_args: tuple[dict[str, Any], ContextManager[Any]]) -> None:
         """
         Clones the given repository into the target directory.
 
         Args:
-            repo (Repository): The repository to clone.
+            repo_args (tuple[dict[str, Any], ContextManager[Any]]): A tuple containing the repository data and a lock.
 
         Returns:
         str: The captured print output.
         """
-        # Redirect stdout to capture print output
-        old_stdout = sys.stdout
-        sys.stdout = captured_output = StringIO()
+        repo, lock = repo_args
         try:
-            if not (self.base_dir / repo.name).exists():
+            if not (self.base_dir / repo["name"]).exists():
                 if not self.dry_run:
-                    message = f"Cloning {repo.html_url} into {self.base_dir}"
-                    print(message)
-                    g.Repo.clone_from(f"{repo.html_url}.git", self.base_dir / repo.name)
+                    message = f"Cloning {repo['html_url']} into {self.base_dir}"
+                    with lock:
+                        print(message)
+                    g.Repo.clone_from(f"{repo['html_url']}.git", self.base_dir / repo["name"])
                 else:
-                    message = f"Would have cloned {repo.html_url} into {self.base_dir}"
-                    print(message)
+                    message = f"Would have cloned {repo['html_url']} into {self.base_dir}"
+                    with lock:
+                        print(message)
             else:
-                message = f"Repository {repo.name} already exists locally. Skipping clone."
-                print(message)
+                message = f"Repository {repo['name']} already exists locally. Skipping clone."
+                with lock:
+                    print(message)
         except g.GitCommandError as e:
-            message = f"Failed to clone {repo.name}: {e}"
-            print(message)
-        finally:
-            # Restore stdout
-            sys.stdout = old_stdout
-        return captured_output.getvalue()
+            message = f"Failed to clone {repo['name']}: {e}"
+            with lock:
+                print(message)
 
     def pull_all(self, single_threaded: bool = False):
         directories = mg.find_git_repos(self.base_dir)
         print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
-                self.pull_repo(repo_dir)
+                self.pull_repo((repo_dir, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-                results = pool.map(self.pull_repo, (print(repo_dir) or repo_dir for repo_dir in directories))
+                manager = multiprocessing.Manager()
+                lock = manager.Lock()
+                results = pool.map(self.pull_repo, (print(repo_dir) or (repo_dir, lock) for repo_dir in directories))
                 for output in results:
                     if output:
                         print(output, end="")
 
-    def pull_repo(self, repo_path: Path) -> str:
+    def pull_repo(self, args: tuple[Path, ContextManager[Any]]) -> None:
         """
         Performs a git pull operation on the repository at the given path.
 
         Args:
-            repo_path (Path): The path to the repository.
+            args (tuple[Path, ContextManager[Any]]): A tuple containing the path to the repository and a lock.
 
         Returns:
             str: The captured print output.
         """
-        # Redirect stdout to capture print output
-        old_stdout = sys.stdout
-        sys.stdout = captured_output = StringIO()
+        repo_path, lock = args
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
             if not self.dry_run:
-                print(f"Pulling latest changes in {repo_path}")
+                with lock:
+                    print(f"Pulling latest changes in {repo_path}")
                 origin.pull()
             else:
-                print(f"Would have pulled latest changes in {repo_path}")
+                with lock:
+                    print(f"Would have pulled latest changes in {repo_path}")
         except Exception as e:
-            print(f"Failed to pull repo at {repo_path}: {e}")
-        finally:
-            # Restore stdout
-            sys.stdout = old_stdout
-        return captured_output.getvalue()
+            with lock:
+                print(f"Failed to pull repo at {repo_path}: {e}")
 
     def not_repo(self) -> tuple[int, int, int, int]:
         """
@@ -236,7 +252,7 @@ class GithubRepoManager(SourceHost):
         with the status color-coded: green for success, red for failure, and yellow for cancelled.
         """
         if not self.user:
-            self.user = self.github.get_user()
+            self.user = self.client().get_user()
 
         messages = []
         for repo in self._get_user_repos():
@@ -343,7 +359,7 @@ class GithubRepoManager(SourceHost):
         Fetches and prints beautifully formatted information about the user's GitHub repositories.
         """
         try:
-            user = self.github.get_user(self.user_login)
+            user = self.client().get_user(self.user_login)
             repos = user.get_repos()
             table = Table(title="GitHub Repositories")
 
@@ -376,7 +392,7 @@ class GithubRepoManager(SourceHost):
         """
         console = Console()
         try:
-            user = self.github.get_user(self.user_login)
+            user = self.client().get_user(self.user_login)
             summary = Text.assemble(
                 ("Username: ", "bold cyan"),
                 f"{user.login}\n",
@@ -411,12 +427,14 @@ class GithubRepoManager(SourceHost):
         print(f"Merging/rebasing {len(directories)} main to local repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
-                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase))
+                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                manager = multiprocessing.Manager()
+                lock = manager.Lock()
                 results = pool.map(
                     self._update_local_branches,
-                    (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase) for repo_dir in directories),
+                    (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, lock) for repo_dir in directories),
                 )
                 for output in results:
                     if output:
@@ -435,7 +453,7 @@ class GithubRepoManager(SourceHost):
         github_repo_full_name = self.user_login + "/" + github_repo_full_name
         repo = g.Repo(str(repo_path))
         try:
-            github_repo = self.github.get_repo(github_repo_full_name)
+            github_repo = self.client().get_repo(github_repo_full_name)
         except gh.GithubException as e:
             print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}")
             return
@@ -491,7 +509,7 @@ class GithubRepoManager(SourceHost):
             print(f"{repo_path} is not a valid Git repository.")
             return
         try:
-            github_repo = self.github.get_repo(github_repo_full_name)
+            github_repo = self.client().get_repo(github_repo_full_name)
         except gh.GithubException as e:
             print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}")
             return
@@ -593,9 +611,9 @@ class GithubRepoManager(SourceHost):
         Returns:
             None
         """
-        repo = self.github.get_repo(repo_name)
+        repo = self.client().get_repo(repo_name)
         if not self.user:
-            self.user = self.github.get_user()
+            self.user = self.client().get_user()
 
         # Create pull request
         pull_request = repo.create_pull(

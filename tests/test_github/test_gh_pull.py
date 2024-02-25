@@ -1,9 +1,10 @@
 import logging
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 import pytest
 from git import GitCommandError
 
+from git_mirror.dummies import Dummy
 from git_mirror.manage_github import GithubRepoManager
 
 LOGGER = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def test_pull_repo_success(mock_repo_class, github_repo_manager, tmp_path):
     repo_path = tmp_path / repo_name
     create_fake_repo(tmp_path, repo_name)
 
-    github_repo_manager.pull_repo(repo_path)
+    github_repo_manager.pull_repo((repo_path, Dummy()))
 
     mock_repo_class.assert_called_once_with(repo_path)
     mock_repo_class.return_value.remotes.origin.pull.assert_called_once()
@@ -45,7 +46,7 @@ def test_pull_repo_failure(mock_repo_class, github_repo_manager, tmp_path):
     # Simulate a GitCommandError on pull
     mock_repo_class.return_value.remotes.origin.pull.side_effect = GitCommandError("pull", "error")
 
-    github_repo_manager.pull_repo(repo_path)
+    github_repo_manager.pull_repo((repo_path, Dummy()))
 
     mock_repo_class.assert_called_once_with(repo_path)
     mock_repo_class.return_value.remotes.origin.pull.assert_called_once()
@@ -63,4 +64,4 @@ def test_pull_all(mock_pull_repo, github_repo_manager, tmp_path):
     # Verify pull_repo is called for each repository
     assert mock_pull_repo.call_count == len(repo_names)
     for name in repo_names:
-        mock_pull_repo.assert_any_call(tmp_path / name)
+        mock_pull_repo.assert_any_call((tmp_path / name, ANY))

@@ -7,11 +7,9 @@ This should use manage_config, manage_git, manage_pypi for things that are not g
 import asyncio
 import logging
 import multiprocessing
-import sys
 from datetime import datetime
-from io import StringIO
 from pathlib import Path
-from typing import Any, Optional, Union, cast
+from typing import Any, ContextManager, Optional, Union, cast
 
 import git as g
 import gitlab
@@ -27,6 +25,7 @@ from termcolor import colored
 import git_mirror.manage_git as mg
 from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
+from git_mirror.dummies import Dummy
 from git_mirror.manage_pypi import PyPiManager
 from git_mirror.safe_env import load_env
 
@@ -64,17 +63,35 @@ class GitlabRepoManager(SourceHost):
             logging_level (int): The logging level.
             dry_run (bool): Whether the operation should be a dry run.
         """
-        self.gitlab = gitlab.Gitlab(host_domain, private_token=token)
-        if logging_level >= 2:
-            self.gitlab.enable_debug()
+        self.token = token
+        self.host_domain = host_domain
         self.base_dir = base_dir
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
-        self.user: Optional[RESTObject] = None
+        # self.user: Optional[RESTObject] = None
         self.group_id = group_id
         self.verbose_logging = logging_level
         self.dry_run = dry_run
+
+    def client(self) -> gitlab.Gitlab:
+        the_client = gitlab.Gitlab(self.host_domain, private_token=self.token)
+        if self.verbose_logging >= 2:
+            the_client.enable_debug()
+        return the_client
+
+    def _thread_safe_repos(self, data: list[Project]) -> list[dict[str, Any]]:
+        repos = []
+        for repo in data:
+            repos.append(
+                {
+                    "path": repo.path,
+                    "web_url": repo.web_url,
+                    # "html_url": repo.html_url,
+                    "http_url_to_repo": repo.http_url_to_repo,
+                }
+            )
+        return repos
 
     def _get_user_repos(self) -> list[Project]:
         """
@@ -83,15 +100,14 @@ class GitlabRepoManager(SourceHost):
         Returns:
             List[gitlab.v4.objects.Project]: A list of Project objects.
         """
-        if not self.user:
-            self.user = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
+        # user = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
 
         try:
             kwargs: dict[str, Union[bool, str]] = {"owned": True}
             if not self.include_private:
                 kwargs["visibility"] = "public"
-            projects = self.gitlab.projects.list(**kwargs, get_all=True)
-            projects = [self.gitlab.projects.get(id=project.id) for project in projects]
+            projects = self.client().projects.list(**kwargs, get_all=True)
+            projects = [self.client().projects.get(id=project.id) for project in projects]
 
             filtered_projects = []
             for project in projects:
@@ -108,18 +124,21 @@ class GitlabRepoManager(SourceHost):
             print(f"Failed to fetch repositories: {e}")
             return []
 
-    def clone_all(self, single_threaded: bool = False):
+    def clone_all(self, single_threaded: bool = False) -> None:
         """
         Clones all repositories for a user.
         """
         repos = self._get_user_repos()
         print(f"Cloning {len(repos)} repositories.")
         if single_threaded or len(repos) < 4:
-            for repo in repos:
-                print(self._clone_repo(repo))
+            for repo in self._thread_safe_repos(repos):
+                self._clone_repo((repo, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-                results = pool.map(self._clone_repo, repos)
+                manager = multiprocessing.Manager()
+                lock = manager.Lock()
+                work_load = [(repo, lock) for repo in self._thread_safe_repos(repos)]
+                results = pool.map(self._clone_repo, work_load)
                 for output in results:
                     if output:
                         print(output, end="")
@@ -156,41 +175,39 @@ class GitlabRepoManager(SourceHost):
                 print(f"Group with ID {current_group_id} not found. Skipping.")
             repos = self._get_repos(group)
 
-            for repo in repos:
+            for repo in self._thread_safe_repos(repos):
                 print(".", end="")
-                self._clone_repo(repo, extra_path=group.full_path)
+                self._clone_repo((repo, Dummy()))  # , extra_path=group.full_path)
 
             # for subgroup in subgroups:
             #     groups_to_process.append(subgroup.id)
 
-    def _clone_repo(self, project, extra_path: str = "") -> str:
+    def _clone_repo(self, repo_args: tuple[dict[str, Any], ContextManager[Any]]) -> None:
         """
         Clones the given project into the target directory, respecting group/subgroup structure.
 
         Args:
-            project: The project to clone.
-            extra_path (str): Additional path components for group/subgroup structure.
+            repo_args (tuple[dict[str, Any], ContextManager[Any]]): A tuple containing the project and a lock.
         """
-        # Redirect stdout to capture print output
-        old_stdout = sys.stdout
-        sys.stdout = captured_output = StringIO()
+        extra_path = ""
+        project, lock = repo_args
         try:
-            repo_path = self.base_dir / extra_path / project.path
+            repo_path = self.base_dir / extra_path / project["path"]
             if not repo_path.exists():
                 if self.dry_run:
-                    print(f"Would clone {project.web_url} into {repo_path}")
+                    with lock:
+                        print(f"Would clone {project['web_url']} into {repo_path}")
                 else:
-                    print(f"Cloning {project.web_url} into {repo_path}")
+                    with lock:
+                        print(f"Cloning {project['web_url']} into {repo_path}")
                     repo_path.parent.mkdir(parents=True, exist_ok=True)
-                    g.Repo.clone_from(project.http_url_to_repo, repo_path)
+                    g.Repo.clone_from(project["http_url_to_repo"], repo_path)
             else:
-                print(f"Project {project.path} already exists locally. Skipping clone.")
+                with lock:
+                    print(f"Project {project['path']} already exists locally. Skipping clone.")
         except g.GitCommandError as e:
-            print(f"Failed to clone {project.path}: {e}")
-        finally:
-            # Restore stdout
-            sys.stdout = old_stdout
-        return captured_output.getvalue()
+            with lock:
+                print(f"Failed to clone {project['path']}: {e}")
 
     def _get_group_by_id(self, group_id: int):
         """
@@ -204,7 +221,7 @@ class GitlabRepoManager(SourceHost):
         """
         try:
             # Fetch the group by ID
-            group = self.gitlab.groups.get(group_id)
+            group = self.client().groups.get(group_id)
             return group
         except gitlab.exceptions.GitlabGetError as e:
             print(f"Failed to get group with ID {group_id}: {e}")
@@ -250,37 +267,37 @@ class GitlabRepoManager(SourceHost):
         print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
-                self.pull_repo(repo_dir)
+                self.pull_repo((repo_dir, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-                results = pool.map(self.pull_repo, (print(repo_dir) or repo_dir for repo_dir in directories))
+                manager = multiprocessing.Manager()
+                lock = manager.Lock()
+                results = pool.map(self.pull_repo, (print(repo_dir) or (repo_dir, lock) for repo_dir in directories))
                 for output in results:
                     if output:
                         print(output, end="")
 
-    def pull_repo(self, repo_path: Path) -> str:
+    def pull_repo(self, args: tuple[Path, ContextManager[Any]]) -> None:
         """
         Performs a git pull operation on the repository at the given path.
 
         Args:
-            repo_path (Path): The path to the repository.
+            args (tuple[Path, ContextManager[Any]]): A tuple containing the path to the repository and a lock.
         """
-        old_stdout = sys.stdout
-        sys.stdout = captured_output = StringIO()
+        repo_path, lock = args
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
             if not self.dry_run:
-                print(f"Pulling latest changes in {repo_path}")
+                with lock:
+                    print(f"Pulling latest changes in {repo_path}")
                 origin.pull()
             else:
-                print(f"Would have pulled latest changes in {repo_path}")
+                with lock:
+                    print(f"Would have pulled latest changes in {repo_path}")
         except Exception as e:
-            print(f"Failed to pull repo at {repo_path}: {e}")
-        finally:
-            # Restore stdout
-            sys.stdout = old_stdout
-        return captured_output.getvalue()
+            with lock:
+                print(f"Failed to pull repo at {repo_path}: {e}")
 
     def not_repo(self) -> tuple[int, int, int, int]:
         """
@@ -294,7 +311,7 @@ class GitlabRepoManager(SourceHost):
         if not self.include_private:
             kwargs["visibility"] = "public"
         user_projects = {
-            project.path: self.gitlab.projects.get(id=project.id) for project in self.gitlab.projects.list(**kwargs)
+            project.path: self.client().projects.get(id=project.id) for project in self.client().projects.list(**kwargs)
         }
 
         no_remote = 0
@@ -463,8 +480,8 @@ class GitlabRepoManager(SourceHost):
             kwargs: dict[str, Union[bool, str]] = {"owned": True, "get_all": True}
             if not self.include_private:
                 kwargs["visibility"] = "public"
-            projects = self.gitlab.projects.list(**kwargs)
-            projects = [self.gitlab.projects.get(id=project.id) for project in projects]
+            projects = self.client().projects.list(**kwargs)
+            projects = [self.client().projects.get(id=project.id) for project in projects]
 
             for project in projects:
 
@@ -494,36 +511,33 @@ class GitlabRepoManager(SourceHost):
         Fetches and prints a summary of the user's Gitlab account.
         """
         try:
-            # double assign to make mypy happy
-            self.user = self.load_user()
-            print(self.user)
+            user = self.load_user()
 
             summary = Text.assemble(
                 ("Username: ", "bold cyan"),
-                f"{self.user.username}\n",
+                f"{user.username}\n",
                 ("Name: ", "bold cyan"),
-                f"{self.user.name}\n",
+                f"{user.name}\n",
                 ("Bio: ", "bold cyan"),
-                f"{self.user.bio or 'No bio available'}\n",
+                f"{user.bio or 'No bio available'}\n",
                 ("Public Email: ", "bold cyan"),
-                f"{self.user.public_email or 'N/A'}\n",
+                f"{user.public_email or 'N/A'}\n",
                 # I don't think Gitlab has following, followers.
                 ("Location: ", "bold cyan"),
-                f"{self.user.location or 'Not specified'}\n",
+                f"{user.location or 'Not specified'}\n",
                 ("Company: ", "bold cyan"),
-                f"{self.user.organization or 'Not specified'}",
+                f"{user.organization or 'Not specified'}",
             )
             console = Console()
-            console.print(Panel(summary, title="GitLab User Summary", subtitle=self.user.username))
+            console.print(Panel(summary, title="GitLab User Summary", subtitle=user.username))
         except Exception as e:
             print("Failed to fetch GitLab user info: %s", str(e))
 
     def load_user(self) -> RESTObject:
-        if not self.user:
-            list_info = self.gitlab.users.list(username=self.user_login, get_all=True)[0]  # type: ignore
-            self.user = self.gitlab.users.get(list_info.id)
+        list_info = self.client().users.list(username=self.user_login, get_all=True)[0]  # type: ignore
+        user = self.client().users.get(list_info.id)
         # to make mypy happy
-        return self.user
+        return user
 
     def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
         """
@@ -537,12 +551,14 @@ class GitlabRepoManager(SourceHost):
         print(f"Merging/rebasing {len(directories)} main to local repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
-                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase))
+                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+                manager = multiprocessing.Manager()
+                lock = manager.Lock()
                 results = pool.map(
                     self._update_local_branches,
-                    (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase) for repo_dir in directories),
+                    (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, lock) for repo_dir in directories),
                 )
                 for output in results:
                     if output:
@@ -559,7 +575,7 @@ class GitlabRepoManager(SourceHost):
         repo = g.Repo(str(repo_path))
 
         # Search for the project using the namespace and project name
-        projects = self.gitlab.projects.list(search=project_name, owned=True)[0]  # type: ignore
+        projects = self.client().projects.list(search=project_name, owned=True)[0]  # type: ignore
         # for project in projects:
         #     if project.path_with_namespace == f"{self.user_login}/{project_name}":
         #         return project.default_branch
@@ -590,11 +606,14 @@ class GitlabRepoManager(SourceHost):
                     # Perform merge
                     repo.git.merge(f"origin/{default_branch}")
                 if not self.dry_run:
-                    print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+                    with args.lock:
+                        print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
                 else:
-                    print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
+                    with args.lock:
+                        print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
             except g.exc.GitCommandError as e:
-                print(f"Failed to update branch '{branch}': {e}")
+                with args.lock:
+                    print(f"Failed to update branch '{branch}': {e}")
 
     def prune_all(self):
         for repo_dir in mg.find_git_repos(self.base_dir):
@@ -614,7 +633,7 @@ class GitlabRepoManager(SourceHost):
         except g.InvalidGitRepositoryError:
             print(f"{repo_path} is not a valid Git repository.")
             return
-        project = self.gitlab.projects.list(search=project_name, owned=True)[0]  # type: ignore
+        project = self.client().projects.list(search=project_name, owned=True)[0]  # type: ignore
 
         # Get a list of all branch names on Gitlab
         remote_branches = [branch.name for branch in project.get_branches()]
@@ -655,7 +674,7 @@ class GitlabRepoManager(SourceHost):
         """
         Return API version information.
         """
-        version, revision = self.gitlab.version()
+        version, revision = self.client().version()
         return {"version": version, "revision": revision}
 
     def cross_repo_sync_report(self, template_dir: Path) -> None:
@@ -695,17 +714,16 @@ class GitlabRepoManager(SourceHost):
     def merge_request(
         self, source_branch: str, target_branch: str, title: str, reviewer: str, project_id: int, repo_name: str
     ):
-        if not self.user:
-            self.user = self.load_user()
-        project = self.gitlab.projects.get(project_id)
-        reviewer_object = self.gitlab.users.list(username=reviewer, get_all=True)[0]  # type: ignore
+        user = self.load_user()
+        project = self.client().projects.get(project_id)
+        reviewer_object = self.client().users.list(username=reviewer, get_all=True)[0]  # type: ignore
         mr = project.mergerequests.create(
             {
                 "source_branch": source_branch,
                 "target_branch": target_branch,
                 "title": title,
                 "remove_source_branch": True,
-                "assignee_ids": [self.user.id],
+                "assignee_ids": [user.id],
                 "reviewer_ids": [reviewer_object.id],
             }
         )

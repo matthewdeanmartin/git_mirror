@@ -18,7 +18,7 @@ def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
     # Mock setup
     base_dir = tmp_path
     manager = GitlabRepoManager("token", base_dir, "user_login")
-    manager.gitlab = MagicMock()
+    manager.client = lambda: MagicMock()
     manager.user = MagicMock()
 
     manager.project = MagicMock()
@@ -76,9 +76,11 @@ def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
         return mock_fork_repo
 
     get.side_effect = get_side_effect
-    manager.gitlab.projects.get = get
-    manager.gitlab.projects.list.return_value = [mock_user_repo, mock_fork_repo]
+    mgl = MagicMock()
 
+    mgl.projects.get = get
+    mgl.projects.list.return_value = [mock_user_repo, mock_fork_repo]
+    manager.client = lambda: mgl
     no_remote, not_found, is_fork, not_repo = manager.not_repo()
 
     assert no_remote == 0
