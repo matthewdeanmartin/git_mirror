@@ -1,6 +1,8 @@
 # git_mirror
 
-Make your local git repos look like Github or Gitlab.
+Make all your local git repos look like Github or Gitlab.
+
+(has nothing to do with keeping identical copies of repos on different remote servers, maybe I'll change the name.)
 
 Supports
 
@@ -13,9 +15,16 @@ Supports
 
 Does not support running arbitrary scripts in each repo.
 
-Goal is for tools to be built-in, to be easy.
+Goal is for tools to be built-in, to be easy, safe.
 
 Also supports parallel execution for some commands.
+
+## Why not just plain git?
+If you support 30 distinct repos across 3 different source control hosts, you'd need to open 30 tabs, cd to 30 repos,
+run 30 git commands (pull, get latest from main, etc) and then feel that this was a good use of time.
+
+## Note!
+Upcoming 0.3.4 to 1.0.0 will break backwards as I switch to (sub-)subcommands.
 
 ## Installation
 
@@ -54,36 +63,37 @@ Your local folder has a bunch of stray folders that aren't even repos. Run `git_
 You care about some repos more than others, use config to focus on a subset of repos. (PENDING FEATURE)
 
 ```text
-usage: git_mirror [-h] [-V] [--menu MENU] [--host {gitlab,github}] [--user-name USER_NAME] [--group-id GROUP_ID]
-                  [--domain DOMAIN] [--pypi-owner-name PYPI_OWNER_NAME] [--target-dir TARGET_DIR] [--include-forks]
-                  [--include-private] [--config-path CONFIG_PATH] [--verbose]
-                  {menu,init,show-account,list-repos,clone-all,pull-all,local-changes,not-repo,build-status,sync-config,list-config,pypi-status}
+usage: git_mirror [-h] [-V] [--menu MENU]
+                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,pypi-status,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+                  ...
 
 Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools.
 
 positional arguments:
-  {menu,init,show-account,list-repos,clone-all,pull-all,local-changes,not-repo,build-status,sync-config,list-config,pypi-status}
-                        The command to execute.
+  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,pypi-status,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+                        Subcommands.
+    show-account        Show source code host user account information.
+    list-repos          List repositories.
+    clone-all           Clone all repositories.
+    pull-all            Pull all repositories.
+    local-changes       List local changes.
+    not-repo            List directories that are not repositories.
+    update-from-main    Update from main branch.
+    prune-all           Prune all repositories not found remotely.
+    sync-config         Sync configuration with source code host.
+    build-status        Show build status.
+    list-config         List configuration.
+    pypi-status         Show pypi deployment status.
+    cross-repo-report   Show cross repo sync report.
+    cross-repo-sync     Sync files across repos.
+    cross-repo-init     Initialize cross repo sync.
+    menu                Show menu.
+    init                Initialize configuration.
 
 options:
   -h, --help            show this help message and exit
   -V, --version         Show program's version number and exit.
   --menu MENU           Choose a command via menu.
-  --host {gitlab,github}
-                        Source host, use gl_mirror or gh_mirror to skip this.
-  --user-name USER_NAME
-                        The username.
-  --group-id GROUP_ID   The gitlab group id.
-  --domain DOMAIN       The gitlab (compatible) domain.
-  --pypi-owner-name PYPI_OWNER_NAME
-                        Pypi Owner Name.
-  --target-dir TARGET_DIR
-                        The directory where repositories will be cloned or pulled.
-  --include-forks       Include forked repositories.
-  --include-private     Include private repositories.
-  --config-path CONFIG_PATH
-                        Path to the TOML config file.
-  --verbose             verbose output
 
     Examples:
 

@@ -71,6 +71,11 @@ def generate_config(level: str = "DEBUG", logging_level: int = 1) -> dict[str, A
                 "level": "DEBUG" if logging_level >= 2 else "INFO",
                 "propagate": False,
             },
+            "requests_cache": {
+                "handlers": ["default"],
+                "level": "DEBUG" if logging_level >= 2 else "INFO",
+                "propagate": False,
+            },
         },
     }
     if os.environ.get("NO_COLOR") or os.environ.get("CI"):

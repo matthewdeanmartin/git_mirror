@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git_mirror"
-version = "0.3.3"
+version = "0.3.4"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
 keywords = ["git", "gitlab", "github", "polyrepo" ]
@@ -64,6 +64,7 @@ GitPython= ">=3.1.42"
 
 # api calls
 httpx = ">=0.26.0, <1"
+requests-cache = ">=1.2.0, <2"
 
 # Config
 toml = ">=0.10.2, <1"
@@ -166,7 +167,7 @@ norecursedirs = ["vendor", "scripts"]
 default_section = "THIRDPARTY"
 force_grid_wrap = 0
 include_trailing_comma = true
-known_first_party = ["dedlin"]
+known_first_party = ["git_mirror"]
 line_length = 120
 multi_line_output = 3
 use_parentheses = true

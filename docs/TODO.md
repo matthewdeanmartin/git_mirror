@@ -1,7 +1,18 @@
+## Top priority
+- PAT token init help
+- platform dirs for config files
+- subcommands (remove the dash in current commands, restrict args to relevant command)
+- show config to show where config files are
+- display config to also show tool versions and API versions
+- check tool versions on init (assume that runs mostly just after instal)
+
 ## DX
 - always output some sort of command, unless `--quiet`
 - support a `-y` flag for auto yes
-- 
+- subcommands so args don't look like they apply to everything
+
+## Cross platform support
+- platform dirs for data files
 
 ## New commands
 
@@ -25,6 +36,7 @@
 
 - Many steps are slow/not parallel
 - Needs to provide UI when waiting/stop waiting for all to finish before showing results
+- we need cache
 
 ## Host support
 

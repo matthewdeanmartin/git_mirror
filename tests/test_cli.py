@@ -23,7 +23,7 @@ def cli_args(tmp_path):
 
 
 # Test parsing and command execution
-@patch("git_mirror.router.route_to_command")
+@patch("git_mirror.router.route_repos")
 @patch.dict(os.environ, {"GITHUB_ACCESS_TOKEN": "testtoken"})
 def test_cli_clone_all(mock_main_github, cli_args):
     argv = ["clone-all"] + cli_args
@@ -38,9 +38,9 @@ def test_cli_clone_all(mock_main_github, cli_args):
         include_private=False,
         logging_level=0,
         target_dir=ANY,
-        template_dir=None,
+        # template_dir=None,
         token="testtoken",
-        pypi_owner_name=None,
+        #        pypi_owner_name=None,
         user_name="testuser",
         domain="",
         dry_run=False,
@@ -49,9 +49,11 @@ def test_cli_clone_all(mock_main_github, cli_args):
 
 
 # Test missing GitHub token
-@patch("git_mirror.router.route_to_command")
+@patch("git_mirror.router.route_repos")
+@patch("git_mirror.pat_init.setup_github_pat")
+@patch("git_mirror.pat_init_gitlab.setup_gitlab_pat")
 @patch.dict(os.environ, clear=True)
-def test_cli_missing_github_token(mock_main_github, cli_args):
+def test_cli_missing_github_token(pat1, pat2, mock_main_github, cli_args):
     argv = ["clone-all"] + cli_args
     with patch("sys.argv", ["prog"] + argv):
         assert main() == 1
@@ -59,7 +61,7 @@ def test_cli_missing_github_token(mock_main_github, cli_args):
 
 
 # Test configuration loading from TOML
-@patch("git_mirror.router.route_to_command")
+@patch("git_mirror.router.route_repos")
 @patch.dict(os.environ, {"GITHUB_ACCESS_TOKEN": "testtoken"})
 def test_cli_config_loading(mock_main_github, tmp_path):
     config_path = tmp_path / "pyproject.toml"

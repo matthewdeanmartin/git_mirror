@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 __title__ = "git_mirror"
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 __description__ = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 __author__ = "Matthew Martin"
 __author_email__ = "matthewdeanmartin@gmail.com"
