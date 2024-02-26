@@ -6,6 +6,8 @@ from pathlib import Path
 import httpx
 from dotenv import find_dotenv, load_dotenv, set_key
 
+from git_mirror.safe_env import env_info
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -34,6 +36,9 @@ def setup_gitlab_pat() -> None:
     Checks if it exists and is valid, then asks the user for their preference
     on storing the PAT.
     """
+    print("Checking environment...")
+    env_info()
+    print()
     # Attempt to load existing .env and check for existing PAT
     dotenv_path = Path(find_dotenv())
     load_dotenv(dotenv_path)
@@ -47,6 +52,7 @@ def setup_gitlab_pat() -> None:
         print("No valid PAT found.")
 
     print("https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html")
+    print("Next we will create a local or global .env file to store the PAT.")
     # Ask for new PAT
     new_pat = getpass.getpass("Enter your new GitLab PAT: ")
 

@@ -23,7 +23,7 @@ class CommandInfo:
     args: list[str] = field(default_factory=list)
 
 
-def get_command_info(args: argparse.Namespace) -> None:
+def get_command_info(args: argparse.Namespace) -> Optional[str]:
     commands: list[tuple[str, str]] = [
         ("Initialize Configuration", "init"),
         ("Show Account Info", "show-account"),
@@ -82,10 +82,10 @@ def get_command_info(args: argparse.Namespace) -> None:
         if selected_command == "Main Menu":
             continue
         args.command = selected_command
-        break
+        return selected_command
     # Right now everything else should come from config and
     # user shouldn't be re-entering all that config on every command.
-    return
+    return None
 
 
 def handle_control_c(answer: Any) -> None:

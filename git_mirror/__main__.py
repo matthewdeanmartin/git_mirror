@@ -43,8 +43,9 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
         tuple[Optional[str], int]: The token and return value.
     """
     host = args.host if hasattr(args, "host") else None
+    config_path = args.config_path if hasattr(args, "config_path") else default_config_path()
     # HACK: This needs to be redone somehow.
-    config_manager = ConfigManager(args.config_path)
+    config_manager = ConfigManager(config_path)
     invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
     needs_host = args.command not in ("init", "list-config")
     if invalid_or_missing_host and needs_host:
@@ -139,7 +140,7 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
 
 def enable_logging(args):
     # No logging above this line!
-    if args.verbose > 0:
+    if hasattr(args, "verbose") and args.verbose > 0:
         config = logging_config.generate_config(level="DEBUG", logging_level=args.verbose)
         logging.config.dictConfig(config)
     else:
@@ -376,11 +377,24 @@ def main(
         simple_parser = subparsers.add_parser(command, help=help_text)
         global_args(simple_parser)
         # router to handler
-        simple_parser.set_defaults(func=handle_simple)
+        if command != "menu":
+            simple_parser.set_defaults(func=handle_simple)
 
     # TODO: UX - help user who hasn't set a host or token.
 
     args: argparse.Namespace = parser.parse_args(argv)
+    if args.command == "menu":
+        selection = get_command_info(args)
+        if selection:
+            if sys.argv:
+                original_arv = list(sys.argv)
+            elif argv:
+                original_arv = list(argv)
+            else:
+                original_arv = []
+            new_command = [selection] + original_arv[2:]
+            args = parser.parse_args(new_command)
+
     args.use_github = use_github
     # UX - help user who doesn't enter any specific command and is likely just starting out
     args.first_time_init = False
@@ -392,18 +406,20 @@ def main(
     enable_logging(args)
     LOGGER.debug(f"Cache store at {backend.db_path}")
 
-    if args.menu:
-        get_command_info(args)
-
+    if use_github:
+        args.host = "github"
+    elif use_gitlab:
+        args.host = "gitlab"
+    elif use_selfhosted:
+        args.host = "selfhosted"
     # Can't run any commands except init without a host and token
     token, return_value = validate_host_token(args)
     if return_value != 0:
         return return_value
 
     if os.environ.get("GITHUB_ACCESS_TOKEN") and "PYTEST_CURRENT_TEST" not in os.environ:
-        # TODO: make this lazy.
         reporter = BugReporter(os.environ.get("GITHUB_ACCESS_TOKEN", ""), "matthewdeanmartin/git_mirror")
-        sys.excepthook = reporter.handle_exception_and_report
+        reporter.register_global_handler()
 
     if hasattr(args, "func"):
         args.func(args)

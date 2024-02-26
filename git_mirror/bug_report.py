@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import traceback
 from typing import Optional
 
@@ -21,10 +22,14 @@ class BugReporter:
             token (str): The GitHub API token.
             repository_name (str): The full name of the repository (e.g., "user/repo").
         """
-        self.github = gh.Github(token)
-        self.repository_name = repository_name
-        self.repo = self.github.get_repo(repository_name)
-        self.user = self.github.get_user()
+        try:
+            self.github = gh.Github(token)
+            self.repository_name = repository_name
+            self.repo = self.github.get_repo(repository_name)
+            self.user = self.github.get_user()
+            self.invalid_token = False
+        except gh.GithubException:
+            self.invalid_token = True
 
     def mask_secrets(self, text: str) -> str:
         """
@@ -118,3 +123,12 @@ class BugReporter:
         else:
             print("You can manually report this issue at https://github.com/matthewdeanmartin/git_mirror/issues")
             LOGGER.info("Bug report canceled by the user.")
+
+    def register_global_handler(self) -> None:
+        """
+        Registers the global exception handler to capture unhandled exceptions and report them as bugs.
+        """
+        if not self.invalid_token:
+            sys.excepthook = self.handle_exception_and_report
+        else:
+            LOGGER.warning("Invalid GitHub token. Bug reporting is disabled.")

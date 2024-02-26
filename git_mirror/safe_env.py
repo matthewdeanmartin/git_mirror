@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -38,3 +39,16 @@ def load_env() -> None:
     except Exception as e:
         print(f"Error loading .env file: {e}")
         print("Continuing without .env file.")
+
+
+def env_info() -> None:
+    print(f".env file in current folder exists: {(Path.cwd() / '.env').exists()}")
+    print(f".env file in home folder exists: {(Path.home() / '.env').exists()}")
+    print(f"GITHUB_ACCESS_TOKEN exists: {bool(os.getenv('GITHUB_ACCESS_TOKEN'))}")
+    print(f"GITLAB_ACCESS_TOKEN exists: {bool(os.getenv('GITLAB_ACCESS_TOKEN'))}")
+    print(f"SELFHOSTED_ACCESS_TOKEN exists: {bool(os.getenv('SELFHOSTED_ACCESS_TOKEN'))}")
+
+
+if __name__ == "__main__":
+    load_env()
+    env_info()
