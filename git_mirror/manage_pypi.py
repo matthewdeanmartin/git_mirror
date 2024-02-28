@@ -4,14 +4,11 @@ Pure pypi actions.
 
 import asyncio
 import logging
-import os
 from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
-import colorama
 import httpx
-from prettytable import PrettyTable
-from prettytable.colortable import ColorTable, Themes
+from rich.table import Table
 
 from git_mirror.safe_env import load_env
 
@@ -21,54 +18,53 @@ load_env()
 LOGGER = logging.getLogger(__name__)
 
 
-def pretty_print_pypi_results(results: list[dict[str, Any]]) -> Union[PrettyTable, ColorTable]:
+def pretty_print_pypi_results(results: list[dict[str, Any]]) -> Table:
     """
-    Pretty print the results of the audit.
+    Pretty prints the results of the PyPI audit using the rich library.
 
-    Returns:
-        Union[PrettyTable, ColorTable]: A PrettyTable or ColorTable object.
+    Args:
+        results (List[dict[str, Any]]): A list of dictionaries containing the audit results.
     """
-    if os.environ.get("NO_COLOR") or os.environ.get("CI"):
-        table = PrettyTable()
-    else:
-        table = ColorTable(theme=Themes.OCEAN)
-    table.field_names = [
-        "Package",
-        "On PyPI",
-        "Pypi Owner",
-        "Repo last change date",
-        "PyPI last change date",
-        "Days difference",
-    ]
+    table = Table()
 
-    all_rows: list[list[str]] = []
+    table.add_column("Package")
+    table.add_column("On PyPI")
+    table.add_column("Pypi Owner")
+    table.add_column("Repo last change date")
+    table.add_column("PyPI last change date")
+    table.add_column("Days difference")
 
     for result in results:
+        days_difference = int(result.get("Days difference", "0"))
+        style = "red" if days_difference * -1 > 60 else ""
+
         row_data = [
             result["Package"],
             result["On PyPI"],
             result["Pypi Owner"],
-            result["Repo last change date"],
-            result["PyPI last change date"],
-            result["Days difference"],
+            str(result["Repo last change date"]),
+            str(result["PyPI last change date"]),
+            str(result["Days difference"]),
         ]
-        row_transformed = []
-        # Turn values red if more than 2 months stale.
-        for datum in row_data:
-            try:
-                days_difference = int(result["Days difference"])
-            except ValueError:
-                days_difference = 0
-            if (days_difference * -1) > 60:
-                transformed = f"{colorama.Fore.RED}{datum}{colorama.Style.RESET_ALL}"
-            else:
-                transformed = str(datum)
-            row_transformed.append(transformed)
-        all_rows.append(row_transformed)
 
-    table.add_rows(sorted(all_rows, key=lambda x: x[0]))
-
+        # Apply style to the entire row if needed
+        table.add_row(*row_data, style=style)
     return table
+
+
+if __name__ == "__main__":
+    # Example usage
+    results = [
+        {
+            "Package": "ExamplePackage",
+            "On PyPI": "Yes",
+            "Pypi Owner": "OwnerName",
+            "Repo last change date": "2023-01-01",
+            "PyPI last change date": "2023-02-01",
+            "Days difference": "-30",
+        }
+    ]
+    pretty_print_pypi_results(results)
 
 
 class PyPiManager:
@@ -90,6 +86,7 @@ class PyPiManager:
         pypi_url = f"https://pypi.org/pypi/{package_name}/json"
         response = await self.client.get(pypi_url)
         data = response.json()
+        print(".", end="", flush=True)
         return data, response.status_code
 
     async def get_infos(self, package_names: list[str]) -> dict[str, tuple[dict[str, Any], int]]:

@@ -4,10 +4,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from git_mirror.ui import console_with_theme
+
 # Configure logging
 LOGGER = logging.getLogger(__name__)
 
 LOADED = False
+
+console = console_with_theme()
 
 
 def load_env() -> None:
@@ -37,16 +41,16 @@ def load_env() -> None:
         load_dotenv()  # Load environment variables from .env file in cwd() if present
         LOADED = True
     except Exception as e:
-        print(f"Error loading .env file: {e}")
-        print("Continuing without .env file.")
+        console.print(f"Error loading .env file: {e}", style="danger")
+        console.print("Continuing without .env file.", style="danger")
 
 
 def env_info() -> None:
-    print(f".env file in current folder exists: {(Path.cwd() / '.env').exists()}")
-    print(f".env file in home folder exists: {(Path.home() / '.env').exists()}")
-    print(f"GITHUB_ACCESS_TOKEN exists: {bool(os.getenv('GITHUB_ACCESS_TOKEN'))}")
-    print(f"GITLAB_ACCESS_TOKEN exists: {bool(os.getenv('GITLAB_ACCESS_TOKEN'))}")
-    print(f"SELFHOSTED_ACCESS_TOKEN exists: {bool(os.getenv('SELFHOSTED_ACCESS_TOKEN'))}")
+    console.print(f".env file in current folder exists: {(Path.cwd() / '.env').exists()}")
+    console.print(f".env file in home folder exists: {(Path.home() / '.env').exists()}")
+    console.print(f"GITHUB_ACCESS_TOKEN exists: {bool(os.getenv('GITHUB_ACCESS_TOKEN'))}")
+    console.print(f"GITLAB_ACCESS_TOKEN exists: {bool(os.getenv('GITLAB_ACCESS_TOKEN'))}")
+    console.print(f"SELFHOSTED_ACCESS_TOKEN exists: {bool(os.getenv('SELFHOSTED_ACCESS_TOKEN'))}")
 
 
 if __name__ == "__main__":

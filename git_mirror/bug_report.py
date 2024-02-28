@@ -10,6 +10,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from git_mirror.ui import console_with_theme
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -23,6 +25,7 @@ class BugReporter:
             repository_name (str): The full name of the repository (e.g., "user/repo").
         """
         try:
+            self.console = console_with_theme()
             self.github = gh.Github(token)
             self.repository_name = repository_name
             self.repo = self.github.get_repo(repository_name)
@@ -59,10 +62,10 @@ class BugReporter:
         """
         try:
             issue: Issue = self.repo.create_issue(title=issue_title, body=issue_body)
-            print(f"Issue titled '{issue_title}' created in {self.repository_name}.")
+            self.console.print(f"Issue titled '{issue_title}' created in {self.repository_name}.")
             return issue
         except gh.GithubException as e:
-            print(f"Failed to create issue in {self.repository_name}: {e}")
+            self.console.print(f"Failed to create issue in {self.repository_name}: {e}", style="danger")
         return None
 
     def find_existing_issue_by_title_and_creator(self, title: str) -> Optional[Issue]:
@@ -99,7 +102,7 @@ class BugReporter:
         # Check if the issue already exists
         existing_issue = self.find_existing_issue_by_title_and_creator(issue_title)
         if existing_issue:
-            print(f"An issue with the title '{issue_title}' has already been reported by you.")
+            self.console.print(f"An issue with the title '{issue_title}' has already been reported by you.")
             return
 
         # Ask the user for permission to report the bug
@@ -119,9 +122,11 @@ class BugReporter:
         if response.lower().startswith("y"):
             issue = self.report_issue(issue_title, issue_body)
             if issue:
-                print(f"Bug report created at: {issue.html_url}")
+                console.print(f"Bug report created at: {issue.html_url}")
         else:
-            print("You can manually report this issue at https://github.com/matthewdeanmartin/git_mirror/issues")
+            console.print(
+                "You can manually report this issue at https://github.com/matthewdeanmartin/git_mirror/issues"
+            )
             LOGGER.info("Bug report canceled by the user.")
 
     def register_global_handler(self) -> None:

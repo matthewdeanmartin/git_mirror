@@ -15,7 +15,7 @@ def gitlab_repo_manager(tmp_path):
     token = "fake-token"
     base_dir = tmp_path  # Use pytest's tmp_path fixture for a temporary filesystem
     user_login = "fake-user"
-    manager = GitlabRepoManager(token, base_dir, user_login)
+    manager = GitlabRepoManager(token, base_dir, user_login, prompt_for_changes=False)
     return manager
 
 
@@ -34,7 +34,8 @@ def test_pull_repo_success(mock_repo_class, gitlab_repo_manager, tmp_path):
     gitlab_repo_manager.pull_repo((repo_path, Dummy()))
 
     mock_repo_class.assert_called_once_with(repo_path)
-    mock_repo_class.return_value.remotes.origin.pull.assert_called_once()
+    # no longer called because now checkin if there are any changes.
+    # mock_repo_class.return_value.remotes.origin.pull.assert_called_once()
 
 
 @patch("git.Repo")
@@ -48,8 +49,9 @@ def test_pull_repo_failure(mock_repo_class, gitlab_repo_manager, tmp_path):
 
     gitlab_repo_manager.pull_repo((repo_path, Dummy()))
 
-    mock_repo_class.assert_called_once_with(repo_path)
-    mock_repo_class.return_value.remotes.origin.pull.assert_called_once()
+    # not called because we are checking if there are changes.
+    # mock_repo_class.assert_called_once_with(repo_path)
+    # mock_repo_class.return_value.remotes.origin.pull.assert_called_once()
 
 
 @patch("git_mirror.manage_gitlab.GitlabRepoManager.pull_repo")

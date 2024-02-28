@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
     # Mock setup
     base_dir = tmp_path
-    manager = GitlabRepoManager("token", base_dir, "user_login")
+    manager = GitlabRepoManager("token", base_dir, "user_login", prompt_for_changes=False)
     manager.client = lambda: MagicMock()
     manager.user = MagicMock()
 

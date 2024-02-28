@@ -31,7 +31,7 @@ def get_command_info(args: argparse.Namespace) -> Optional[str]:
         ("Clone all repositories", "clone-all"),
         ("Run pull for all repositories", "pull-all"),
         ("Report uncommitted/unpushed changes", "local-changes"),
-        ("Report non-repo files in target folder", "not-repo"),
+        ("Report non-repo folders in target folder", "not-repo"),
         ("Report all build statuses", "build-status"),
         ("Sync repo list in config with source control host", "sync-config"),
         ("Report current configuration", "list-config"),

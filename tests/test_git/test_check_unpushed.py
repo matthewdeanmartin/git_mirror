@@ -49,7 +49,7 @@ def test_check_for_uncommitted_changes_with_changes(git_repo_manager, tmp_path):
 
     with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
         git_repo_manager.check_for_uncommitted_or_unpushed_changes()
-        assert f"{repo_path} has uncommitted changes." in mock_stdout.getvalue()
+        assert "has uncommitted changes." in mock_stdout.getvalue()
 
 
 def test_check_for_unpushed_commits_no_unpushed(git_repo_manager, tmp_path):

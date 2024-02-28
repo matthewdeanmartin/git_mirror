@@ -1,6 +1,10 @@
 import cli_tool_audit as cta
 import cli_tool_audit.models as models
 
+from git_mirror.ui import console_with_theme
+
+console = console_with_theme()
+
 
 def check_tool_availability():
     """
@@ -22,7 +26,7 @@ def check_tool_availability():
     }
     results = cta.process_tools(to_check, no_cache=True, disable_progress_bar=True)
     for result in results:
-        print(f"{result.tool}: available {result.is_available}, compatible {result.is_compatible}")
+        console.print(f"{result.tool}: available {result.is_available}, compatible {result.is_compatible}")
 
 
 if __name__ == "__main__":

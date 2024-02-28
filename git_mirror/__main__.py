@@ -19,6 +19,7 @@ from git_mirror.bug_report import BugReporter
 from git_mirror.manage_config import ConfigManager, default_config_path
 from git_mirror.menu import get_command_info
 from git_mirror.safe_env import load_env
+from git_mirror.ui import console_with_theme
 from git_mirror.version_check import display_version_check_message
 
 # Assuming RepoManager and other necessary imports are defined elsewhere
@@ -30,6 +31,8 @@ LOGGER = logging.getLogger(__name__)
 backend = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
 
 requests_cache.install_cache("git_mirror_cache", backend=backend, expire_after=300)
+
+console = console_with_theme()
 
 
 def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
@@ -49,7 +52,7 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
     needs_host = args.command not in ("init", "list-config")
     if invalid_or_missing_host and needs_host:
-        print(
+        console.print(
             "Please specify a host with --host or use gh_mirror for Github, gl_mirror for Gitlab, or sh_mirror for self hosted. "
             "Specify selfhosted in config file with a host_type of github or gitlab."
         )
@@ -64,11 +67,11 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     if selfhosted_type_is_github or selfhosted_type_is_gitlab:
         token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
         if selfhosted_type_is_github and not token:
-            print("Self hosted Github access token is missing. Setup and re-run command.")
+            console.print("Self hosted Github access token is missing. Setup and re-run command.")
             pat_init.setup_github_pat()
             return "", 1
         if selfhosted_type_is_gitlab and not token:
-            print(
+            console.print(
                 "Self hosted GitLab access token must be provided through SELFHOSTED_ACCESS_TOKEN environment variable."
             )
             pat_init_gitlab.setup_gitlab_pat()
@@ -76,13 +79,13 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     elif args.host == "github" or selfhosted_type_is_github:
         token = os.getenv("GITHUB_ACCESS_TOKEN")
         if not token:
-            print("Github access token is missing. Setup and re-run command.")
+            console.print("Github access token is missing. Setup and re-run command.")
             pat_init.setup_github_pat()
             return "", 1
     elif args.host == "gitlab" or selfhosted_type_is_gitlab:
         token = os.getenv("GITLAB_ACCESS_TOKEN")
         if not token:
-            print("GitLab access token must be provided through GITLAB_ACCESS_TOKEN environment variable.")
+            console.print("GitLab access token must be provided through GITLAB_ACCESS_TOKEN environment variable.")
             pat_init_gitlab.setup_gitlab_pat()
             return "", 1
     elif args.command in ("init", "list-config"):
@@ -107,7 +110,7 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
     ):
         config_manager = ConfigManager(args.config_path)
         if not args.host:
-            print("Please specify a host, eg. --host github or --host gitlab.")
+            console.print("Please specify a host, eg. --host github or --host gitlab.")
             return domain, group_id, 1
         config_data = config_manager.load_config(args.host)
         config_path = args.config_path
@@ -133,7 +136,7 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
         and not args.first_time_init
         and args.command not in ("init", "list-config")
     ):
-        print("user-name and target-dir are required if not specified in ~/git_mirror.toml.")
+        console.print("user-name and target-dir are required if not specified in ~/git_mirror.toml.")
         return domain, group_id, 1
     return domain, group_id, 0
 
@@ -179,6 +182,7 @@ def handle_repos(args: argparse.Namespace) -> None:
         group_id=group_id,
         logging_level=args.verbose,
         dry_run=args.dry_run,
+        prompt_for_changes=not args.yes,
     )
 
 
@@ -228,6 +232,7 @@ def handle_cross_repo_sync(args: argparse.Namespace) -> None:
         logging_level=args.verbose,
         dry_run=args.dry_run,
         template_dir=args.global_template_dir,
+        prompt_for_changes=not args.yes,
     )
 
 
@@ -399,7 +404,7 @@ def main(
     # UX - help user who doesn't enter any specific command and is likely just starting out
     args.first_time_init = False
     if not sys.argv[1:] and not default_config_path().exists():
-        print("This appears to be first time setup. Let's initialize configuration.")
+        console.print("This appears to be first time setup. Let's initialize configuration.")
         argv = ["init"]
         args.first_time_init = True
 
@@ -443,14 +448,17 @@ def global_args(parser):
         "--verbose",
         action="count",
         default=0,
-        # shared=True,
         help="Verbose output, repeat for more verbose",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        # shared=True,
         help="Don't change anything.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Don't prompt before slow actions or writes.",
     )
 
 

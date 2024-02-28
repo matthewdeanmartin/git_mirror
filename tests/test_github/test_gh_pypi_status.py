@@ -19,7 +19,7 @@ def init_git_repo(repo_path: Path):
 
 @pytest.fixture
 def github_repo_manager(tmp_path):
-    return GithubRepoManager("token", tmp_path, "user_login")
+    return GithubRepoManager("token", tmp_path, "user_login", prompt_for_changes=False)
 
 
 @pytest.mark.parametrize(

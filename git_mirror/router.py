@@ -13,11 +13,14 @@ import git_mirror.manage_gitlab as mgl
 from git_mirror.custom_types import SourceHost
 from git_mirror.manage_poetry import PoetryManager
 from git_mirror.safe_env import load_env
+from git_mirror.ui import console_with_theme
 
 load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
+
+console = console_with_theme()
 
 
 def route_simple(
@@ -38,7 +41,7 @@ def route_simple(
         config_manager = mc.ConfigManager(config_path=config_path)
         config_manager.initialize_config()
     else:
-        print(f"Unknown command: {command}")
+        console.print(f"Unknown command: {command}")
 
 
 def route_config(
@@ -61,7 +64,7 @@ def route_config(
         config_manager = mc.ConfigManager(config_path=config_path)
         config_manager.list_config()
     else:
-        print(f"Unknown command: {command}")
+        console.print(f"Unknown command: {command}")
 
 
 def route_repos(
@@ -78,6 +81,7 @@ def route_repos(
     logging_level: int = 1,
     dry_run: bool = False,
     template_dir: Optional[Path] = None,
+    prompt_for_changes: bool = True,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -96,13 +100,14 @@ def route_repos(
         logging_level (int): The logging level.
         dry_run (bool): Flag to determine whether the operation should be a dry run.
         template_dir (Path): The directory containing the templates to sync.
+        prompt_for_changes (bool): Flag to determine whether to prompt for changes.
     """
     if config_path is None:
         config_path = mc.default_config_path()
 
     if command == "local-changes":
         base_path = Path(target_dir).expanduser()
-        git_manager = mg.GitManager(base_path, dry_run)
+        git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes)
         git_manager.check_for_uncommitted_or_unpushed_changes()
     elif host in ("github", "gitlab", "selfhosted"):
         if host == "github":
@@ -114,6 +119,7 @@ def route_repos(
                 include_private=include_private,
                 include_forks=include_forks,
                 dry_run=dry_run,
+                prompt_for_changes=prompt_for_changes,
             )
         elif host in ("gitlab", "selfhosted"):
             base_path = Path(target_dir).expanduser()
@@ -126,6 +132,7 @@ def route_repos(
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
                 dry_run=dry_run,
+                prompt_for_changes=prompt_for_changes,
             )
         else:
             raise ValueError(f"Unknown host: {host}")
@@ -143,6 +150,7 @@ def route_repos(
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
                 dry_run=dry_run,
+                prompt_for_changes=prompt_for_changes,
             )
             gl_manager.clone_group(group_id)
         elif command == "clone-all":
@@ -166,21 +174,21 @@ def route_repos(
             config_manager.load_and_sync_config(host, manager.list_repo_names())
         elif command == "cross-repo-report":
             if not template_dir:
-                print("Template directory is required for cross-repo-report")
+                console.print("Template directory is required for cross-repo-report")
                 return
             manager.cross_repo_sync_report(template_dir)
         elif command == "cross-repo-sync":
             if not template_dir:
-                print("Template directory is required for cross-repo-sync")
+                console.print("Template directory is required for cross-repo-sync")
                 return
             manager.cross_repo_sync(template_dir)
         elif command == "cross-repo-init":
             if not template_dir:
-                print("Template directory is required for cross-repo-init")
+                console.print("Template directory is required for cross-repo-init")
                 return
             manager.cross_repo_init(template_dir)
         elif command == "poetry-relock":
-            git_manager = mg.GitManager(base_path, dry_run)
+            git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes)
             poetry_manager = PoetryManager(manager)
             for repo in git_manager.local_repos_with_file_in_root("pyproject.toml"):
                 poetry_manager.update_dependencies(
@@ -192,9 +200,9 @@ def route_repos(
                     user="TODO-lookup",
                 )
         else:
-            print(f"Unknown command: {command}")
+            console.print(f"Unknown command: {command}")
     else:
-        print(f"Unknown host: {host}")
+        console.print(f"Unknown host: {host}")
 
 
 def route_cross_repo(
@@ -209,6 +217,7 @@ def route_cross_repo(
     logging_level: int = 1,
     dry_run: bool = False,
     template_dir: Optional[Path] = None,
+    prompt_for_changes: bool = True,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -227,6 +236,7 @@ def route_cross_repo(
         logging_level (int): The logging level.
         dry_run (bool): Flag to determine whether the operation should be a dry run.
         template_dir (Path): The directory containing the templates to sync.
+        prompt_for_changes (bool): Flag to determine whether to prompt for changes.
     """
     if host in ("github", "gitlab", "selfhosted"):
         if host == "github":
@@ -238,6 +248,7 @@ def route_cross_repo(
                 include_private=include_private,
                 include_forks=include_forks,
                 dry_run=dry_run,
+                prompt_for_changes=prompt_for_changes,
             )
         elif host in ("gitlab", "selfhosted"):
             base_path = Path(target_dir).expanduser()
@@ -250,30 +261,31 @@ def route_cross_repo(
                 host_domain=domain or "https://gitlab.com",
                 logging_level=logging_level,
                 dry_run=dry_run,
+                prompt_for_changes=prompt_for_changes,
             )
         else:
             raise ValueError(f"Unknown host: {host}")
 
         if not template_dir:
-            print("Template directory is required for cross-repo-report")
+            console.print("Template directory is required for cross-repo-report")
             return
 
         if command == "cross-repo-report":
             manager.cross_repo_sync_report(template_dir)
         elif command == "cross-repo-sync":
             if not template_dir:
-                print("Template directory is required for cross-repo-sync")
+                console.print("Template directory is required for cross-repo-sync")
                 return
             manager.cross_repo_sync(template_dir)
         elif command == "cross-repo-init":
             if not template_dir:
-                print("Template directory is required for cross-repo-init")
+                console.print("Template directory is required for cross-repo-init")
                 return
             manager.cross_repo_init(template_dir)
         else:
-            print(f"Unknown command: {command}")
+            console.print(f"Unknown command: {command}")
     else:
-        print(f"Unknown host: {host}")
+        console.print(f"Unknown host: {host}")
 
 
 def route_pypi(
@@ -334,6 +346,6 @@ def route_pypi(
         if command == "pypi-status":
             manager.check_pypi_publish_status(pypi_owner_name=pypi_owner_name)
         else:
-            print(f"Unknown command: {command}")
+            console.print(f"Unknown command: {command}")
     else:
-        print(f"Unknown host: {host}")
+        console.print(f"Unknown host: {host}")

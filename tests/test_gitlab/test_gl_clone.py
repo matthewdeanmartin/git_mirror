@@ -31,7 +31,7 @@ def gitlab_repo_manager(tmp_path):
     token = "fake-token"
     base_dir = tmp_path  # Use pytest's tmp_path fixture to avoid real filesystem writes
     user_login = "fake-user"
-    manager = GitlabRepoManager(token, base_dir, user_login)
+    manager = GitlabRepoManager(token, base_dir, user_login, prompt_for_changes=False)
     return manager
 
 

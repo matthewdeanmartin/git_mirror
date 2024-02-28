@@ -15,7 +15,7 @@ def github_repo_manager(tmp_path):
     token = "fake-token"
     base_dir = tmp_path  # Use pytest's tmp_path fixture for a temporary filesystem
     user_login = "fake-user"
-    manager = GithubRepoManager(token, base_dir, user_login)
+    manager = GithubRepoManager(token, base_dir, user_login, prompt_for_changes=False)
     return manager
 
 

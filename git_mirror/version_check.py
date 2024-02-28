@@ -4,6 +4,9 @@ from packaging.version import Version
 
 # Import the current version of your package
 from git_mirror.__about__ import __version__
+from git_mirror.ui import console_with_theme
+
+console = console_with_theme()
 
 
 def call_pypi_with_version_check(package_name: str, current_version: str) -> tuple[bool, Version]:
@@ -32,9 +35,9 @@ def display_version_check_message() -> None:
         package_name = "git_mirror"
         available, new_version = call_pypi_with_version_check(package_name, __version__)
         if available:
-            print(f"A newer version of {package_name} is available on PyPI. Upgrade to {new_version}.")
+            console.print(f"A newer version of {package_name} is available on PyPI. Upgrade to {new_version}.")
     except httpx.HTTPError as e:
-        print(f"An error occurred while checking the latest version: {e}")
+        console.print(f"An error occurred while checking the latest version: {e}", style="danger")
 
 
 if __name__ == "__main__":

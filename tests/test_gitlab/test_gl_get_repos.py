@@ -18,7 +18,7 @@ def gitlab_repo_manager():
     user_login = "fake-user"
     include_private = True
     include_forks = False
-    manager = GitlabRepoManager(token, base_dir, user_login, include_private, include_forks)
+    manager = GitlabRepoManager(token, base_dir, user_login, include_private, include_forks, prompt_for_changes=False)
     return manager
 
 

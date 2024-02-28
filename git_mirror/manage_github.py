@@ -18,7 +18,6 @@ import github.NamedUser as ghnu
 import github.Repository as ghr
 import httpx
 import inquirer
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -29,7 +28,9 @@ from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 from git_mirror.dummies import Dummy
 from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
+from git_mirror.performance import log_duration
 from git_mirror.safe_env import load_env
+from git_mirror.ui import console_with_theme
 
 load_env()
 
@@ -47,6 +48,7 @@ class GithubRepoManager(SourceHost):
         include_forks: bool = False,
         host_domain: str = "https://github.com",
         dry_run: bool = False,
+        prompt_for_changes: bool = True,
     ):
         """
         Initializes the RepoManager with a GitHub token and a base directory for cloning repositories.
@@ -59,6 +61,7 @@ class GithubRepoManager(SourceHost):
             include_forks (bool): Whether to include forked repositories.
             host_domain (str): The domain of the GitHub instance.
             dry_run (bool): Whether to perform a dry run.
+            prompt_for_changes (bool): Whether to prompt for changes.
         """
         # self.client() = gh.Github(token)
         self.token = token
@@ -70,6 +73,7 @@ class GithubRepoManager(SourceHost):
         self.include_forks = include_forks
         self.host_domain = host_domain
         self.dry_run = dry_run
+        self.prompt_for_changes = prompt_for_changes
         LOGGER.debug(
             f"GithubRepoManager initialized with user_login: {user_login}, include_private: {include_private}, include_forks: {include_forks}"
         )
@@ -91,22 +95,22 @@ class GithubRepoManager(SourceHost):
             )
         return repos
 
-    def _get_user_repos(
-        self,
-    ) -> list[ghr.Repository]:
+    def _get_user_repos(self, ignore_users_filters: bool = False) -> list[ghr.Repository]:
         """
         Fetches the user's repositories from GitHub, optionally including private repositories and forks.
 
         Returns:
             list[Repository]: A list of Repository objects.
         """
+        console = console_with_theme()
         if not self.user:
             self.user = self.client().get_user()
 
         try:
             repos = []
             for repo in self.user.get_repos():
-                if (
+                # ignore user's filters when checking if something local isn't a remote repo.
+                if ignore_users_filters or (
                     (self.include_private or not repo.private)
                     and (self.include_forks or not repo.fork)
                     and repo.owner.login == self.user_login
@@ -115,12 +119,27 @@ class GithubRepoManager(SourceHost):
 
             return repos
         except gh.GithubException as e:
-            LOGGER.error(f"Failed to fetch repositories: {e}")
+            console.print(f"Failed to fetch repositories: {e}", style="danger")
             return []
 
+    @log_duration
     def clone_all(self, single_threaded: bool = False):
+        console = console_with_theme()
         repos = self._get_user_repos()
-        print(f"Cloning {len(repos)} repositories.")
+        if self.prompt_for_changes:
+            answer = inquirer.prompt(
+                [
+                    inquirer.Confirm(
+                        "clone-all", message=f"Are you sure you want to clone {len(repos)} repositories?", default=False
+                    )
+                ]
+            )
+            if not answer["clone-all"]:
+                console.print("Cloning cancelled.")
+                return
+
+        console.print(f"Cloning {len(repos)} repositories.")
+
         if single_threaded or len(repos) < 4:  # or features.CACHING:
             for repo in self._thread_safe_repos(repos):
                 self._clone_repo((repo, Dummy()))
@@ -131,7 +150,7 @@ class GithubRepoManager(SourceHost):
                 results = pool.map(self._clone_repo, [(repo, lock) for repo in self._thread_safe_repos(repos)])
                 for output in results:
                     if output:
-                        print(output, end="")
+                        console.print(output, end="")
 
     def _clone_repo(self, repo_args: tuple[dict[str, Any], ContextManager[Any]]) -> None:
         """
@@ -143,30 +162,33 @@ class GithubRepoManager(SourceHost):
         Returns:
         str: The captured print output.
         """
+        console = console_with_theme()
         repo, lock = repo_args
         try:
             if not (self.base_dir / repo["name"]).exists():
                 if not self.dry_run:
                     message = f"Cloning {repo['html_url']} into {self.base_dir}"
                     with lock:
-                        print(message)
+                        console.print(message)
                     g.Repo.clone_from(f"{repo['html_url']}.git", self.base_dir / repo["name"])
                 else:
                     message = f"Would have cloned {repo['html_url']} into {self.base_dir}"
                     with lock:
-                        print(message)
+                        console.print(message)
             else:
                 message = f"Repository {repo['name']} already exists locally. Skipping clone."
                 with lock:
-                    print(message)
+                    console.print(message)
         except g.GitCommandError as e:
             message = f"Failed to clone {repo['name']}: {e}"
             with lock:
-                print(message)
+                console.print(message, style="danger")
 
+    @log_duration
     def pull_all(self, single_threaded: bool = False):
+        console = console_with_theme()
         directories = mg.find_git_repos(self.base_dir)
-        print(f"Pulling {len(directories)} repositories.")
+        console.print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
                 self.pull_repo((repo_dir, Dummy()))
@@ -174,11 +196,12 @@ class GithubRepoManager(SourceHost):
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 manager = multiprocessing.Manager()
                 lock = manager.Lock()
-                results = pool.map(self.pull_repo, (print(repo_dir) or (repo_dir, lock) for repo_dir in directories))
+                results = pool.map(self.pull_repo, ((repo_dir, lock) for repo_dir in directories))
                 for output in results:
                     if output:
-                        print(output, end="")
+                        console.print(output, end="")
 
+    @log_duration
     def pull_repo(self, args: tuple[Path, ContextManager[Any]]) -> None:
         """
         Performs a git pull operation on the repository at the given path.
@@ -189,21 +212,23 @@ class GithubRepoManager(SourceHost):
         Returns:
             str: The captured print output.
         """
+        console = console_with_theme()
         repo_path, lock = args
         try:
             repo = g.Repo(repo_path)
             origin = repo.remotes.origin
             if not self.dry_run:
                 with lock:
-                    print(f"Pulling latest changes in {repo_path}")
+                    console.print(f"Pulling latest changes in {repo_path}")
                 origin.pull()
             else:
                 with lock:
-                    print(f"Would have pulled latest changes in {repo_path}")
+                    console.print(f"Would have pulled latest changes in {repo_path}")
         except Exception as e:
             with lock:
-                print(f"Failed to pull repo at {repo_path}: {e}")
+                console.print(f"Failed to pull repo at {repo_path}: {e}", style="danger")
 
+    @log_duration
     def not_repo(self) -> tuple[int, int, int, int]:
         """
         Lists directories in the base directory that are not valid Git repositories,
@@ -211,20 +236,23 @@ class GithubRepoManager(SourceHost):
 
         Uses both git and github because of fork checking.
         """
-        user_repos = {repo.name: repo for repo in self._get_user_repos()}
+        console = console_with_theme()
+        user_repos = {repo.name: repo for repo in self._get_user_repos(ignore_users_filters=True)}
 
         no_remote = 0
         not_found = 0
         is_fork = 0
         not_repo = 0
-        for repo_dir in mg.find_git_repos(self.base_dir):
+        repos = mg.find_git_repos(self.base_dir)
+        console.print(f"Checking {len(repos)} repositories for stray, non-repo subfolders in {self.base_dir}.")
+        for repo_dir in repos:
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
                     remotes = repo.remotes
                     if not remotes:
                         no_remote += 1
-                        print(f"{repo_dir} has no remote repositories defined.")
+                        console.print(f"{repo_dir} has no remote repositories defined.")
                         continue
 
                     remote_url = remotes[0].config_reader.get("url")
@@ -232,36 +260,41 @@ class GithubRepoManager(SourceHost):
 
                     if repo_name not in user_repos:
                         not_found += 1
-                        print(f"{repo_dir} is not found in your GitHub account.")
+                        console.print(f"{repo_dir} is not found in your GitHub account.")
                         continue
 
                     github_repo = user_repos[repo_name]
                     if github_repo.fork:
                         is_fork += 1
-                        print(f"{repo_dir} is a fork of another repository.")
+                        console.print(f"{repo_dir} is in your account, but is a fork of another user's repository.")
                         continue
 
                 except g.InvalidGitRepositoryError:
                     not_repo += 1
-                    print(f"{repo_dir} is not a valid Git repository.")
+                    console.print(f"{repo_dir} is not a valid Git repository.", style="danger")
         return no_remote, not_found, is_fork, not_repo
 
+    @log_duration
     def list_repo_builds(self) -> list[tuple[str, str]]:
         """
         Lists the most recent GitHub Actions workflow runs for each repository of the authenticated user,
         with the status color-coded: green for success, red for failure, and yellow for cancelled.
         """
+        console = console_with_theme()
         if not self.user:
             self.user = self.client().get_user()
 
         messages = []
-        for repo in self._get_user_repos():
-            print(f"Repository: {repo.name}")
+        repos = self._get_user_repos()
+        console.print(f"Checking {len(repos)} repositories for build statuses.")
+        for repo in repos:
+            console.print(f"Repository: {repo.name}")
             statuses = repo.get_workflow_runs()
             messages.extend(self._loop_actions(statuses))
         return messages
 
     def _loop_actions(self, statuses) -> list[tuple[str, str]]:
+        console = console_with_theme()
         actions_per_repo = 1
         status_count = 0
         messages = []
@@ -274,19 +307,21 @@ class GithubRepoManager(SourceHost):
             conclusion = (action.conclusion or "").lower()
             messages.append((conclusion, status_message))
             if conclusion == "success":
-                print(colored(status_message, "green"))
+                console.print(colored(status_message, "green"))
             elif conclusion == "failure":
-                print(colored(status_message, "red"))
+                console.print(colored(status_message, "red"))
             elif conclusion == "cancelled":
-                print(colored(status_message, "yellow"))
+                console.print(colored(status_message, "yellow"))
             else:
-                print(status_message)  # Default, no color
+                console.print(status_message)  # Default, no color
         return messages
 
+    @log_duration
     def check_pypi_publish_status(self, pypi_owner_name: Optional[str] = None) -> list[dict[str, Any]]:
         """
         Checks if the repositories as Python packages are published on PyPI and compares the last change dates.
         """
+        console = console_with_theme()
         results = []
         if pypi_owner_name:
             pypi_owner_name = pypi_owner_name.strip().lower()
@@ -298,7 +333,9 @@ class GithubRepoManager(SourceHost):
         package_names = [path.name for path in mg.find_git_repos(self.base_dir)]
         package_infos = asyncio.run(get_infos_async(package_names))
 
-        for repo_dir in mg.find_git_repos(self.base_dir):
+        repos = mg.find_git_repos(self.base_dir)
+        console.print(f"Checking {len(repos)} repositories for PyPI publish status.")
+        for repo_dir in repos:
             if repo_dir.is_dir():
                 try:
                     repo = g.Repo(repo_dir)
@@ -328,7 +365,8 @@ class GithubRepoManager(SourceHost):
                     LOGGER.warning(f"{repo_dir} is not a valid Git repository.")
                 except Exception as e:
                     LOGGER.error(f"Error checking {repo_dir}: {e}")
-        print(pretty_print_pypi_results(results))
+        print()
+        console.print(pretty_print_pypi_results(results))
         return results
 
     @classmethod
@@ -345,6 +383,7 @@ class GithubRepoManager(SourceHost):
         last_commit = next(repo.iter_commits())
         return datetime.fromtimestamp(last_commit.committed_date)
 
+    @log_duration
     def list_repo_names(self) -> list[str]:
         """
         Returns a list of repository names.
@@ -354,10 +393,12 @@ class GithubRepoManager(SourceHost):
         """
         return [repo.full_name for repo in self._get_user_repos()]
 
+    @log_duration
     def list_repos(self) -> Optional[Table]:
         """
         Fetches and prints beautifully formatted information about the user's GitHub repositories.
         """
+        console = console_with_theme()
         try:
             user = self.client().get_user(self.user_login)
             repos = user.get_repos()
@@ -379,18 +420,18 @@ class GithubRepoManager(SourceHost):
                         "Yes" if repo.fork else "No",
                     )
 
-            console = Console()
             console.print(table)
             return table
         except gh.GithubException as e:
-            print(f"An error occurred: {e}")
+            console.print(f"An error occurred: {e}", style="danger")
         return None
 
+    @log_duration
     def print_user_summary(self) -> None:
         """
         Fetches and prints a summary of the user's GitHub account.
         """
-        console = Console()
+        console = console_with_theme()
         try:
             user = self.client().get_user(self.user_login)
             summary = Text.assemble(
@@ -415,6 +456,7 @@ class GithubRepoManager(SourceHost):
         except gh.GithubException as e:
             console.print(f"An error occurred: {e}", style="bold red")
 
+    @log_duration
     def update_all_branches(self, single_threaded: bool = False, prefer_rebase: bool = False):
         """
         Updates each local branch with the latest changes from the main/master branch on GitHub.
@@ -423,8 +465,9 @@ class GithubRepoManager(SourceHost):
             single_threaded (bool): Whether to run the operation in a single thread.
             prefer_rebase (bool): Whether to prefer rebasing instead of merging.
         """
+        console = console_with_theme()
         directories = mg.find_git_repos(self.base_dir)
-        print(f"Merging/rebasing {len(directories)} main to local repositories.")
+        console.print(f"Merging/rebasing {len(directories)} main to local repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
                 self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, Dummy()))
@@ -439,7 +482,7 @@ class GithubRepoManager(SourceHost):
                 for output in results:
                     if output:
                         if output:
-                            print(output, end="")
+                            console.print(output, end="")
 
     # def _update_local_branches(self, repo_path: Path, github_repo_full_name: str, prefer_rebase: bool = False):
     def _update_local_branches(self, args: UpdateBranchArgs):
@@ -449,13 +492,14 @@ class GithubRepoManager(SourceHost):
         Args:
             args: UpdateBranchArgs
         """
+        console = console_with_theme()
         repo_path, github_repo_full_name, prefer_rebase = args.repo_path, args.github_repo_full_name, args.prefer_rebase
         github_repo_full_name = self.user_login + "/" + github_repo_full_name
         repo = g.Repo(str(repo_path))
         try:
             github_repo = self.client().get_repo(github_repo_full_name)
         except gh.GithubException as e:
-            print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}")
+            console.print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}", style="danger")
             return
         # Get the default branch name from GitHub
         default_branch = github_repo.default_branch
@@ -483,14 +527,29 @@ class GithubRepoManager(SourceHost):
                         # Perform merge
                         repo.git.merge(f"origin/{default_branch}")
 
-                    print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
+                    console.print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
                 else:
-                    print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
+                    console.print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
             except g.exc.GitCommandError as e:
-                print(f"Failed to update branch '{branch}': {e}")
+                console.print(f"Failed to update branch '{branch}': {e}", style="danger")
 
+    @log_duration
     def prune_all(self) -> None:
-        for repo_dir in mg.find_git_repos(self.base_dir):
+        """
+        Prunes all local branches that have been deleted on GitHub.
+        """
+        console = console_with_theme()
+        repos = mg.find_git_repos(self.base_dir)
+        console.print(f"Ready to Pruning {len(repos)} repositories of branches no longer on remote.")
+        if self.prompt_for_changes:
+            answer = inquirer.prompt(
+                [inquirer.Confirm("prune", message="Are you sure you want to prune all repositories?", default=False)]
+            )
+            if not answer["prune"]:
+                console.print("Pruning cancelled.")
+                return
+
+        for repo_dir in repos:
             if repo_dir.is_dir():
                 self._delete_local_branches_if_not_on_github(repo_dir, f"{self.user_login}/{repo_dir.name}")
 
@@ -502,16 +561,16 @@ class GithubRepoManager(SourceHost):
             repo_path (Path): The file system path to the local git repository.
             github_repo_full_name (str): The full name of the GitHub repository (e.g., "owner/repo").
         """
-        # Initialize GitHub client and GitPython Repo
+        console = console_with_theme()
         try:
             repo = g.Repo(str(repo_path))
         except g.InvalidGitRepositoryError:
-            print(f"{repo_path} is not a valid Git repository.")
+            console.print(f"{repo_path} is not a valid Git repository.", style="danger")
             return
         try:
             github_repo = self.client().get_repo(github_repo_full_name)
         except gh.GithubException as e:
-            print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}")
+            console.print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}", style="danger")
             return
 
         # Get a list of all branch names on GitHub
@@ -524,31 +583,37 @@ class GithubRepoManager(SourceHost):
         branches_to_consider = [branch for branch in local_branches if branch not in remote_branches]
 
         if not branches_to_consider:
-            print(f"For {github_repo_full_name}, no local branches exist that are missing on GitHub.")
+            console.print(f"For {github_repo_full_name}, no local branches exist that are missing on GitHub.")
             return
 
         # Prompt user for each branch that doesn't exist on GitHub
         for branch in branches_to_consider:
-            question = [
-                inquirer.Confirm(
-                    "delete", message=f"The branch '{branch}' does not exist on GitHub. Delete locally?", default=False
+            if self.prompt_for_changes:
+                question = [
+                    inquirer.Confirm(
+                        "delete",
+                        message=f"The branch '{branch}' does not exist on GitHub. Delete locally?",
+                        default=False,
+                    )
+                ]
+                answer = inquirer.prompt(question)
+
+                if not answer["delete"]:
+                    console.print(f"Skipped deletion of branch '{branch}'.")
+                    continue
+            try:
+                if not self.dry_run:
+                    # Safely delete the branch
+                    repo.git.branch("-d", branch)
+                    console.print(f"Deleted branch '{branch}' locally.")
+                else:
+                    console.print(f"Would have deleted branch '{branch}' locally.")
+            except g.exc.GitCommandError as e:
+                console.print(
+                    f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}", style="danger"
                 )
-            ]
-            answer = inquirer.prompt(question)
 
-            if answer["delete"]:
-                try:
-                    if not self.dry_run:
-                        # Safely delete the branch
-                        repo.git.branch("-d", branch)
-                        print(f"Deleted branch '{branch}' locally.")
-                    else:
-                        print(f"Would have deleted branch '{branch}' locally.")
-                except g.exc.GitCommandError as e:
-                    print(f"Could not delete branch '{branch}'. It may not be fully merged. Error: {e}")
-            else:
-                print(f"Skipped deletion of branch '{branch}'.")
-
+    @log_duration
     def version_info(self) -> dict[str, Any]:
         """
         Return API version information.
@@ -560,40 +625,54 @@ class GithubRepoManager(SourceHost):
         versions_supported = data["info"]["version"]
         return {"version": versions_supported}
 
+    @log_duration
     def cross_repo_sync_report(self, template_dir: Path) -> None:
         """
         Reports differences between the template directory and the target directories.
         """
+        console = console_with_theme()
         if not template_dir or not template_dir.exists():
-            print(f"Template directory {template_dir} does not exist.")
+            console.print(f"Template directory {template_dir} does not exist.")
             return
         # right now just the easy case of all repos need to match 1 template_dir
-        print("Reporting differences between the template directory and the target directories.")
+        console.print("Reporting differences between the template directory and the target directories.")
         syncer = TemplateSync(template_dir)
         directories = mg.find_git_repos(self.base_dir)
-        print(f"Found {len(directories)} repositories.")
+        console.print(f"Found {len(directories)} repositories.")
         syncer.report_content_differences(directories)
 
-    def cross_repo_init(self, template_dir: Path):
+    @log_duration
+    def cross_repo_init(self, template_dir: Path) -> None:
+        console = console_with_theme()
         if not template_dir or not template_dir.exists():
-            print(f"Template directory {template_dir} does not exist.")
+            console.print(f"Template directory {template_dir} does not exist.")
             return
         syncer = TemplateSync(template_dir, use_default=True)
         directories = mg.find_git_repos(self.base_dir)
-        print(f"Found {len(directories)} repositories.")
+        console.print(f"Found {len(directories)} repositories.")
         syncer.write_template_map(directories)
-        print(f"Initialized template map for {len(directories)} repositories.")
+        console.print(f"Initialized template map for {len(directories)} repositories.")
 
-    def cross_repo_sync(self, template_dir: Path):
+    @log_duration
+    def cross_repo_sync(self, template_dir: Path) -> None:
+        console = console_with_theme()
         if not template_dir or not template_dir.exists():
-            print(f"Template directory {template_dir} does not exist.")
+            console.print(f"Template directory {template_dir} does not exist.")
             return
         syncer = TemplateSync(template_dir, use_default=True)
         directories = mg.find_git_repos(self.base_dir)
-        print(f"Found {len(directories)} repositories.")
+        console.print(f"Found {len(directories)} repositories.")
+        if self.prompt_for_changes:
+            answer = inquirer.prompt(
+                [inquirer.Confirm("sync", message="Are you sure you want to sync all repositories?", default=False)]
+            )
+            if not answer["sync"]:
+                console.print("Sync cancelled.")
+                return
         syncer.sync_template(directories)
-        print(f"Synchronized {len(directories)} repositories with the template directory.")
+        console.print(f"Synchronized {len(directories)} repositories with the template directory.")
 
+    @log_duration
     def merge_request(
         self, source_branch: str, target_branch: str, title: str, reviewer: str, project_id: int, repo_name: str
     ) -> None:
@@ -611,6 +690,7 @@ class GithubRepoManager(SourceHost):
         Returns:
             None
         """
+        console = console_with_theme()
         repo = self.client().get_repo(repo_name)
         if not self.user:
             self.user = self.client().get_user()
@@ -628,4 +708,4 @@ class GithubRepoManager(SourceHost):
         pull_request.assignees.append(self.user)  # type: ignore
         pull_request.create_review_request(reviewers=[reviewer])
 
-        print(f"Pull request created: {pull_request.html_url}")
+        console.print(f"Pull request created: {pull_request.html_url}")

@@ -17,7 +17,9 @@ LOGGER = logging.getLogger(__name__)
 def test_not_repo(mock_iterdir, mock_git_repo, tmp_path):
     # Mock setup
     base_dir = tmp_path
-    manager = GithubRepoManager("token", base_dir, "user_login", include_private=True, include_forks=True)
+    manager = GithubRepoManager(
+        "token", base_dir, "user_login", include_private=True, include_forks=True, prompt_for_changes=False
+    )
     manager.user = MagicMock()
     mock_get_repos = MagicMock()
     manager.user.get_repos = mock_get_repos

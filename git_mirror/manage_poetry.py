@@ -5,6 +5,7 @@ import subprocess  # nosec
 import git
 
 from git_mirror.custom_types import SourceHost
+from git_mirror.performance import log_duration
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,18 @@ def clean_gone_branches(repo: git.Repo) -> None:
 
 
 class PoetryManager:
-    def __init__(self, host: SourceHost):
+    def __init__(self, host: SourceHost, dry_run: bool = False, prompt_for_changes: bool = True):
+        """
+        Args:
+            host: The source host.
+            dry_run: Whether to perform a dry run.
+            prompt_for_changes: Whether to prompt for changes.
+        """
         self.host = host
+        self.dry_run = dry_run
+        self.prompt_for_changes = prompt_for_changes
 
+    @log_duration
     def update_dependencies(
         self, main_branch: str, dependency_update_branch: str, project_id: int, repo_name: str, user: str, reviewer: str
     ) -> None:

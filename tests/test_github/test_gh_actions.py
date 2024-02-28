@@ -8,7 +8,7 @@ from git_mirror.manage_github import GithubRepoManager
 
 @pytest.fixture
 def github_repo_manager():
-    return GithubRepoManager("token", Path("/fake/path"), "user_login")
+    return GithubRepoManager("token", Path("/fake/path"), "user_login", prompt_for_changes=False)
 
 
 def test_loop_actions(github_repo_manager):

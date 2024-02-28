@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from git_mirror.manage_pypi import ColorTable, PrettyTable, pretty_print_pypi_results
+from git_mirror.manage_pypi import pretty_print_pypi_results
 
 
 @pytest.fixture
@@ -31,8 +31,7 @@ def sample_results():
 def test_pretty_print_pypi_results_no_color_or_ci(env_var, sample_results, monkeypatch):
     monkeypatch.setenv(env_var[0], "true")
     table = pretty_print_pypi_results(sample_results)
-    assert isinstance(table, PrettyTable)
-    assert len(table._rows) == len(sample_results)  # Using internal _rows for test demonstration
+    assert len(table.rows) == len(sample_results)  # Using internal _rows for test demonstration
 
 
 @pytest.mark.parametrize("env_var", [("NO_COLOR",), ("CI",)])
@@ -42,8 +41,7 @@ def test_pretty_print_pypi_results_color(env_var, sample_results, monkeypatch):
         return
     monkeypatch.delenv(env_var[0], raising=False)
     table = pretty_print_pypi_results(sample_results)
-    assert isinstance(table, ColorTable)
-    assert len(table._rows) == len(sample_results)  # Using internal _rows for test demonstration
+    assert len(table.rows) == len(sample_results)  # Using internal _rows for test demonstration
 
 
 if __name__ == "__main__":

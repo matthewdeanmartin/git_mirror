@@ -8,7 +8,7 @@ from git_mirror.manage_gitlab import GitlabRepoManager
 
 @pytest.fixture
 def gitlab_repo_manager():
-    return GitlabRepoManager("token", Path("/fake/path"), "user_login")
+    return GitlabRepoManager("token", Path("/fake/path"), "user_login", prompt_for_changes=False)
 
 
 def test_loop_pipelines(gitlab_repo_manager):

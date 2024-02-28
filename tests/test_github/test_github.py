@@ -18,7 +18,7 @@ def github_repo_manager():
     user_login = "fake-user"
     include_private = True
     include_forks = False
-    manager = GithubRepoManager(token, base_dir, user_login, include_private, include_forks)
+    manager = GithubRepoManager(token, base_dir, user_login, include_private, include_forks, prompt_for_changes=False)
     return manager
 
 

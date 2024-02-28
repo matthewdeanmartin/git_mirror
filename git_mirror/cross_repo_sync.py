@@ -20,6 +20,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.text import Text
 
+from git_mirror.ui import console_with_theme
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -39,6 +41,7 @@ class TemplateSync:
         self.template_map = self.read_template_map()
         self.default_template = "default"
         self.use_default = use_default
+        self.console = console_with_theme()
 
     def read_template_map(self) -> dict[str, str]:
         if not self.template_map_file.exists():
@@ -68,8 +71,8 @@ class TemplateSync:
                 else:
                     template_map_handle.write(f"{path.name}:\n")
         if not self.use_default:
-            print("Please fill in the template_map.txt file with the correct template for each project.")
-            print(f"File is located at {self.template_map_file}")
+            self.console.print("Please fill in the template_map.txt file with the correct template for each project.")
+            self.console.print(f"File is located at {self.template_map_file}")
             sys.exit(1)
 
     def get_template_dir(self, project: str) -> Path:
@@ -81,12 +84,12 @@ class TemplateSync:
         """
         self.write_template_map(target_dirs)
         differences = self._report_differences_data(target_dirs)
-        print(differences)
+        self.console.print(differences)
         for target_dir, diff_files in differences.items():
             if diff_files:
-                print(f"Differences in {target_dir}: {diff_files}")
+                self.console.print(f"Differences in {target_dir}: {diff_files}")
             else:
-                print(f"No differences in {target_dir}")
+                self.console.print(f"No differences in {target_dir}")
 
         self.report_content_differences(target_dirs)
 

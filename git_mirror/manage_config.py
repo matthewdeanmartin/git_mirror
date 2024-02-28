@@ -17,11 +17,14 @@ from rich.text import Text
 from tomlkit import TOMLDocument
 
 from git_mirror.safe_env import load_env
+from git_mirror.ui import console_with_theme
 
 load_env()
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
+
+console = console_with_theme()
 
 
 def default_config_path() -> Path:
@@ -69,7 +72,7 @@ class ConfigData:
 
 def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
     if len(already_configured) == 3:
-        print("All Github, Gitlab and a self-hosted Gitlab are already configured.")
+        console.print("All Github, Gitlab and a self-hosted Gitlab are already configured.")
         return None
     choices = ["github", "gitlab", "selfhosted"]
     for host in already_configured:
@@ -94,7 +97,7 @@ def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
         answer = inquirer.prompt(
             [inquirer.Confirm("create_target_dir", message="Target directory does not exist. Create it?", default=True)]
         )
-        print(answer)
+        console.print(answer)
         if answer["create_target_dir"]:
             os.makedirs(target_dir)
         else:
@@ -186,7 +189,7 @@ class ConfigManager:
                 found += 1
                 display_config(data)
         if not found:
-            print("No configuration found. Run `git-mirror init` to create a new configuration.")
+            console.print("No configuration found. Run `git-mirror init` to create a new configuration.")
 
     def initialize_config(self) -> list[str]:
         already_configured: list[str] = []
@@ -202,7 +205,7 @@ class ConfigManager:
                 return already_done
 
             already_configured = already(git_mirror_section)
-            print(f"Already configured: {already_configured}")
+            console.print(f"Already configured: {already_configured}")
             config_section = ask_for_section(already_configured)
             if not config_section:
                 break
@@ -212,7 +215,7 @@ class ConfigManager:
                     f"Configuration for {config_section.host_type} " f"already exists in {self.config_path.resolve()}"
                 )
             if config_section.target_dir and not config_section.target_dir.exists():
-                print(f"Creating directory {config_section.target_dir}")
+                console.print(f"Creating directory {config_section.target_dir}")
                 os.makedirs(config_section.target_dir)
 
             if config_section.host_type not in ("github", "gitlab"):
@@ -260,7 +263,7 @@ class ConfigManager:
                 raise ValueError(f"target_dir not found in config file at {self.config_path.resolve()}")
 
             if target_dir and not Path(target_dir).exists():
-                print(f"Creating directory {target_dir}")
+                console.print(f"Creating directory {target_dir}")
                 os.makedirs(target_dir)
             data = ConfigData(
                 host,
@@ -322,7 +325,7 @@ class ConfigManager:
 
         config["tool"]["git-mirror"][host]["repos"] = git_mirror  # type: ignore
 
-        print(f"Syncing configuration with {len(repos)} repositories to {self.config_path.resolve()}")
+        console.print(f"Syncing configuration with {len(repos)} repositories to {self.config_path.resolve()}")
         with open(self.config_path, "w", encoding="utf-8") as file:
             file.write(tomlkit.dumps(config))
 
