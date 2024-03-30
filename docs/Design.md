@@ -11,6 +11,9 @@ Not specifically TODO items, but guidance for making TODO items.
 - Python concerns (pypi publish and poetry update)
 - Support windows, linux, mac
 
+## Out of scope features 
+- Try not to overlap with `gh` and `glab`'s feature sets.
+
 ## Extension points
 - Do support pluggy
 - Don't support running arbitrary code (e.g. a yaml file full of bash to be run on each repo)

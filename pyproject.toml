@@ -86,7 +86,13 @@ pytest-cov = ">=4.1.0"
 pytest-xdist =">=3.5.0"
 pytest-randomly=">=3.15.0"
 pytest-sugar =">=0.9.7"
-pytest-mock = "*"
+pytest-mock =">=3.14.0"
+
+# pytest-snapshot = "*"
+# pytest-asyncio = "*"
+pytest-network= "*"
+# time-machine = "*"
+
 
 hypothesis = ">=6.96.0"
 tox = "*"

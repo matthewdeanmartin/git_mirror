@@ -6,6 +6,10 @@ from typing import Any, Optional
 
 import inquirer
 
+from git_mirror.manage_config import ConfigManager
+from git_mirror.ui import console_with_theme
+
+console = console_with_theme()
 
 @dataclass
 class CommandInfo:
@@ -99,3 +103,42 @@ def handle_control_c(answer: Any) -> None:
         print("Exiting.")
         # This happens when the user hits control-C
         sys.exit()
+
+
+def ask_for_host(config_manager:ConfigManager) -> str:
+    """
+    Main function to run the UI that queries configuration statuses and asks the user for further actions.
+    """
+    config_status = config_manager.load_config_objects()
+    configured_options = [service for service, is_configured  in config_status.items() if is_configured]
+    unconfigured_options = [service for service, is_configured  in config_status.items() if not is_configured]
+
+    if len(configured_options)==3:
+        message = "Select a source host"
+        choices = configured_options
+    else:
+        message = "Select as source host or configure an additional one"
+        choices = configured_options + ["Configure new service"]
+    questions = [
+        inquirer.List('service',
+                      message=message,
+                      choices=choices,
+                      carousel=True)
+    ]
+
+    answers = inquirer.prompt(questions)
+
+    if answers["service"] == "Configure new service":
+        config_questions = [
+            inquirer.Checkbox('services_to_configure',
+                              message="Select services to configure:",
+                              choices=unconfigured_options,
+                              carousel=True)
+        ]
+        config_answers = inquirer.prompt(config_questions)
+        console.print(f"Selected for configuration: {config_answers['services_to_configure']}", style="bold green")
+        # Here you would call your configuration function(s) for the selected services
+        return ""
+    else:
+        console.print(f"Using {answers['service']}", style="bold green")
+        return answers['service']

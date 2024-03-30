@@ -17,7 +17,7 @@ from git_mirror import logging_config
 from git_mirror.__about__ import __description__, __version__
 from git_mirror.bug_report import BugReporter
 from git_mirror.manage_config import ConfigManager, default_config_path
-from git_mirror.menu import get_command_info
+from git_mirror.menu import get_command_info, ask_for_host
 from git_mirror.safe_env import load_env
 from git_mirror.ui import console_with_theme
 from git_mirror.version_check import display_version_check_message
@@ -52,11 +52,15 @@ def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
     invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
     needs_host = args.command not in ("init", "list-config")
     if invalid_or_missing_host and needs_host:
-        console.print(
-            "Please specify a host with --host or use gh_mirror for Github, gl_mirror for Gitlab, or sh_mirror for self hosted. "
-            "Specify selfhosted in config file with a host_type of github or gitlab."
-        )
-        return "", 1
+        host = ask_for_host(config_manager)
+        if not host:
+            config_manager.initialize_config()
+            # console.print(
+            #     "Please specify a host with --host or use gh_mirror for Github, gl_mirror for Gitlab, or sh_mirror for self hosted. "
+            #     "Specify selfhosted in config file with a host_type of github or gitlab."
+            # )
+            return "", 1
+        args.host = host
     if not needs_host:
         return None, 0
     config_data = config_manager.load_config(args.host)

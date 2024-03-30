@@ -10,6 +10,7 @@ import git_mirror.manage_config as mc
 import git_mirror.manage_git as mg
 import git_mirror.manage_github as mgh
 import git_mirror.manage_gitlab as mgl
+from git_mirror.check_cli_deps import check_tool_availability
 from git_mirror.custom_types import SourceHost
 from git_mirror.manage_poetry import PoetryManager
 from git_mirror.safe_env import load_env
@@ -63,6 +64,8 @@ def route_config(
     if command == "list-config":
         config_manager = mc.ConfigManager(config_path=config_path)
         config_manager.list_config()
+        print()
+        check_tool_availability()
     else:
         console.print(f"Unknown command: {command}")
 

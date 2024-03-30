@@ -26,7 +26,11 @@ def check_tool_availability():
     }
     results = cta.process_tools(to_check, no_cache=True, disable_progress_bar=True)
     for result in results:
-        console.print(f"{result.tool}: available {result.is_available}, compatible {result.is_compatible}")
+        console.print(f"{result.tool}", style="underline")
+        if result.is_compatible:
+            console.print(f"{result.parsed_version}: available {result.is_available}, {result.is_compatible}")
+        else:
+            console.print(f"{result.parsed_version}: available {result.is_available}, {result.is_compatible}", "danger")
 
 
 if __name__ == "__main__":
