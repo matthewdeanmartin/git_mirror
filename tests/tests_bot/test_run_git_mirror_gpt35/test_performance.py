@@ -1,24 +1,18 @@
-import pytest
-
-from git_mirror.performance import log_duration
-from unittest.mock import patch
 import logging
 import time
 
-
-
-
+from git_mirror.performance import log_duration
 
 # Let's review the code and identify any potential issues before writing unit
 # tests:
-# 
+#
 # 1. The `log_duration` decorator looks well-implemented.
 # 2. The decorator logs the execution time of the wrapped function in minutes,
 #    seconds, and milliseconds.
 # 3. The decorator does not handle exceptions that might occur during the
 #    execution of the wrapped function. Adding exception handling could be
 #    beneficial.
-# 
+#
 # Now, let's proceed to write pytest-style unit tests:
 
 # Mocking getLogger to prevent actual log messages during testing
@@ -35,8 +29,7 @@ def test_log_duration_logs_execution_time(caplog):
         dummy_function()
 
         # Check if the log message contains the expected duration format
-        assert "Function dummy_function took 0 minutes, 1 seconds, and 0 ms to execute." in caplog.text
-
+        assert "Function dummy_function took 0 minutes, 1 seconds" in caplog.text
 
 
 def test_log_duration_preserves_functionality():

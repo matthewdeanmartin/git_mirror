@@ -1,30 +1,37 @@
 from pathlib import Path
+from unittest.mock import MagicMock
 
-from git_mirror.custom_types import UpdateBranchArgs, SourceHost
-from unittest.mock import MagicMock, patch
 import pytest
+
+from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 
 # I will write unit tests to cover the following scenarios for the
 # `git_mirror.custom_types` module:
-# 
+#
 # 1. Testing the `UpdateBranchArgs` dataclass initialization.
 # 2. Mocking the `SourceHost` protocol methods with dummy implementations to
 #    ensure they can be called without error.
-# 
+#
 # Here are the unit tests:
 
-@pytest.mark.parametrize("repo_path, github_repo_full_name, prefer_rebase, lock", [
-    ("/path/to/repo", "user/repo", True, MagicMock()),  # Test with preferred rebase
-    ("/another/path", "user/another_repo", False, MagicMock())  # Test without preferred rebase
-])
+
+@pytest.mark.parametrize(
+    "repo_path, github_repo_full_name, prefer_rebase, lock",
+    [
+        ("/path/to/repo", "user/repo", True, MagicMock()),  # Test with preferred rebase
+        ("/another/path", "user/another_repo", False, MagicMock()),  # Test without preferred rebase
+    ],
+)
 def test_update_branch_args(repo_path, github_repo_full_name, prefer_rebase, lock):
     # Test dataclass initialization
-    update_args = UpdateBranchArgs(repo_path=repo_path, github_repo_full_name=github_repo_full_name,
-                                   prefer_rebase=prefer_rebase, lock=lock)
+    update_args = UpdateBranchArgs(
+        repo_path=repo_path, github_repo_full_name=github_repo_full_name, prefer_rebase=prefer_rebase, lock=lock
+    )
     assert update_args.repo_path == repo_path
     assert update_args.github_repo_full_name == github_repo_full_name
     assert update_args.prefer_rebase == prefer_rebase
     assert update_args.lock == lock
+
 
 def test_source_host_protocol_methods():
     # Mocking the SourceHost protocol methods
@@ -62,6 +69,7 @@ def test_source_host_protocol_methods():
     source_host.cross_repo_sync(Path("/template/dir"))
 
     source_host.merge_request("source_branch", "target_branch", "test", "reviewer", 123, "repo_name")
+
 
 # These tests cover the initialization of the `UpdateBranchArgs` dataclass and
 # ensure that the `SourceHost` protocol methods can be called without error.

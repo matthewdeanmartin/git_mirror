@@ -27,7 +27,7 @@ def clean_gone_branches(repo: git.Repo) -> None:
 
 
 @contextmanager
-def working_directory(repo_folder:str):
+def working_directory(repo_folder: str):
     """Changes to the working directory and returns to the original directory when done."""
     original_directory = os.getcwd()
     os.chdir(repo_folder)
@@ -50,9 +50,7 @@ class PoetryManager:
         self.prompt_for_changes = prompt_for_changes
 
     @log_duration
-    def install(
-            self, repo_folder: str
-    ) -> None:
+    def install(self, repo_folder: str) -> None:
         """Update project dependencies and create a merge request if changes are made.
 
         Args:
@@ -64,11 +62,16 @@ class PoetryManager:
             # TODO: make group config driven.
             subprocess.run(["poetry", "install", "--with", "dev"], check=True, shell=True)  # nosec
 
-
     @log_duration
     def update_dependencies(
-        self,  repo_folder:str, main_branch: str, dependency_update_branch: str, project_id: int, repo_name: str,
-            user: str, reviewer: str
+        self,
+        repo_folder: str,
+        main_branch: str,
+        dependency_update_branch: str,
+        project_id: int,
+        repo_name: str,
+        user: str,
+        reviewer: str,
     ) -> None:
         """Update project dependencies and create a merge request if changes are made.
 

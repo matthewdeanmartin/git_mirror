@@ -181,7 +181,7 @@ class ConfigManager:
     def __init__(self, config_path: Optional[Path] = None):
         self.config_path = config_path or default_config_path()
 
-    def load_config_objects(self) -> dict[str,ConfigData]:
+    def load_config_objects(self) -> dict[str, Optional[ConfigData]]:
         configs = {}
         for host_type in ["selfhosted", "gitlab", "github"]:
             data = self.load_config(host_type)

@@ -1,26 +1,23 @@
-from git_mirror.check_cli_deps import check_tool_availability
 from unittest.mock import MagicMock, patch
-from unittest.mock import patch
 
-
-
-
+from git_mirror.check_cli_deps import check_tool_availability
 
 # ### Bugs
-# 
+#
 # 1. The `check_tool_availability` function in `check_cli_deps.py` imports
 #    `cli_tool_audit` as `cta`, but this import is not present in the given code
 #    snippet. This could lead to an ImportError when running the function.
-# 
+#
 # ### Unit Test
-# 
+#
 # To test the `check_tool_availability` function, we should:
-# 
+#
 # 1. Mock the `cli_tool_audit` dependency.
 # 2. Mock the `console_with_theme` function.
 # 3. Test the output based on different scenarios.
-# 
+#
 # Here is how we can write the unit test:
+
 
 @patch("git_mirror.check_cli_deps.models.CliToolConfig")
 @patch("cli_tool_audit.process_tools")
@@ -38,7 +35,7 @@ def test_check_tool_availability(mock_console_with_theme, mock_process_tools, mo
     mock_result_1 = MagicMock(tool="git", parsed_version="1.7.10", is_available=True, is_compatible=True)
     mock_result_2 = MagicMock(tool="poetry", parsed_version="1.1.5", is_available=True, is_compatible=False)
     mock_process_tools.return_value = [mock_result_1, mock_result_2]
-    
+
     # Call the function to be tested
     check_tool_availability()
 
@@ -50,15 +47,17 @@ def test_check_tool_availability(mock_console_with_theme, mock_process_tools, mo
 
     # Additional assertions can be added based on the specific requirements of the function
 
+
 # Run the test
 test_check_tool_availability()
 
 # This test mocks the dependencies and asserts that the correct output is printed
 # to the console based on the mocked results from the `process_tools` function.
 # ### Unit Test
-# 
+#
 # Let's write a unit test to verify the behavior when `process_tools` returns an
 # empty result.
+
 
 @patch("cli_tool_audit.process_tools")
 @patch("git_mirror.check_cli_deps.console_with_theme")
@@ -76,11 +75,12 @@ def test_check_tool_availability_empty_result(mock_console_with_theme, mock_proc
     # Assertions
     assert mock_console.print.call_count == 0  # No console output should be printed
 
+
 # Run the test
 test_check_tool_availability_empty_result()
 
 # This test verifies that when `process_tools` returns an empty result, the
 # `check_tool_availability` function does not print anything to the console.
-# 
+#
 # If you have more scenarios to test, feel free to provide additional
 # requirements, and I can write more unit tests accordingly.

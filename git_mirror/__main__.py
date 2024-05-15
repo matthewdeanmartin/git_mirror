@@ -17,7 +17,7 @@ from git_mirror import logging_config
 from git_mirror.__about__ import __description__, __version__
 from git_mirror.bug_report import BugReporter
 from git_mirror.manage_config import ConfigManager, default_config_path
-from git_mirror.menu import get_command_info, ask_for_host
+from git_mirror.menu import ask_for_host, get_command_info
 from git_mirror.safe_env import load_env
 from git_mirror.ui import console_with_theme
 from git_mirror.version_check import display_version_check_message

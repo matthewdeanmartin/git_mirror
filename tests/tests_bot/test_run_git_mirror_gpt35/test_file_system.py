@@ -1,12 +1,7 @@
-import pytest
+import os
+from unittest.mock import patch
 
 from git_mirror.file_system import setup_app_directories
-from unittest.mock import patch
-import os
-
-
-
-
 
 # 1. We need to test if the directories are created correctly when
 #    `setup_app_directories` is called.
@@ -14,8 +9,9 @@ import os
 # 3. Additionally, we can test what happens when `os.makedirs` fails for some
 #    reason.
 # 4. We should test with different input values to cover multiple scenarios.
-# 
+#
 # Here are the unit tests for the `file_system.py` module:
+
 
 def test_setup_app_directories(mocker):
     app_name = "my_app"
@@ -24,11 +20,13 @@ def test_setup_app_directories(mocker):
     data_dir = "data_dir_path"
     cache_dir = "cache_dir_path"
 
-    with patch("git_mirror.file_system.user_config_dir", return_value=config_dir), \
-         patch("git_mirror.file_system.user_data_dir", return_value=data_dir), \
-         patch("git_mirror.file_system.user_cache_dir", return_value=cache_dir), \
-         patch("git_mirror.file_system.os.makedirs") as mock_makedirs:
-        
+    with (
+        patch("git_mirror.file_system.user_config_dir", return_value=config_dir),
+        patch("git_mirror.file_system.user_data_dir", return_value=data_dir),
+        patch("git_mirror.file_system.user_cache_dir", return_value=cache_dir),
+        patch("git_mirror.file_system.os.makedirs") as _mock_makedirs,
+    ):
+
         result = setup_app_directories(app_name)
 
         assert result["config_dir"] == config_dir

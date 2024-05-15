@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git_mirror"
-version = "0.3.7"
+version = "0.3.8"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
 keywords = ["git", "gitlab", "github", "polyrepo" ]
@@ -51,6 +51,7 @@ python-dotenv = ">=1.0.1, <2"
 # ui
 rich = ">=13.7.0, <14"
 inquirer = ">=3.2.3, <4"
+termcolor = "*"
 
 # one table uses this...
 prettytable = "3.9.0, <4"

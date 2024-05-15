@@ -1,23 +1,16 @@
-from rich.text import Text
-
-from git_mirror.cross_repo_sync import TemplateSync
-from pathlib import Path
-from unittest.mock import patch, Mock
 import pytest
 
-
-
-
+from git_mirror.cross_repo_sync import TemplateSync
 
 # ### Bug Identification
-# 
+#
 # - The `def console_with_theme()` function from `git_mirror.ui` is imported but
 #   has not been mocked in the tests.
-# 
+#
 # ### Unit Tests
-# 
+#
 # I will write unit tests to cover the following scenarios:
-# 
+#
 # 1. Test `TemplateSync` initialization with the default template settings.
 # 2. Test reading an empty `template_map.txt` file in the `TemplateSync` class.
 # 3. Test reading a non-empty `template_map.txt` file in the `TemplateSync` class
@@ -30,6 +23,7 @@ import pytest
 # 8. Test reporting content differences for files with different lengths.
 # 9. Test synchronizing the template directory with a target directory.
 
+
 @pytest.fixture
 def sample_template_dir(tmp_path):
     # Create a sample template directory for testing
@@ -40,12 +34,14 @@ def sample_template_dir(tmp_path):
         file.write("Sample template content")
     return template_dir
 
+
 def test_template_sync_initialization(sample_template_dir):
     templates_dir = sample_template_dir
     template_sync = TemplateSync(templates_dir, use_default=True)
     assert template_sync.templates_dir == templates_dir
     assert template_sync.default_template == "default"
-    assert template_sync.use_default == True
+    assert template_sync.use_default
+
 
 # subtle syntax error here?
 # def test_empty_template_map_file():
@@ -67,10 +63,9 @@ def test_get_template_dir(sample_template_dir):
     assert template_sync.get_template_dir("project1") == sample_template_dir / "template1"
 
 
-
 # No more unit tests
 # ### Unit Test
-# 
+#
 # 10. Test comparing two files with different contents in the `_compare_files`
 #     method.
 def test_compare_files_different_contents(tmp_path):
@@ -91,9 +86,10 @@ def test_compare_files_different_contents(tmp_path):
     difference = template_sync._compare_files(template_file, target_file, "project1")
     assert difference == {"difference": "different contents"}
 
+
 # No more unit tests
 # ### Unit Test
-# 
+#
 # 11. Test applying light templating to replace project name token in files.
 #
 # 12. Test the `_copy_template` method to ensure the template directory is copied
@@ -101,7 +97,7 @@ def test_compare_files_different_contents(tmp_path):
 
 # No more unit tests
 # ### Unit Test
-# 
+#
 # 13. Test displaying rich diff of contents between two files in the
 #     `_display_diff` method.
 
