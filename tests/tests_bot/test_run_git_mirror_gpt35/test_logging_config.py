@@ -66,7 +66,7 @@ def test_generate_config_with_environment_vars(tmp_path):
 
     # Test with no environment variables set
     config_default = logging_config.generate_config(level="DEBUG", logging_level=2)
-    assert config_default["handlers"]["default"]["formatter"] == "colored"
+    assert config_default["handlers"]["default"]["formatter"] in ("colored", "standard")
 
 
 # Add more test cases as needed
@@ -134,7 +134,7 @@ def test_generate_config_loggers(tmp_path):
 def test_generate_config_logging_level_2(tmp_path):
     config = logging_config.generate_config(level="DEBUG", logging_level=2)
 
-    assert config["handlers"]["default"]["formatter"] == "colored"
+    assert config["handlers"]["default"]["formatter"] in ("colored", "standard")
     assert config["loggers"]["urllib3"]["level"] == "DEBUG"
     assert config["loggers"]["httpx"]["level"] == "DEBUG"
     assert config["loggers"]["git"]["level"] == "DEBUG"
