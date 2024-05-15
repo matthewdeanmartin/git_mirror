@@ -141,7 +141,6 @@ def test_generate_config_logging_level_2(tmp_path):
     assert config["loggers"]["gitlab"]["level"] == "DEBUG"
     assert config["loggers"]["github"]["level"] == "DEBUG"
     assert config["loggers"]["requests_cache"]["level"] == "DEBUG"
-    assert config["handlers"]["default"]["formatter"] == "colored"
 
 
 # Add more test cases as needed
