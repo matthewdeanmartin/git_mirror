@@ -619,7 +619,7 @@ class GithubRepoManager(SourceHost):
         Return API version information.
         """
         # pygithub doesn't support this endpoint?
-        response = httpx.get(f"{self.host_domain}/versions")
+        response = httpx.get(f"{self.host_domain}/versions", timeout=10)
         response.raise_for_status()  # Raises an exception for 4XX/5XX responses
         data = response.json()
         versions_supported = data["info"]["version"]

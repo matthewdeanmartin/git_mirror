@@ -15,7 +15,7 @@ include_private = true
 include_forks = false
 
 [tool.git-mirror.selfhosted]
-type = "gitlab"
+type = "gitlab" # host_type?
 user_name = "mmartin"
 url = "http://git.example.com"
 pypi_owner_name = "Matthew Martin"

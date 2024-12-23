@@ -71,7 +71,7 @@ class PyPiManager:
 
     def __init__(self, pypi_owner_name: Optional[str] = None):
         self.pypi_owner_name = pypi_owner_name
-        self.client = httpx.AsyncClient()
+        self.client = httpx.AsyncClient()  # nosec
 
     async def get_info(self, package_name: str) -> tuple[dict[str, Any], int]:
         """

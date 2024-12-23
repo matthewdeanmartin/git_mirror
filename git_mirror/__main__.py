@@ -496,4 +496,5 @@ def host_specific_args(parser: argparse.ArgumentParser, use_github: bool, use_gi
 
 
 if __name__ == "__main__":
+    # sys.exit(main(["list-repos","--host=selfhosted","--verbose"], use_selfhosted=True))
     sys.exit(main(sys.argv[1:]))

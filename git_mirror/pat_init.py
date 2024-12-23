@@ -26,7 +26,7 @@ def check_pat_validity(token: str) -> bool:
     """
     headers = {"Authorization": f"token {token}"}
     try:
-        response = httpx.get("https://api.github.com/user", headers=headers)
+        response = httpx.get("https://api.github.com/user", headers=headers, timeout=10)
         return response.status_code == 200
     except httpx.RequestError as e:
         console.print(f"An error occurred while checking PAT validity: {e}", style="danger")

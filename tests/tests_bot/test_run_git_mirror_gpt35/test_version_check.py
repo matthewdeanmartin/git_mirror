@@ -23,7 +23,7 @@ def test_call_pypi_with_version_check_available_newer_version():
 
         assert result is True
         assert new_version == expected_version
-        httpx_get_mock.assert_called_once_with("https://pypi.org/pypi/git_mirror/json")
+        httpx_get_mock.assert_called_once_with("https://pypi.org/pypi/git_mirror/json", timeout=10)
 
 
 def test_call_pypi_with_version_check_no_newer_version():
@@ -36,7 +36,7 @@ def test_call_pypi_with_version_check_no_newer_version():
 
         assert result is False
         assert new_version == version.parse("1.0.0")
-        httpx_get_mock.assert_called_once_with("https://pypi.org/pypi/git_mirror/json")
+        httpx_get_mock.assert_called_once_with("https://pypi.org/pypi/git_mirror/json", timeout=10)
 
 
 def test_call_pypi_with_version_check_http_error():

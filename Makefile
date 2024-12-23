@@ -31,7 +31,7 @@ clean: clean-pyc clean-test
 # tests are often slow and linting is fast, so run tests on linted code.
 test: clean poetry.lock
 	@echo "Running unit tests"
-	$(VENV) pytest --doctest-modules git_mirror
+	$(VENV) pytest --doctest-modules git_mirror -n 2
 	# $(VENV) python -m unittest discover
 	$(VENV) py.test tests -vv -n 2 --cov=git_mirror --cov-report=html --cov-fail-under 50
 	$(VENV) bash basic_help.sh
@@ -78,7 +78,7 @@ bandit: .build_history/bandit
 .PHONY: pylint
 .build_history/pylint: .build_history .build_history/isort .build_history/black $(FILES)
 	@echo "Linting with pylint"
-	$(VENV) ruff --fix
+	$(VENV) ruff check --fix
 	$(VENV) pylint git_mirror --fail-under 9.8
 	@touch .build_history/pylint
 

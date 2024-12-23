@@ -21,7 +21,7 @@ def call_pypi_with_version_check(package_name: str, current_version: str) -> tup
         bool: True if the latest version on PyPI is greater than the current version, False otherwise.
     """
     pypi_url = f"https://pypi.org/pypi/{package_name}/json"
-    response = httpx.get(pypi_url)
+    response = httpx.get(pypi_url, timeout=10)
     response.raise_for_status()  # Raises an exception for 4XX/5XX responses
     data = response.json()
     latest_version = data["info"]["version"]

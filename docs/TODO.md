@@ -1,3 +1,10 @@
+## Top Top Priority
+- Rename to gittyup
+- Change selfhosted to self-hosted-gitlab
+- Maybe shows some minimal output before running a command (config)
+- Support flat directory structure for gitlab
+- Support repo to folder map?
+
 ## Top priority
 - PAT token init help
 - platform dirs for config files
