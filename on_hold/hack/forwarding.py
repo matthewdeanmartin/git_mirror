@@ -34,8 +34,8 @@ class Namespace(argparse.Namespace):
                 if old is None:
                     super().__setattr__(name, value)
                 elif old != value:
-                    raise argparse.ArgumentError(name,
-                        f"conflicting values provided for {arg.action.dest!r} ({old!r} and {value!r})"
+                    raise argparse.ArgumentError(
+                        name, f"conflicting values provided for {arg.action.dest!r} ({old!r} and {value!r})"
                     )
             else:
                 raise NotImplementedError("Action {action_type!r} for {arg.action.dest!r} is not supported")
