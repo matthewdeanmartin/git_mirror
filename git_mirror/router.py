@@ -4,7 +4,6 @@ Sends the cli commands to the right method
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import git_mirror.manage_config as mc
 import git_mirror.manage_git as mg
@@ -26,7 +25,7 @@ console = console_with_theme()
 
 def route_simple(
     command: str,
-    config_path: Optional[Path] = None,
+    config_path: Path | None = None,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -47,7 +46,7 @@ def route_simple(
 
 def route_config(
     command: str,
-    config_path: Optional[Path] = None,
+    config_path: Path | None = None,
     dry_run: bool = False,
 ):
     """
@@ -78,12 +77,12 @@ def route_repos(
     host: str,
     include_private: bool,
     include_forks: bool,
-    config_path: Optional[Path] = None,
-    domain: Optional[str] = None,
-    group_id: Optional[int] = None,
+    config_path: Path | None = None,
+    domain: str | None = None,
+    group_id: int | None = None,
     logging_level: int = 1,
     dry_run: bool = False,
-    template_dir: Optional[Path] = None,
+    template_dir: Path | None = None,
     prompt_for_changes: bool = True,
 ):
     """
@@ -216,10 +215,10 @@ def route_cross_repo(
     host: str,
     include_private: bool,
     include_forks: bool,
-    domain: Optional[str] = None,
+    domain: str | None = None,
     logging_level: int = 1,
     dry_run: bool = False,
-    template_dir: Optional[Path] = None,
+    template_dir: Path | None = None,
     prompt_for_changes: bool = True,
 ):
     """
@@ -299,8 +298,8 @@ def route_pypi(
     host: str,
     include_private: bool,
     include_forks: bool,
-    pypi_owner_name: Optional[str] = None,
-    domain: Optional[str] = None,
+    pypi_owner_name: str | None = None,
+    domain: str | None = None,
     logging_level: int = 1,
     dry_run: bool = False,
 ):

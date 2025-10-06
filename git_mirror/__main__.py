@@ -6,7 +6,6 @@ import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
 
 import requests_cache
 
@@ -35,7 +34,7 @@ requests_cache.install_cache("git_mirror_cache", backend=backend, expire_after=3
 console = console_with_theme()
 
 
-def validate_host_token(args: argparse.Namespace) -> tuple[Optional[str], int]:
+def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     """
     Get token from env or raise a helpful message.
 
@@ -155,15 +154,15 @@ def enable_logging(args):
         logging.basicConfig(level=logging.FATAL)
 
 
-def main_selfhosted(argv: Optional[Sequence[str]] = None) -> int:
+def main_selfhosted(argv: Sequence[str] | None = None) -> int:
     return main(argv, use_gitlab=False, use_github=False, use_selfhosted=True)
 
 
-def main_github(argv: Optional[Sequence[str]] = None) -> int:
+def main_github(argv: Sequence[str] | None = None) -> int:
     return main(argv, use_gitlab=False, use_github=True, use_selfhosted=False)
 
 
-def main_gitlab(argv: Optional[Sequence[str]] = None) -> int:
+def main_gitlab(argv: Sequence[str] | None = None) -> int:
     return main(argv, use_gitlab=True, use_github=False, use_selfhosted=False)
 
 
@@ -262,7 +261,7 @@ def cross_repo_specific_args(parser):
 
 
 def main(
-    argv: Optional[Sequence[str]] = None,
+    argv: Sequence[str] | None = None,
     use_gitlab: bool = False,
     use_github: bool = False,
     use_selfhosted: bool = False,

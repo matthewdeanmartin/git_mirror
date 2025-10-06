@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import traceback
-from typing import Optional
 
 import github as gh
 from github.Issue import Issue
@@ -52,7 +51,7 @@ class BugReporter:
 
         return text
 
-    def report_issue(self, issue_title: str, issue_body: str) -> Optional[Issue]:
+    def report_issue(self, issue_title: str, issue_body: str) -> Issue | None:
         """
         Creates an issue in the specified GitHub repository.
 
@@ -68,7 +67,7 @@ class BugReporter:
             self.console.print(f"Failed to create issue in {self.repository_name}: {e}", style="danger")
         return None
 
-    def find_existing_issue_by_title_and_creator(self, title: str) -> Optional[Issue]:
+    def find_existing_issue_by_title_and_creator(self, title: str) -> Issue | None:
         """
         Searches for an existing issue by title and the issue creator.
 
