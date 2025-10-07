@@ -12,7 +12,7 @@ jobs:
         persist-credentials: false
     - uses: actions/setup-python@v5.3.0
       with:
-        python-version: '3.11'
+        python-version: '3.14'
           # cache: 'pipenv' # caching pipenv dependencies
     - name: Install poetry and pipx
       run: |

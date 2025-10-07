@@ -1,8 +1,13 @@
-[tool.poetry]
+[project]
 name = "git_mirror"
-version = "0.3.8"
+version = "0.3.9"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
-authors = ["Matthew Martin <matthewdeanmartin@gmail.com>"]
+authors = [
+    {name = "Matthew Martin", email = "matthewdeanmartin@gmail.com"},
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
 keywords = ["git", "gitlab", "github", "polyrepo" ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -16,117 +21,58 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-include = [
-    "git_mirror/**/*.py",
-    "git_mirror/**/*.md",
-    "git_mirror/**/*.txt",
-    "git_mirror/**/*.html",
-    "git_mirror/**/*.jinja",
-    "git_mirror/py.typed",
+dependencies = [
+    "python-dotenv>=1.0.1,<2",
+    "rich>=13.7.0,<14",
+    "inquirer>=3.2.3,<4",
+    "termcolor",
+    "prettytable<4",
+    "colorama>=0.4.6,<1",
+    "colorlog>=6.8.0,<7",
+    "PyGithub>=2.2.0",
+    "python-gitlab>=4.4.0",
+    "GitPython>=3.1.42",
+    "httpx>=0.26.0,<1",
+    "requests-cache>=1.2.0,<2",
+    "toml>=0.10.2,<1",
+    "tomlkit>=0.12.3,<1",
+    "cli-tool-audit>=3.0.1",
 ]
-exclude = [
-]
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/matthewdeanmartin/git_mirror"
-homepage = "https://github.com/matthewdeanmartin/git_mirror"
-documentation = "https://matthewdeanmartin.github.io/git_mirror/git_mirror/index.html"
 
-[tool.poetry.urls]
+[project.urls]
 "Bug Tracker" = "https://github.com/matthewdeanmartin/git_mirror/issues"
 "Change Log" = "https://github.com/matthewdeanmartin/git_mirror/blob/main/CHANGELOG.md"
 
-[tool.poetry.scripts]
+[project.scripts]
 git_mirror = 'git_mirror.__main__:main'
 gl_mirror = 'git_mirror.__main__:main_gitlab'
 gh_mirror = 'git_mirror.__main__:main_github'
 sh_mirror = 'git_mirror.__main__:main_selfhosted'
 
-[tool.poetry.dependencies]
-python = ">=3.9"
 
-# core
-python-dotenv = ">=1.0.1, <2"
+[dependency-groups]
+dev = ["black>=23.11.0", "pytest>=7.4.3", "pytest-cov>=4.1.0", "pytest-xdist>=3.5.0", "pytest-randomly>=3.15.0", "pytest-sugar>=0.9.7", "pytest-mock>=3.14.0", "pytest-network", "hypothesis>=6.96.0", "tox", "pylint>=3.0.2", "ruff>=0.1.9", "mypy>=1.8.0", "types-toml", "types-colorama", "types-tqdm", "pre-commit>=3.5.0", "metametameta", "interrogate>=1.5.0", "pydoctest>=0.1.22", "pdoc3>=0.10.0", "mdformat>=0.7.17", "linkcheckmd>=1.4.0", "codespell>=2.2.6", "pyenchant>=3.2.2"]
 
-# ui
-rich = ">=13.7.0, <14"
-inquirer = ">=3.2.3, <4"
-termcolor = "*"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-# one table uses this...
-prettytable = "3.9.0, <4"
-colorama = ">=0.4.6, <1"
-
-# ui for verbose loggging
-colorlog = ">=6.8.0, <7"
-
-# git
-PyGithub=">=2.2.0"
-python-gitlab = ">=4.4.0"
-# needs git >=1.7.*
-GitPython= ">=3.1.42"
-
-# api calls
-httpx = ">=0.26.0, <1"
-requests-cache = ">=1.2.0, <2"
-
-# Config
-toml = ">=0.10.2, <1"
-tomlkit = ">=0.12.3, <1"
-
-# git cli dep validation
-cli-tool-audit = ">=3.0.1"
-
-
-[tool.poetry.dev-dependencies]
-
-# build tools
-black = ">=23.11.0"
-pytest = ">=7.4.3"
-pytest-cov = ">=4.1.0"
-pytest-xdist =">=3.5.0"
-pytest-randomly=">=3.15.0"
-pytest-sugar =">=0.9.7"
-pytest-mock =">=3.14.0"
-
-# pytest-snapshot = "*"
-# pytest-asyncio = "*"
-pytest-network= "*"
-# time-machine = "*"
-
-
-hypothesis = ">=6.96.0"
-tox = "*"
-pylint = ">=3.0.2"
-ruff = ">=0.1.9"
-
-# types
-mypy = ">=1.8.0"
-types-toml = "*"
-types-colorama = "*"
-types-tqdm = "*"
-
-# more testing
-# pytest-snapshot = ">=0.9.0"
-# pytest-asyncio = ">=0.23.2"
-#anyio = ">=4.2.0"
-#trio = ">=0.23.2"
-
-pre-commit = ">=3.5.0"
-
-# docs
-metametameta  = "*"
-interrogate = ">=1.5.0"
-pydoctest = ">=0.1.22"
-pdoc3 = ">=0.10.0"
-mdformat = ">=0.7.17"
-linkcheckmd = ">=1.4.0"
-codespell = ">=2.2.6"
-pyenchant = ">=3.2.2"
 #
-# contract
-# griffe = ">=0.38.1"
+#[tool.hatch.build.targets.wheel.sources]
+#"templates" = "git_mirror/templates"
+
+[tool.hatch.build.targets.wheel]
+packages = ["git_mirror"]
+include = [
+    "git_mirror/**/*.py",
+    "git_mirror/py.typed",
+    "/README.md", "LICENSE",
+]
+
+[tool.hatch.build.targets.sdist]
+include = ["/README.md", "LICENSE", "/git_mirror"]
 
 
 [tool.black]
@@ -156,10 +102,6 @@ exclude = '''
 
 
 
-[build-system]
-requires = ["poetry-core>=1.0.8"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = [
@@ -173,6 +115,7 @@ norecursedirs = ["vendor", "scripts"]
 #markers =
 #	slow: marks tests as slow (deselect with '-m "not slow"')
 #	fast: marks tests as fast (deselect with '-m "not fast"')
+
 
 [tool.isort]
 default_section = "THIRDPARTY"
@@ -236,26 +179,11 @@ target-version = "py311"
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+
 [tool.scriv]
 version = "literal: pyproject.toml: tool.poetry.version"
 format = "md"
 main_branches = "master, main, develop, dev"
-
-[mypy]
-warn_return_any = true
-warn_unused_configs = true
-strict = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-strict_optional = true
-warn_redundant_casts = true
-warn_no_return = true
-
-mypy_path = [".", "$MYPY_CONFIG_FILE_DIR/typings", "typings"]
-files = ["git_mirror", "typings"]
-
 
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
