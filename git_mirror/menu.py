@@ -2,7 +2,7 @@ import argparse
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import inquirer
 
@@ -15,20 +15,20 @@ console = console_with_theme()
 @dataclass
 class CommandInfo:
     command: str
-    host: Optional[str] = None
-    user_name: Optional[str] = None
-    group_id: Optional[int] = None
-    domain: Optional[str] = None
-    pypi_owner_name: Optional[str] = None
-    target_dir: Optional[Path] = None
+    host: str | None = None
+    user_name: str | None = None
+    group_id: int | None = None
+    domain: str | None = None
+    pypi_owner_name: str | None = None
+    target_dir: Path | None = None
     include_forks: bool = False
     include_private: bool = False
-    config_path: Optional[Path] = None
+    config_path: Path | None = None
     verbose: bool = False
     args: list[str] = field(default_factory=list)
 
 
-def get_command_info(args: argparse.Namespace) -> Optional[str]:
+def get_command_info(args: argparse.Namespace) -> str | None:
     commands: list[tuple[str, str]] = [
         ("Initialize Configuration", "init"),
         ("Show Account Info", "show-account"),

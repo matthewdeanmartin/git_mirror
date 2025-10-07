@@ -4,7 +4,7 @@ Mypy types.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ContextManager, Optional, Protocol
+from typing import Any, ContextManager, Protocol
 
 from rich.table import Table
 
@@ -50,7 +50,7 @@ class SourceHost(Protocol):
         with the status color-coded: green for success, red for failure, and yellow for cancelled.
         """
 
-    def check_pypi_publish_status(self, pypi_owner_name: Optional[str] = None) -> list[dict[str, Any]]:
+    def check_pypi_publish_status(self, pypi_owner_name: str | None = None) -> list[dict[str, Any]]:
         """
         Checks if the repositories as Python packages are published on PyPI and compares the last change dates.
         """
@@ -63,7 +63,7 @@ class SourceHost(Protocol):
             List[str]: A list of repository names.
         """
 
-    def list_repos(self) -> Optional[Table]:
+    def list_repos(self) -> Table | None:
         """
         Fetches and prints beautifully formatted information about the user's GitHub repositories.
         """

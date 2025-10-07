@@ -5,7 +5,7 @@ Pure pypi actions.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from rich.table import Table
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 class PyPiManager:
 
-    def __init__(self, pypi_owner_name: Optional[str] = None):
+    def __init__(self, pypi_owner_name: str | None = None):
         self.pypi_owner_name = pypi_owner_name
         self.client = httpx.AsyncClient()  # nosec
 

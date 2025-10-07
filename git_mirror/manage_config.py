@@ -6,7 +6,7 @@ import logging
 import os
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import inquirer
 import toml
@@ -38,7 +38,7 @@ def default_config_path() -> Path:
     return Path("git_mirror.toml")
 
 
-def read_config(config_path: Path, key: str) -> Optional[str]:
+def read_config(config_path: Path, key: str) -> str | None:
     """
     Reads a specific key from the TOML configuration file.
 
@@ -62,15 +62,15 @@ class ConfigData:
     host_type: str  # github, gitlab or name of self hosted
     host_url: str  # API endpoint
     user_name: str
-    target_dir: Optional[Path]
+    target_dir: Path | None
     pypi_owner_name: str
     include_private: bool = False
     include_forks: bool = False
     group_id: int = 0
-    global_template_dir: Optional[Path] = None
+    global_template_dir: Path | None = None
 
 
-def ask_for_section(already_configured: list[str]) -> Optional[ConfigData]:
+def ask_for_section(already_configured: list[str]) -> ConfigData | None:
     if len(already_configured) == 3:
         console.print("All Github, Gitlab and a self-hosted Gitlab are already configured.")
         return None
@@ -178,10 +178,10 @@ def display_config(config: ConfigData):
 
 
 class ConfigManager:
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         self.config_path = config_path or default_config_path()
 
-    def load_config_objects(self) -> dict[str, Optional[ConfigData]]:
+    def load_config_objects(self) -> dict[str, ConfigData | None]:
         configs = {}
         for host_type in ["selfhosted", "gitlab", "github"]:
             data = self.load_config(host_type)
@@ -248,7 +248,7 @@ class ConfigManager:
                 break
         return already_configured
 
-    def load_config(self, host: str) -> Optional[ConfigData]:
+    def load_config(self, host: str) -> ConfigData | None:
         """
         Loads the configuration for the specified host from the TOML file.
         Args:

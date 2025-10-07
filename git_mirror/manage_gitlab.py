@@ -9,7 +9,7 @@ import logging
 import multiprocessing
 from datetime import datetime
 from pathlib import Path
-from typing import Any, ContextManager, Optional, Union, cast
+from typing import Any, ContextManager, Union, cast
 
 import git as g
 import gitlab
@@ -47,7 +47,7 @@ class GitlabRepoManager(SourceHost):
         include_private: bool = True,
         include_forks: bool = False,
         host_domain: str = "https://gitlab.com",
-        group_id: Optional[int] = None,
+        group_id: int | None = None,
         logging_level: int = 1,
         dry_run: bool = False,
         prompt_for_changes: bool = True,
@@ -467,7 +467,7 @@ class GitlabRepoManager(SourceHost):
         return datetime.fromtimestamp(last_commit.committed_date)
 
     @log_duration
-    def check_pypi_publish_status(self, pypi_owner_name: Optional[str] = None) -> list[dict[str, Any]]:
+    def check_pypi_publish_status(self, pypi_owner_name: str | None = None) -> list[dict[str, Any]]:
         """
         Checks if the repositories as Python packages are published on PyPI and compares the last change dates.
         """
@@ -535,7 +535,7 @@ class GitlabRepoManager(SourceHost):
         return [project.name for project in self._get_user_repos()]
 
     @log_duration
-    def list_repos(self) -> Optional[Table]:
+    def list_repos(self) -> Table | None:
         """
         Fetches and prints beautifully formatted information about the user's Gitlab repositories.
         """

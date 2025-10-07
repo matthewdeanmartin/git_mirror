@@ -9,7 +9,7 @@ import logging
 import multiprocessing
 from datetime import datetime
 from pathlib import Path
-from typing import Any, ContextManager, Optional, Union
+from typing import Any, ContextManager, Union
 
 import git as g
 import github as gh
@@ -67,7 +67,7 @@ class GithubRepoManager(SourceHost):
         self.token = token
         self.base_dir = base_dir
         # cache user
-        self.user: Optional[Union[ghnu.NamedUser, ghau.AuthenticatedUser]] = None
+        self.user: Union[ghnu.NamedUser, ghau.AuthenticatedUser] | None = None
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
@@ -317,7 +317,7 @@ class GithubRepoManager(SourceHost):
         return messages
 
     @log_duration
-    def check_pypi_publish_status(self, pypi_owner_name: Optional[str] = None) -> list[dict[str, Any]]:
+    def check_pypi_publish_status(self, pypi_owner_name: str | None = None) -> list[dict[str, Any]]:
         """
         Checks if the repositories as Python packages are published on PyPI and compares the last change dates.
         """
@@ -394,7 +394,7 @@ class GithubRepoManager(SourceHost):
         return [repo.full_name for repo in self._get_user_repos()]
 
     @log_duration
-    def list_repos(self) -> Optional[Table]:
+    def list_repos(self) -> Table | None:
         """
         Fetches and prints beautifully formatted information about the user's GitHub repositories.
         """
