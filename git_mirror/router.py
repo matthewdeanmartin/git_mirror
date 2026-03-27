@@ -46,6 +46,7 @@ def route_simple(
 def route_config(
     command: str,
     config_path: Path | None = None,
+    host: str | None = None,
     dry_run: bool = False,
 ):
     """
@@ -54,6 +55,7 @@ def route_config(
     Args:
         command (str): The command to execute ('clone-all' or 'pull-all').
         config_path (Path): Path to the TOML config file.
+        host (str | None): Optional host to inspect.
         dry_run (bool): Flag to determine whether the operation should be a dry run.
     """
     if config_path is None:
@@ -64,6 +66,9 @@ def route_config(
         config_manager.list_config()
         print()
         check_tool_availability()
+    elif command == "doctor":
+        config_manager = mc.ConfigManager(config_path=config_path)
+        config_manager.doctor(host=host)
     else:
         console.print(f"Unknown command: {command}")
 
@@ -111,7 +116,18 @@ def route_repos(
         git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes)
         git_manager.check_for_uncommitted_or_unpushed_changes()
     elif host in ("github", "gitlab", "selfhosted"):
-        if host == "github":
+        backend_host = host
+        resolved_domain = domain
+        if host == "selfhosted":
+            config_manager = mc.ConfigManager(config_path=config_path)
+            config_data = config_manager.load_config("selfhosted")
+            if not config_data:
+                console.print("No self-hosted configuration found. Run `git_mirror init` first.")
+                return
+            backend_host = config_data.host_type
+            resolved_domain = resolved_domain or config_data.host_url
+
+        if backend_host == "github":
             base_path = Path(target_dir).expanduser()
             manager: SourceHost = mgh.GithubRepoManager(
                 token,
@@ -119,10 +135,11 @@ def route_repos(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
+                host_domain=resolved_domain or "https://api.github.com",
                 dry_run=dry_run,
                 prompt_for_changes=prompt_for_changes,
             )
-        elif host in ("gitlab", "selfhosted"):
+        elif backend_host == "gitlab":
             base_path = Path(target_dir).expanduser()
             manager = mgl.GitlabRepoManager(
                 token,
@@ -130,15 +147,15 @@ def route_repos(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
-                host_domain=domain or "https://gitlab.com",
+                host_domain=resolved_domain or "https://gitlab.com",
                 logging_level=logging_level,
                 dry_run=dry_run,
                 prompt_for_changes=prompt_for_changes,
             )
         else:
-            raise ValueError(f"Unknown host: {host}")
+            raise ValueError(f"Unknown host: {backend_host}")
 
-        if command == "clone-all" and host in ("gitlab", "selfhosted") and group_id is not None and group_id != 0:
+        if command == "clone-all" and backend_host == "gitlab" and group_id is not None and group_id != 0:
             # TODO: confusion with clone all by user name and by group id.
             # If they are both filled in, then what does the user want?
             # hack until I support cloning by github org or something.
@@ -148,7 +165,7 @@ def route_repos(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
-                host_domain=domain or "https://gitlab.com",
+                host_domain=resolved_domain or "https://gitlab.com",
                 logging_level=logging_level,
                 dry_run=dry_run,
                 prompt_for_changes=prompt_for_changes,
@@ -202,6 +219,7 @@ def route_cross_repo(
     host: str,
     include_private: bool,
     include_forks: bool,
+    config_path: Path | None = None,
     domain: str | None = None,
     logging_level: int = 1,
     dry_run: bool = False,
@@ -228,7 +246,18 @@ def route_cross_repo(
         prompt_for_changes (bool): Flag to determine whether to prompt for changes.
     """
     if host in ("github", "gitlab", "selfhosted"):
-        if host == "github":
+        backend_host = host
+        resolved_domain = domain
+        if host == "selfhosted":
+            config_manager = mc.ConfigManager(config_path=config_path)
+            config_data = config_manager.load_config("selfhosted")
+            if not config_data:
+                console.print("No self-hosted configuration found. Run `git_mirror init` first.")
+                return
+            backend_host = config_data.host_type
+            resolved_domain = resolved_domain or config_data.host_url
+
+        if backend_host == "github":
             base_path = Path(target_dir).expanduser()
             manager: SourceHost = mgh.GithubRepoManager(
                 token,
@@ -236,10 +265,11 @@ def route_cross_repo(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
+                host_domain=resolved_domain or "https://api.github.com",
                 dry_run=dry_run,
                 prompt_for_changes=prompt_for_changes,
             )
-        elif host in ("gitlab", "selfhosted"):
+        elif backend_host == "gitlab":
             base_path = Path(target_dir).expanduser()
             manager = mgl.GitlabRepoManager(
                 token,
@@ -247,13 +277,13 @@ def route_cross_repo(
                 user_name,
                 include_private=include_private,
                 include_forks=include_forks,
-                host_domain=domain or "https://gitlab.com",
+                host_domain=resolved_domain or "https://gitlab.com",
                 logging_level=logging_level,
                 dry_run=dry_run,
                 prompt_for_changes=prompt_for_changes,
             )
         else:
-            raise ValueError(f"Unknown host: {host}")
+            raise ValueError(f"Unknown host: {backend_host}")
 
         if not template_dir:
             console.print("Template directory is required for cross-repo-report")

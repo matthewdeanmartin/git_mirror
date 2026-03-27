@@ -45,7 +45,7 @@ class GithubRepoManager(SourceHost):
         user_login: str,
         include_private: bool = True,
         include_forks: bool = False,
-        host_domain: str = "https://github.com",
+        host_domain: str = "https://api.github.com",
         dry_run: bool = False,
         prompt_for_changes: bool = True,
     ):
@@ -78,6 +78,8 @@ class GithubRepoManager(SourceHost):
         )
 
     def client(self) -> gh.Github:
+        if self.host_domain and self.host_domain != "https://api.github.com":
+            return gh.Github(base_url=self.host_domain, login_or_token=self.token)
         return gh.Github(self.token)
 
     def _thread_safe_repos(self, data: list[ghr.Repository]) -> list[dict[str, Any]]:

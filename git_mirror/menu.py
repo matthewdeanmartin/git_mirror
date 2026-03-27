@@ -39,6 +39,7 @@ def get_command_info(args: argparse.Namespace) -> str | None:
         ("Report all build statuses", "build-status"),
         ("Sync repo list in config with source control host", "sync-config"),
         ("Report current configuration", "list-config"),
+        ("Check configuration health", "doctor"),
         ("Update all branches from main", "update-from-main"),
         ("Prune all branches", "prune-all"),
         ("Cross-repo report", "cross-repo-report"),
@@ -50,7 +51,7 @@ def get_command_info(args: argparse.Namespace) -> str | None:
     categories: dict[str, list[str]] = {
         "Repository Commands": ["list-repos", "clone-all", "pull-all", "local-changes", "not-repo", "Main Menu"],
         "Branch Commands": ["update-from-main", "prune-all", "Main Menu"],
-        "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
+        "Configuration Commands": ["init", "sync-config", "list-config", "doctor", "Main Menu"],
         "Source Control Host Commands": ["show-account", "Main Menu"],
         "Template Sync": ["cross-repo-report", "cross-repo-sync", "cross-repo-init", "Main Menu"],
         "Exit": [],

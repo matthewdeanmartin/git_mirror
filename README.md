@@ -30,13 +30,15 @@ Version `1.0.0` removes the old Python-package-specific commands such as `pypi-s
 
 ```bash
 pipx install git-mirror
-# Interactively initialize configuration
+# Run the guided setup wizard
 git_mirror init
+# Inspect what is configured and what still needs fixing
+git_mirror doctor
 # Interactively select command for Github
 gh_mirror menu
 ```
 
-Requires .env file with Github or Gitlab token.
+The setup wizard will help create or validate the right token, then tell you what is still broken if anything fails.
 
 ```bash
 GITHUB_ACCESS_TOKEN=PAT
@@ -62,13 +64,13 @@ You care about some repos more than others, use config to focus on a subset of r
 
 ```text
 usage: git_mirror [-h] [-V] [--menu MENU]
-                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
                   ...
 
 Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools.
 
 positional arguments:
-  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
                         Subcommands.
     show-account        Show source code host user account information.
     list-repos          List repositories.
@@ -81,6 +83,7 @@ positional arguments:
     sync-config         Sync configuration with source code host.
     build-status        Show build status.
     list-config         List configuration.
+    doctor              Check configuration and explain what needs fixing.
     cross-repo-report   Show cross repo sync report.
     cross-repo-sync     Sync files across repos.
     cross-repo-init     Initialize cross repo sync.
@@ -103,27 +106,30 @@ options:
 
 ## Config
 
-Either run `git_mirror init` to interactively setup the config, or add a section to `~/git_mirror.toml`.
+Either run `git_mirror init` to go through the setup wizard, or add a section to `~/git_mirror.toml`. If something still does not work afterward, run `git_mirror doctor`.
 
 ```toml
 [tool.git-mirror.github]
+host_type = "github"
+host_url = "https://api.github.com"
 user_name = "matthewdeanmartin"
 target_dir = "f:/github/"
 include_private = false
 include_forks = false
 
 [tool.git-mirror.gitlab]
+host_type = "gitlab"
+host_url = "https://gitlab.com"
 user_name = "matthewdeanmartin"
-url = "http://gitlab.com"
 target_dir = "f:/gitlab/"
 include_private = true
 include_forks = false
 group_id = 542
 
 [tool.git-mirror.selfhosted]
-type = "gitlab"
+host_type = "gitlab"
+host_url = "http://git.example.com"
 user_name = "mmartin"
-url = "http://git.example.com"
 target_dir = "e:/self/"
 include_private = true
 include_forks = false

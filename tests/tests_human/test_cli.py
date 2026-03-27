@@ -54,6 +54,8 @@ def test_cli_clone_all(mock_main_github, cli_args):
 @patch("git_mirror.pat_init_gitlab.setup_gitlab_pat")
 @patch.dict(os.environ, clear=True)
 def test_cli_missing_github_token(pat1, pat2, mock_main_github, cli_args):
+    pat1.return_value = None
+    pat2.return_value = None
     argv = ["clone-all"] + cli_args
     with patch("sys.argv", ["prog"] + argv):
         assert main() == 1
@@ -74,3 +76,14 @@ def test_cli_config_loading(mock_main_github, tmp_path):
     with patch("sys.argv", ["git_mirror"] + argv):
         assert main() == 0
     mock_main_github.assert_called_once()
+
+
+@patch("git_mirror.router.route_simple")
+def test_cli_first_time_init_reparses_to_init(mock_route_simple, tmp_path):
+    config_path = tmp_path / "git_mirror.toml"
+    with (
+        patch("git_mirror.__main__.default_config_path", return_value=config_path),
+        patch("sys.argv", ["git_mirror"]),
+    ):
+        assert main() == 0
+    mock_route_simple.assert_called_once_with(command="init", config_path=config_path)

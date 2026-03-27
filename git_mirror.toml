@@ -1,4 +1,6 @@
 [tool.git-mirror.github]
+host_type = "github"
+host_url = "https://api.github.com"
 user_name = "matthewdeanmartin"
 target_dir = "f:/github/"
 include_private = false
@@ -6,16 +8,17 @@ include_private = false
 [tool.git-mirror.github.repos]
 
 [tool.git-mirror.gitlab]
+host_type = "gitlab"
+host_url = "https://gitlab.com"
 user_name = "matthewdeanmartin"
-url = "http://gitlab.com"
 target_dir = "f:/gitlab/"
 include_private = true
 include_forks = false
 
 [tool.git-mirror.selfhosted]
-type = "gitlab" # host_type?
+host_type = "gitlab"
+host_url = "http://git.example.com"
 user_name = "mmartin"
-url = "http://git.example.com"
 target_dir = "e:/self/"
 include_private = true
 include_forks = false

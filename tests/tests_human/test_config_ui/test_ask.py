@@ -4,13 +4,13 @@ from git_mirror.manage_config import ConfigData, ask_for_section
 
 # Mock responses for inquirer.prompt to simulate user input
 mock_prompt_responses = {
-    "host_type": "github",
+    "host_name": "github",
+    "host_type": "gitlab",
     "user_name": "testuser",
     "target_dir": "~/repositories",
     "include_private": True,
     "include_forks": False,
     "create_target_dir": True,
-    "host_name": "gitlab",  # For selfhosted
     "host_url": "http://self-hosted-git.example.com",
     "group_id": "123",
 }
@@ -56,6 +56,32 @@ def test_ask_for_section_host_type_github(mock_prompt):
     result = ask_for_section([])
     assert result.host_type == "github"
     assert result.host_url == "https://api.github.com"
+
+
+@patch(
+    "inquirer.prompt",
+    side_effect=lambda x: {
+        q.name: {
+            "host_name": "selfhosted",
+            "host_type": "gitlab",
+            "user_name": "testuser",
+            "target_dir": "~/repositories",
+            "include_private": True,
+            "include_forks": False,
+            "create_target_dir": True,
+            "host_url": "http://self-hosted-git.example.com",
+            "group_id": "123",
+        }[q.name]
+        for q in x
+    },
+)
+@patch("pathlib.Path.exists", return_value=True)
+def test_ask_for_section_selfhosted_gitlab(mock_exists, mock_prompt):
+    result = ask_for_section([])
+    assert result.host_name == "selfhosted"
+    assert result.host_type == "gitlab"
+    assert result.host_url == "http://self-hosted-git.example.com"
+    assert result.group_id == 123
 
 
 @patch(

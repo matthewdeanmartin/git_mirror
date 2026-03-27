@@ -49,7 +49,7 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     # HACK: This needs to be redone somehow.
     config_manager = ConfigManager(config_path)
     invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
-    needs_host = args.command not in ("init", "list-config")
+    needs_host = args.command not in ("init", "list-config", "doctor")
     if invalid_or_missing_host and needs_host:
         host = ask_for_host(config_manager)
         if not host:
@@ -63,6 +63,9 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     if not needs_host:
         return None, 0
     config_data = config_manager.load_config(args.host)
+    if args.host == "selfhosted" and not config_data:
+        console.print(f"No configuration found for {args.host}. Run `git_mirror init` first.")
+        return "", 1
     # github or self hosted github
     selfhosted_type_is_github = args.host == "selfhosted" and config_data and config_data.host_type == "github"
     selfhosted_type_is_gitlab = args.host == "selfhosted" and config_data and config_data.host_type == "gitlab"
@@ -70,28 +73,38 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     if selfhosted_type_is_github or selfhosted_type_is_gitlab:
         token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
         if selfhosted_type_is_github and not token:
-            console.print("Self hosted Github access token is missing. Setup and re-run command.")
-            pat_init.setup_github_pat()
-            return "", 1
-        if selfhosted_type_is_gitlab and not token:
-            console.print(
-                "Self hosted GitLab access token must be provided through SELFHOSTED_ACCESS_TOKEN environment variable."
+            console.print("Self hosted Github access token is missing. Let's set it up now.")
+            token = pat_init.setup_github_pat(
+                env_var="SELFHOSTED_ACCESS_TOKEN",
+                api_url=config_data.host_url,
+                host_label="self-hosted GitHub",
             )
-            pat_init_gitlab.setup_gitlab_pat()
-            return "", 1
+            if not token:
+                return "", 1
+        if selfhosted_type_is_gitlab and not token:
+            console.print("Self hosted GitLab access token is missing. Let's set it up now.")
+            token = pat_init_gitlab.setup_gitlab_pat(
+                env_var="SELFHOSTED_ACCESS_TOKEN",
+                host_url=config_data.host_url,
+                host_label="self-hosted GitLab",
+            )
+            if not token:
+                return "", 1
     elif args.host == "github" or selfhosted_type_is_github:
         token = os.getenv("GITHUB_ACCESS_TOKEN")
         if not token:
-            console.print("Github access token is missing. Setup and re-run command.")
-            pat_init.setup_github_pat()
-            return "", 1
+            console.print("Github access token is missing. Let's set it up now.")
+            token = pat_init.setup_github_pat()
+            if not token:
+                return "", 1
     elif args.host == "gitlab" or selfhosted_type_is_gitlab:
         token = os.getenv("GITLAB_ACCESS_TOKEN")
         if not token:
-            console.print("GitLab access token must be provided through GITLAB_ACCESS_TOKEN environment variable.")
-            pat_init_gitlab.setup_gitlab_pat()
-            return "", 1
-    elif args.command in ("init", "list-config"):
+            console.print("GitLab access token is missing. Let's set it up now.")
+            token = pat_init_gitlab.setup_gitlab_pat()
+            if not token:
+                return "", 1
+    elif args.command in ("init", "list-config", "doctor"):
         token = None
     else:
         raise ValueError(f"Invalid host: {args.host}")
@@ -109,7 +122,7 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
     if (
         (not args.user_name or not args.target_dir)
         and not args.first_time_init
-        and args.command not in ("init", "list-config")
+        and args.command not in ("init", "list-config", "doctor")
     ):
         config_manager = ConfigManager(args.config_path)
         if not args.host:
@@ -135,7 +148,7 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
     if (
         (not args.user_name or not args.target_dir)
         and not args.first_time_init
-        and args.command not in ("init", "list-config")
+        and args.command not in ("init", "list-config", "doctor")
     ):
         console.print("user-name and target-dir are required if not specified in ~/git_mirror.toml.")
         return domain, group_id, 1
@@ -191,6 +204,7 @@ def handle_config(args: argparse.Namespace) -> None:
     router.route_config(
         command=args.command,
         config_path=args.config_path,
+        host=args.host,
         dry_run=args.dry_run,
     )
 
@@ -209,6 +223,7 @@ def handle_cross_repo_sync(args: argparse.Namespace) -> None:
         host=args.host,
         include_private=args.include_private,
         include_forks=args.include_forks,
+        config_path=args.config_path,
         domain=domain,
         logging_level=args.verbose,
         dry_run=args.dry_run,
@@ -225,9 +240,11 @@ def handle_simple(args: argparse.Namespace) -> None:
 
 
 def config_specific_args(parser):
-    pass
-    # config path is global
-    # parser.add_argument("--config-path", type=Path, default=default_config_path(), help="Path to the TOML config file.")
+    parser.add_argument(
+        "--host",
+        choices=["github", "gitlab", "selfhosted"],
+        help="Limit configuration checks to one configured host.",
+    )
 
 
 def cross_repo_specific_args(parser):
@@ -311,6 +328,7 @@ def main(
 
     config_commands = {
         "list-config": "List configuration.",
+        "doctor": "Check configuration and explain what needs fixing.",
     }
 
     for command, help_text in config_commands.items():
@@ -351,6 +369,7 @@ def main(
 
     # TODO: UX - help user who hasn't set a host or token.
 
+    original_args = list(argv) if argv is not None else sys.argv[1:]
     args: argparse.Namespace = parser.parse_args(argv)
     if args.command == "menu":
         selection = get_command_info(args)
@@ -367,9 +386,10 @@ def main(
     args.use_github = use_github
     # UX - help user who doesn't enter any specific command and is likely just starting out
     args.first_time_init = False
-    if not sys.argv[1:] and not default_config_path().exists():
+    if not original_args and not default_config_path().exists():
         console.print("This appears to be first time setup. Let's initialize configuration.")
         argv = ["init"]
+        args = parser.parse_args(argv)
         args.first_time_init = True
 
     enable_logging(args)

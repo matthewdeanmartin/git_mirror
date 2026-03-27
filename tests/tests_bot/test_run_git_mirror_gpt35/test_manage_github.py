@@ -85,7 +85,7 @@ def test_GitRepoManager_initialization(mock_github):
         user_login="test_user",
         include_private=True,
         include_forks=False,
-        host_domain="https://github.com",
+        host_domain="https://api.github.com",
         dry_run=False,
         prompt_for_changes=True,
     )
@@ -94,7 +94,7 @@ def test_GitRepoManager_initialization(mock_github):
     assert manager.user_login == "test_user"
     assert manager.include_private
     assert not manager.include_forks
-    assert manager.host_domain == "https://github.com"
+    assert manager.host_domain == "https://api.github.com"
     assert not manager.dry_run
     assert manager.prompt_for_changes
 
@@ -113,7 +113,7 @@ def mock_repo():
         user_login="test_user",
         include_private=True,
         include_forks=False,
-        host_domain="https://github.com",
+        host_domain="https://api.github.com",
         dry_run=False,
         prompt_for_changes=True,
     )
