@@ -71,6 +71,9 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     selfhosted_type_is_gitlab = args.host == "selfhosted" and config_data and config_data.host_type == "gitlab"
     # SELFHOSTED_ACCESS_TOKEN
     if selfhosted_type_is_github or selfhosted_type_is_gitlab:
+        if config_data is None:
+            # Should be impossible due to checks above
+            return "", 1
         token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
         if selfhosted_type_is_github and not token:
             console.print("Self hosted Github access token is missing. Let's set it up now.")
@@ -209,29 +212,6 @@ def handle_config(args: argparse.Namespace) -> None:
     )
 
 
-def handle_cross_repo_sync(args: argparse.Namespace) -> None:
-    token, return_value = validate_host_token(args)
-    # modify args
-    domain, group_id, return_value = validate_parse_args(args)
-    if return_value != 0:
-        sys.exit(return_value)
-    router.route_cross_repo(
-        command=args.command,
-        user_name=args.user_name,
-        target_dir=args.target_dir,
-        token=token or "",
-        host=args.host,
-        include_private=args.include_private,
-        include_forks=args.include_forks,
-        config_path=args.config_path,
-        domain=domain,
-        logging_level=args.verbose,
-        dry_run=args.dry_run,
-        template_dir=args.global_template_dir,
-        prompt_for_changes=not args.yes,
-    )
-
-
 def handle_simple(args: argparse.Namespace) -> None:
     router.route_simple(
         command=args.command,
@@ -245,11 +225,6 @@ def config_specific_args(parser):
         choices=["github", "gitlab", "selfhosted"],
         help="Limit configuration checks to one configured host.",
     )
-
-
-def cross_repo_specific_args(parser):
-    parser.add_argument("--global-template-dir", type=Path, help="Templates for syncing files across repos.")
-
 
 def main(
     argv: Sequence[str] | None = None,
@@ -339,21 +314,6 @@ def main(
         global_args(config_parser)
         # router to handler
         config_parser.set_defaults(func=handle_config)
-
-    template_commands = {
-        "cross-repo-report": "Show cross repo sync report.",
-        "cross-repo-sync": "Sync files across repos.",
-        "cross-repo-init": "Initialize cross repo sync.",
-    }
-
-    for command, help_text in template_commands.items():
-        template_parser = subparsers.add_parser(command, help=help_text)
-        # specific args
-        host_specific_args(template_parser, use_github, use_gitlab, use_selfhosted)
-        cross_repo_specific_args(template_parser)
-        global_args(template_parser)
-        # router to handler
-        template_parser.set_defaults(func=handle_cross_repo_sync)
 
     simple_commands = {
         "menu": "Show menu.",

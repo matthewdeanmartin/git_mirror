@@ -4,12 +4,11 @@ Interface with gitlab.
 This should use manage_config and manage_git for things that are not gitlab specific.
 """
 
-import asyncio
 import logging
 import multiprocessing
 from datetime import datetime
 from pathlib import Path
-from typing import Any, ContextManager, Union, cast
+from typing import Any, ContextManager, cast
 
 import git as g
 import gitlab
@@ -23,7 +22,6 @@ from rich.text import Text
 from termcolor import colored
 
 import git_mirror.manage_git as mg
-from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 from git_mirror.dummies import Dummy
 from git_mirror.performance import log_duration
@@ -106,7 +104,7 @@ class GitlabRepoManager(SourceHost):
         """
         console = console_with_theme()
         try:
-            kwargs: dict[str, Union[bool, str]] = {"owned": True}
+            kwargs: dict[str, Any] = {"owned": True}
             if not self.include_private:
                 kwargs["visibility"] = "public"
             projects = self.client().projects.list(**kwargs, get_all=True)
@@ -490,7 +488,7 @@ class GitlabRepoManager(SourceHost):
             table.add_column("Private", style="red")
             table.add_column("Fork", style="blue")
 
-            kwargs: dict[str, Union[bool, str]] = {"owned": True, "get_all": True}
+            kwargs: dict[str, Any] = {"owned": True, "get_all": True}
             if not self.include_private:
                 kwargs["visibility"] = "public"
             projects = self.client().projects.list(**kwargs)
@@ -712,52 +710,6 @@ class GitlabRepoManager(SourceHost):
         """
         version, revision = self.client().version()
         return {"version": version, "revision": revision}
-
-    @log_duration
-    def cross_repo_sync_report(self, template_dir: Path) -> None:
-        """
-        Reports differences between the template directory and the target directories.
-        """
-        console = console_with_theme()
-        if not template_dir or not template_dir.exists():
-            console.print(f"Template directory {template_dir} does not exist.")
-            return
-        # right now just the easy case of all repos need to match 1 template_dir
-        console.print("Reporting differences between the template directory and the target directories.")
-        syncer = TemplateSync(template_dir)
-        directories = mg.find_git_repos(self.base_dir)
-        console.print(f"Found {len(directories)} repositories.")
-        syncer.report_content_differences(directories)
-
-    @log_duration
-    def cross_repo_init(self, template_dir: Path):
-        console = console_with_theme()
-        if not template_dir or not template_dir.exists():
-            console.print(f"Template directory {template_dir} does not exist.")
-            return
-        syncer = TemplateSync(template_dir, use_default=True)
-        directories = mg.find_git_repos(self.base_dir)
-        console.print(f"Found {len(directories)} repositories.")
-        syncer.write_template_map(directories)
-        console.print(f"Initialized template map for {len(directories)} repositories.")
-
-    @log_duration
-    def cross_repo_sync(self, template_dir: Path):
-        console = console_with_theme()
-        if not template_dir or not template_dir.exists():
-            console.print(f"Template directory {template_dir} does not exist.")
-            return
-        syncer = TemplateSync(template_dir, use_default=True)
-        directories = mg.find_git_repos(self.base_dir)
-        console.print(f"Found {len(directories)} repositories.")
-        answer = inquirer.confirm(
-            "Do you want to synchronize all repositories with the template directory?", default=False
-        ).execute()
-        if not answer:
-            console.print("Aborted.")
-            return
-        syncer.sync_template(directories)
-        console.print(f"Synchronized {len(directories)} repositories with the template directory.")
 
     @log_duration
     def merge_request(

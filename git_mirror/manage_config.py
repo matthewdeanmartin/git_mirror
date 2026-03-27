@@ -87,7 +87,7 @@ def _normalize_github_url(raw_url: str) -> str:
 
 
 def _coerce_path(value: str | Path | None) -> Path | None:
-    if value in (None, ""):
+    if value is None or value == "":
         return None
     return Path(value).expanduser()
 
@@ -390,7 +390,7 @@ class ConfigManager:
             if not config_section:
                 break
 
-            if toml_config["tool"]["git-mirror"].get(config_section.host_name, {}):  # type: ignore[index]
+            if toml_config["tool"]["git-mirror"].get(config_section.host_name, {}):  # type: ignore[index, union-attr]
                 raise ValueError(
                     f"Configuration for {config_section.host_name} already exists in {self.config_path.resolve()}"
                 )

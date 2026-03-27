@@ -4,7 +4,6 @@ Public interface with github.
 This should use manage_config and manage_git for things that are not github specific.
 """
 
-import asyncio
 import logging
 import multiprocessing
 from datetime import datetime
@@ -24,7 +23,6 @@ from rich.text import Text
 from termcolor import colored
 
 import git_mirror.manage_git as mg
-from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 from git_mirror.dummies import Dummy
 from git_mirror.performance import log_duration
@@ -572,53 +570,6 @@ class GithubRepoManager(SourceHost):
         data = response.json()
         versions_supported = data["info"]["version"]
         return {"version": versions_supported}
-
-    @log_duration
-    def cross_repo_sync_report(self, template_dir: Path) -> None:
-        """
-        Reports differences between the template directory and the target directories.
-        """
-        console = console_with_theme()
-        if not template_dir or not template_dir.exists():
-            console.print(f"Template directory {template_dir} does not exist.")
-            return
-        # right now just the easy case of all repos need to match 1 template_dir
-        console.print("Reporting differences between the template directory and the target directories.")
-        syncer = TemplateSync(template_dir)
-        directories = mg.find_git_repos(self.base_dir)
-        console.print(f"Found {len(directories)} repositories.")
-        syncer.report_content_differences(directories)
-
-    @log_duration
-    def cross_repo_init(self, template_dir: Path) -> None:
-        console = console_with_theme()
-        if not template_dir or not template_dir.exists():
-            console.print(f"Template directory {template_dir} does not exist.")
-            return
-        syncer = TemplateSync(template_dir, use_default=True)
-        directories = mg.find_git_repos(self.base_dir)
-        console.print(f"Found {len(directories)} repositories.")
-        syncer.write_template_map(directories)
-        console.print(f"Initialized template map for {len(directories)} repositories.")
-
-    @log_duration
-    def cross_repo_sync(self, template_dir: Path) -> None:
-        console = console_with_theme()
-        if not template_dir or not template_dir.exists():
-            console.print(f"Template directory {template_dir} does not exist.")
-            return
-        syncer = TemplateSync(template_dir, use_default=True)
-        directories = mg.find_git_repos(self.base_dir)
-        console.print(f"Found {len(directories)} repositories.")
-        if self.prompt_for_changes:
-            answer = inquirer.prompt(
-                [inquirer.Confirm("sync", message="Are you sure you want to sync all repositories?", default=False)]
-            )
-            if not answer["sync"]:
-                console.print("Sync cancelled.")
-                return
-        syncer.sync_template(directories)
-        console.print(f"Synchronized {len(directories)} repositories with the template directory.")
 
     @log_duration
     def merge_request(

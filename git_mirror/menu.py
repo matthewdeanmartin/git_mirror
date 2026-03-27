@@ -42,9 +42,6 @@ def get_command_info(args: argparse.Namespace) -> str | None:
         ("Check configuration health", "doctor"),
         ("Update all branches from main", "update-from-main"),
         ("Prune all branches", "prune-all"),
-        ("Cross-repo report", "cross-repo-report"),
-        ("Cross-repo sync", "cross-repo-sync"),
-        ("Cross-repo Template Initialization", "cross-repo-init"),
         ("Main Menu", "Main Menu"),
     ]
 
@@ -53,7 +50,6 @@ def get_command_info(args: argparse.Namespace) -> str | None:
         "Branch Commands": ["update-from-main", "prune-all", "Main Menu"],
         "Configuration Commands": ["init", "sync-config", "list-config", "doctor", "Main Menu"],
         "Source Control Host Commands": ["show-account", "Main Menu"],
-        "Template Sync": ["cross-repo-report", "cross-repo-sync", "cross-repo-init", "Main Menu"],
         "Exit": [],
     }
 

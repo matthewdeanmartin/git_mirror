@@ -60,12 +60,7 @@ from git_mirror.manage_github import GithubRepoManager
 #     - Mock the `httpx.get` method to test the API call and return values based
 #       on different scenarios.
 #
-# 11. Test the `cross_repo_sync` method:
-#
-#     - Mock the `TemplateSync` class and ensure that the synchronization logic
-#       behaves as expected.
-#
-# 12. Test the `merge_request` method:
+# 11. Test the `merge_request` method:
 #
 #     - Mock the creation of a pull request and assignment of a reviewer, ensuring
 #       the correct URL is returned.

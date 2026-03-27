@@ -64,13 +64,13 @@ You care about some repos more than others, use config to focus on a subset of r
 
 ```text
 usage: git_mirror [-h] [-V] [--menu MENU]
-                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,menu,init}
                   ...
 
 Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools.
 
 positional arguments:
-  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,menu,init}
                         Subcommands.
     show-account        Show source code host user account information.
     list-repos          List repositories.
@@ -84,9 +84,6 @@ positional arguments:
     build-status        Show build status.
     list-config         List configuration.
     doctor              Check configuration and explain what needs fixing.
-    cross-repo-report   Show cross repo sync report.
-    cross-repo-sync     Sync files across repos.
-    cross-repo-init     Initialize cross repo sync.
     menu                Show menu.
     init                Initialize configuration.
 

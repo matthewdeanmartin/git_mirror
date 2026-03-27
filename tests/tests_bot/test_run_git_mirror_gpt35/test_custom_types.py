@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -59,12 +58,6 @@ def test_source_host_protocol_methods():
     source_host.prune_all()
 
     source_host.version_info()
-
-    source_host.cross_repo_sync_report(Path("/template/dir"))
-
-    source_host.cross_repo_init(Path("/template/dir"))
-
-    source_host.cross_repo_sync(Path("/template/dir"))
 
     source_host.merge_request("source_branch", "target_branch", "test", "reviewer", 123, "repo_name")
 

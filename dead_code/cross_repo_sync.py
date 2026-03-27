@@ -1,14 +1,9 @@
 """
-Synchronize build scripts and config files across multiple repositories.
+Retired cross-repo sync implementation.
 
-Source directory:
-- Has files
-- If file is empty, only check if it exists in target directory
-
-Target directories:
-- Will certainly have additional files, those will not be removed.
-- No particular solution for how to remove a previously synced file
-- Change detection assumes text files and CR, CRLF differences are not significant
+Archived after removing the mutating `cross-repo-sync` command from the active
+CLI surface so the tool can stay focused on safe git operations across many
+repositories.
 """
 
 import difflib
@@ -27,13 +22,10 @@ LOGGER = logging.getLogger(__name__)
 
 class TemplateSync:
     """
-    A class to synchronize template directories across multiple target directories, with detailed file comparison.
+    Archived version of the old template sync helper.
     """
 
     def __init__(self, templates_dir: Path, use_default: bool = False) -> None:
-        """
-        Initializes the TemplateSync with a source template directory.
-        """
         self.templates_dir = templates_dir
         self.console = Console()
         self.project_name_token = "{{{PROJECT_NAME}}}"  # nosec
@@ -79,9 +71,6 @@ class TemplateSync:
         return self.templates_dir / self.template_map[project]
 
     def report_differences(self, target_dirs: list[Path]) -> None:
-        """
-        Reports detailed differences between the template directory and each target directory.
-        """
         self.write_template_map(target_dirs)
         differences = self._report_differences_data(target_dirs)
         self.console.print(differences)
@@ -107,9 +96,6 @@ class TemplateSync:
         return differences
 
     def report_content_differences(self, target_dirs: list[Path]) -> None:
-        """
-        Reports detailed differences between the template directory and each target directory, displaying rich diffs for files with different contents.
-        """
         self.write_template_map(target_dirs)
         for target_path in target_dirs:
             template_dir = self.get_template_dir(target_path.name)
@@ -132,18 +118,12 @@ class TemplateSync:
                     )
 
     def sync_template(self, target_dirs: list[Path]) -> None:
-        """
-        Synchronizes the template directory with each target directory.
-        """
         self.write_template_map(target_dirs)
         for target_dir in target_dirs:
             target_path = Path(target_dir)
             self._copy_template(target_path)
 
     def _compare_directories(self, target_dir: Path, project_name: str = "") -> list[dict[str, str]]:
-        """
-        Compares the template directory with a target directory to find detailed differences.
-        """
         differences = []
         template_dir = self.get_template_dir(target_dir.name)
         for template_file in template_dir.glob("**/*"):
@@ -160,9 +140,6 @@ class TemplateSync:
         return differences
 
     def _compare_files(self, template: Path, target: Path, project_name: str = "") -> dict[str, str]:
-        """
-        Compares two files, insensitive to CR/LF differences, and returns the nature of the difference.
-        """
         target_lines, template_lines = self.apply_light_templating(target, template, project_name)
         if not template_lines:
             return {"difference": "Empty templates match all file contents."}
@@ -185,9 +162,6 @@ class TemplateSync:
         return target_lines, template_lines
 
     def _copy_template(self, target_dir: Path) -> None:
-        """
-        Copies the template directory to a target directory.
-        """
         template_dir = self.get_template_dir(target_dir.name)
         for template_file in template_dir.glob("**/*"):
             if template_file.is_file():
@@ -198,23 +172,7 @@ class TemplateSync:
                 LOGGER.info(f"Copied {template_file} to {target_file}")
 
     def _display_diff(self, template: Path, target: Path, project_name: str) -> None:
-        """
-        Displays a rich diff of the contents of two files.
-        """
         target_lines, template_lines = self.apply_light_templating(target, template, project_name)
         diff = difflib.unified_diff(target_lines, template_lines, fromfile=str(template), tofile=str(target))
         diff_text = "".join(diff)
         self.console.print(Text(diff_text, style="diff.removed"))
-
-
-if __name__ == "__main__":
-
-    def run() -> None:
-        logging.basicConfig(level=logging.INFO)
-        sync = TemplateSync(Path("E:\\github\\build_templates\\pypi_library"))
-        target_directories = [Path("E:\\github\\dedlin"), Path("E:\\github\\llm_build")]
-        sync.report_differences(target_directories)
-
-        # sync.sync_template(target_directories)
-
-    run()

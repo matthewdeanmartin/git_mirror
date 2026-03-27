@@ -72,7 +72,7 @@ def test_route_repos_selfhosted_github_uses_github_manager():
         mock_gitlab_manager.assert_not_called()
 
 
-# additional tests can be added for route_repos and route_cross_repo functions
+# additional tests can be added for route_repos as needed
 
 
 # No more unit tests
