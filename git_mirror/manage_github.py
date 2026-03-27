@@ -1,7 +1,7 @@
 """
 Public interface with github.
 
-This should use manage_config, manage_git, manage_pypi for things that are not github specific.
+This should use manage_config and manage_git for things that are not github specific.
 """
 
 import asyncio
@@ -27,7 +27,6 @@ import git_mirror.manage_git as mg
 from git_mirror.cross_repo_sync import TemplateSync
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
 from git_mirror.dummies import Dummy
-from git_mirror.manage_pypi import PyPiManager, pretty_print_pypi_results
 from git_mirror.performance import log_duration
 from git_mirror.safe_env import load_env
 from git_mirror.ui import console_with_theme
@@ -315,59 +314,6 @@ class GithubRepoManager(SourceHost):
             else:
                 console.print(status_message)  # Default, no color
         return messages
-
-    @log_duration
-    def check_pypi_publish_status(self, pypi_owner_name: str | None = None) -> list[dict[str, Any]]:
-        """
-        Checks if the repositories as Python packages are published on PyPI and compares the last change dates.
-        """
-        console = console_with_theme()
-        results = []
-        if pypi_owner_name:
-            pypi_owner_name = pypi_owner_name.strip().lower()
-
-        async def get_infos_async(package_names):
-            pypi_manager = PyPiManager()
-            return await pypi_manager.get_infos(package_names)
-
-        package_names = [path.name for path in mg.find_git_repos(self.base_dir)]
-        package_infos = asyncio.run(get_infos_async(package_names))
-
-        repos = mg.find_git_repos(self.base_dir)
-        console.print(f"Checking {len(repos)} repositories for PyPI publish status.")
-        for repo_dir in repos:
-            if repo_dir.is_dir():
-                try:
-                    repo = g.Repo(repo_dir)
-                    package_name = repo_dir.name  # Assuming the repo name is the package name
-
-                    pypi_data, status_code = package_infos[package_name]
-                    any_owner_is_fine = pypi_owner_name is None
-                    i_am_owner = pypi_owner_name == pypi_data.get("info", {}).get("author", "").strip().lower()
-
-                    if status_code == 200 and (any_owner_is_fine or i_am_owner):
-                        pypi_release_date = PyPiManager._get_latest_pypi_release_date(pypi_data)
-
-                        repo_last_commit_date = self._get_latest_commit_date(repo)
-                        days_difference = (pypi_release_date - repo_last_commit_date).days
-
-                        results.append(
-                            {
-                                "Package": package_name,
-                                "On PyPI": "Yes",
-                                "Pypi Owner": pypi_data.get("info", {}).get("author"),
-                                "Repo last change date": repo_last_commit_date.date(),
-                                "PyPI last change date": pypi_release_date.date(),
-                                "Days difference": days_difference,
-                            }
-                        )
-                except g.InvalidGitRepositoryError:
-                    LOGGER.warning(f"{repo_dir} is not a valid Git repository.")
-                except Exception as e:
-                    LOGGER.error(f"Error checking {repo_dir}: {e}")
-        print()
-        console.print(pretty_print_pypi_results(results))
-        return results
 
     @classmethod
     def _get_latest_commit_date(self, repo: g.Repo) -> datetime:

@@ -38,7 +38,7 @@ def test_route_config_unknown_command():
         mock_print.assert_called_with("Unknown command: unknown-command")
 
 
-# additional tests can be added for route_repos, route_cross_repo, route_pypi functions
+# additional tests can be added for route_repos and route_cross_repo functions
 
 
 # No more unit tests

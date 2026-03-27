@@ -122,8 +122,6 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
                 args.user_name = config_data.user_name
             if not args.target_dir:
                 args.target_dir = config_data.target_dir
-            if hasattr(args, "pypi_owner_name") and not args.pypi_owner_name:
-                args.pypi_owner_name = config_data.pypi_owner_name
             if not args.include_private:
                 args.include_private = config_data.include_private
             if not args.include_forks:
@@ -197,26 +195,6 @@ def handle_config(args: argparse.Namespace) -> None:
     )
 
 
-def handle_pypi(args: argparse.Namespace) -> None:
-    token, return_value = validate_host_token(args)
-    # modify args
-    domain, group_id, return_value = validate_parse_args(args)
-    if return_value != 0:
-        sys.exit(return_value)
-    router.route_pypi(
-        command=args.command,
-        user_name=args.user_name,
-        target_dir=args.target_dir,
-        token=token or "",
-        host=args.host,
-        include_private=args.include_private,
-        include_forks=args.include_forks,
-        domain=domain,
-        logging_level=args.verbose,
-        dry_run=args.dry_run,
-    )
-
-
 def handle_cross_repo_sync(args: argparse.Namespace) -> None:
     token, return_value = validate_host_token(args)
     # modify args
@@ -244,10 +222,6 @@ def handle_simple(args: argparse.Namespace) -> None:
         command=args.command,
         config_path=args.config_path,
     )
-
-
-def pypi_specific_args(parser):
-    parser.add_argument("--pypi-owner-name", help="Pypi Owner Name.")
 
 
 def config_specific_args(parser):
@@ -347,19 +321,6 @@ def main(
         global_args(config_parser)
         # router to handler
         config_parser.set_defaults(func=handle_config)
-
-    pypi_commands = {
-        "pypi-status": "Show pypi deployment status.",
-    }
-
-    for command, help_text in pypi_commands.items():
-        pypi_parser = subparsers.add_parser(command, help=help_text)
-        # specific args
-        host_specific_args(pypi_parser, use_github, use_gitlab, use_selfhosted)
-        pypi_specific_args(pypi_parser)
-        global_args(pypi_parser)
-        # router to handler
-        pypi_parser.set_defaults(func=handle_pypi)
 
     template_commands = {
         "cross-repo-report": "Show cross repo sync report.",

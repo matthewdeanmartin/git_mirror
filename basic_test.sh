@@ -24,10 +24,6 @@ echo
 echo "Testing: git_mirror list-config"
 git_mirror list-config
 echo
-# need limit!
-echo "Testing: gh_mirror pypi-status"
-gh_mirror pypi-status
-echo
 echo "Testing: gh_mirror show-account"
 gh_mirror show-account
 echo "Testing: gl_mirror show-account"

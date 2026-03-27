@@ -19,7 +19,6 @@ class CommandInfo:
     user_name: str | None = None
     group_id: int | None = None
     domain: str | None = None
-    pypi_owner_name: str | None = None
     target_dir: Path | None = None
     include_forks: bool = False
     include_private: bool = False
@@ -40,13 +39,11 @@ def get_command_info(args: argparse.Namespace) -> str | None:
         ("Report all build statuses", "build-status"),
         ("Sync repo list in config with source control host", "sync-config"),
         ("Report current configuration", "list-config"),
-        ("Report unpublished pypi packages", "pypi-status"),
         ("Update all branches from main", "update-from-main"),
         ("Prune all branches", "prune-all"),
         ("Cross-repo report", "cross-repo-report"),
         ("Cross-repo sync", "cross-repo-sync"),
         ("Cross-repo Template Initialization", "cross-repo-init"),
-        ("Poetry ", "cross-repo-init"),
         ("Main Menu", "Main Menu"),
     ]
 
@@ -54,10 +51,8 @@ def get_command_info(args: argparse.Namespace) -> str | None:
         "Repository Commands": ["list-repos", "clone-all", "pull-all", "local-changes", "not-repo", "Main Menu"],
         "Branch Commands": ["update-from-main", "prune-all", "Main Menu"],
         "Configuration Commands": ["init", "sync-config", "list-config", "Main Menu"],
-        "PyPI Commands": ["pypi-status", "Main Menu"],
         "Source Control Host Commands": ["show-account", "Main Menu"],
         "Template Sync": ["cross-repo-report", "cross-repo-sync", "cross-repo-init", "Main Menu"],
-        "Poetry Commands": ["poetry-relock", "Main Menu"],
         "Exit": [],
     }
 

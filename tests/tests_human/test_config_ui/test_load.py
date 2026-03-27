@@ -23,7 +23,6 @@ def test_display_config(mock_console_class):
         host_url="https://api.github.com",
         user_name="testuser",
         target_dir=Path("/path/to/repo"),
-        pypi_owner_name="testowner",
         include_private=True,
         include_forks=False,
         group_id=123,

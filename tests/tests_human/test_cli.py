@@ -40,7 +40,6 @@ def test_cli_clone_all(mock_main_github, cli_args):
         target_dir=ANY,
         # template_dir=None,
         token="testtoken",
-        #        pypi_owner_name=None,
         user_name="testuser",
         domain="",
         dry_run=False,

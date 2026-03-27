@@ -24,7 +24,7 @@ If you support 30 distinct repos across 3 different source control hosts, you'd 
 run 30 git commands (pull, get latest from main, etc) and then feel that this was a good use of time.
 
 ## Note!
-Upcoming 0.3.4 to 1.0.0 will break backwards as I switch to (sub-)subcommands.
+Version `1.0.0` removes the old Python-package-specific commands such as `pypi-status`.
 
 ## Installation
 
@@ -54,8 +54,6 @@ You probably made changes and forgot to pull them. Run `git_mirror pull-all`.
 
 You have made changes to many repos and can't remember which. Run `git_mirror local-changes`.
 
-You have pushed changes to many repos and forgot if you deployed them to pypi or not. Run `git_mirror build-status`.
-
 Github doesn't summarize failing builds across all repos. Run `git_mirror build-status`.
 
 Your local folder has a bunch of stray folders that aren't even repos. Run `git_mirror not-repo`.
@@ -64,13 +62,13 @@ You care about some repos more than others, use config to focus on a subset of r
 
 ```text
 usage: git_mirror [-h] [-V] [--menu MENU]
-                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,pypi-status,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+                  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
                   ...
 
 Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools.
 
 positional arguments:
-  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,pypi-status,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
+  {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,cross-repo-report,cross-repo-sync,cross-repo-init,menu,init}
                         Subcommands.
     show-account        Show source code host user account information.
     list-repos          List repositories.
@@ -83,7 +81,6 @@ positional arguments:
     sync-config         Sync configuration with source code host.
     build-status        Show build status.
     list-config         List configuration.
-    pypi-status         Show pypi deployment status.
     cross-repo-report   Show cross repo sync report.
     cross-repo-sync     Sync files across repos.
     cross-repo-init     Initialize cross repo sync.
@@ -111,7 +108,6 @@ Either run `git_mirror init` to interactively setup the config, or add a section
 ```toml
 [tool.git-mirror.github]
 user_name = "matthewdeanmartin"
-pypi_owner_name = "Matthew Martin"
 target_dir = "f:/github/"
 include_private = false
 include_forks = false
@@ -119,7 +115,6 @@ include_forks = false
 [tool.git-mirror.gitlab]
 user_name = "matthewdeanmartin"
 url = "http://gitlab.com"
-pypi_owner_name = "Matthew Martin"
 target_dir = "f:/gitlab/"
 include_private = true
 include_forks = false
@@ -129,7 +124,6 @@ group_id = 542
 type = "gitlab"
 user_name = "mmartin"
 url = "http://git.example.com"
-pypi_owner_name = "Matthew Martin"
 target_dir = "e:/self/"
 include_private = true
 include_forks = false

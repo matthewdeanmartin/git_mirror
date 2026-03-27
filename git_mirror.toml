@@ -1,6 +1,5 @@
 [tool.git-mirror.github]
 user_name = "matthewdeanmartin"
-pypi_owner_name = "Matthew Martin"
 target_dir = "f:/github/"
 include_private = false
 
@@ -9,7 +8,6 @@ include_private = false
 [tool.git-mirror.gitlab]
 user_name = "matthewdeanmartin"
 url = "http://gitlab.com"
-pypi_owner_name = "Matthew Martin"
 target_dir = "f:/gitlab/"
 include_private = true
 include_forks = false
@@ -18,7 +16,6 @@ include_forks = false
 type = "gitlab" # host_type?
 user_name = "mmartin"
 url = "http://git.example.com"
-pypi_owner_name = "Matthew Martin"
 target_dir = "e:/self/"
 include_private = true
 include_forks = false

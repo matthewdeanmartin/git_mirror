@@ -13,7 +13,6 @@ from git_mirror.manage_config import ConfigManager
 #         host_url="https://api.github.com",
 #         user_name="testuser",
 #         target_dir=Path("/path/to/repo"),
-#         pypi_owner_name="testowner",
 #         include_private=True,
 #         include_forks=False,
 #         group_id=123,

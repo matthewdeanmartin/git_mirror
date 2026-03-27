@@ -48,8 +48,6 @@ def test_source_host_protocol_methods():
 
     source_host.list_repo_builds()
 
-    source_host.check_pypi_publish_status(pypi_owner_name="test_owner")
-
     source_host.list_repo_names()
 
     source_host.list_repos()

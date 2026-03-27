@@ -63,7 +63,6 @@ class ConfigData:
     host_url: str  # API endpoint
     user_name: str
     target_dir: Path | None
-    pypi_owner_name: str
     include_private: bool = False
     include_forks: bool = False
     group_id: int = 0
@@ -145,7 +144,6 @@ def ask_for_section(already_configured: list[str]) -> ConfigData | None:
         target_dir=target_dir,
         include_private=answers["include_private"],
         include_forks=answers["include_forks"],
-        pypi_owner_name="",  # advanced feature.
         group_id=group_id,
     )
     LOGGER.debug(f"Configuration data: {data}")
@@ -234,7 +232,6 @@ class ConfigManager:
                 "target_dir": str(config_section.target_dir),
                 "include_private": config_section.include_private,
                 "include_forks": config_section.include_forks,
-                "pypi_owner_name": config_section.pypi_owner_name,
                 "global_template_dir": config_section.global_template_dir,
             }
             if config_section.group_id:
@@ -278,7 +275,6 @@ class ConfigManager:
                 tool_config.get("host_url", ""),
                 tool_config.get("user_name"),
                 target_dir,
-                tool_config.get("pypi_owner_name", ""),
                 tool_config.get("include_private", False),
                 tool_config.get("include_forks", False),
                 tool_config.get("group_id", 0),

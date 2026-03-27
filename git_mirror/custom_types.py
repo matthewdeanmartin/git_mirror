@@ -50,11 +50,6 @@ class SourceHost(Protocol):
         with the status color-coded: green for success, red for failure, and yellow for cancelled.
         """
 
-    def check_pypi_publish_status(self, pypi_owner_name: str | None = None) -> list[dict[str, Any]]:
-        """
-        Checks if the repositories as Python packages are published on PyPI and compares the last change dates.
-        """
-
     def list_repo_names(self) -> list[str]:
         """
         Returns a list of repository names.
