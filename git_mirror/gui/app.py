@@ -740,29 +740,31 @@ class ShowAccountPanel(_BasePanel):
                 client = gh.Github(base_url=config.host_url, login_or_token=token)
             else:
                 client = gh.Github(token)
-            user = client.get_user(config.user_name)
+            gh_user = client.get_user(config.user_name)
             return {
-                "Username": user.login,
-                "Name": user.name or "N/A",
-                "Bio": user.bio or "N/A",
-                "Public repos": str(user.public_repos),
-                "Followers": str(user.followers),
-                "Following": str(user.following),
-                "Location": user.location or "N/A",
-                "Company": user.company or "N/A",
-                "URL": user.html_url,
+                "Username": gh_user.login,
+                "Name": gh_user.name or "N/A",
+                "Bio": gh_user.bio or "N/A",
+                "Public repos": str(gh_user.public_repos),
+                "Followers": str(gh_user.followers),
+                "Following": str(gh_user.following),
+                "Location": gh_user.location or "N/A",
+                "Company": gh_user.company or "N/A",
+                "URL": gh_user.html_url,
             }
         elif config.host_type == "gitlab":
             import gitlab
             gl = gitlab.Gitlab(config.host_url, private_token=token)
             gl.auth()
-            user = gl.user
+            gl_user = gl.user
+            if gl_user is None:
+                return {"Error": "GitLab authentication failed"}
             return {
-                "Username": user.username,
-                "Name": user.name or "N/A",
-                "Bio": getattr(user, "bio", "") or "N/A",
-                "State": user.state,
-                "URL": user.web_url,
+                "Username": gl_user.username,
+                "Name": gl_user.name or "N/A",
+                "Bio": getattr(gl_user, "bio", "") or "N/A",
+                "State": gl_user.state,
+                "URL": gl_user.web_url,
             }
         return {"Error": "Unknown host type"}
 
@@ -1222,13 +1224,19 @@ class GitMirrorApp:
         ]
 
         for item_id, label in items:
-            if item_id is None:
+            if item_id is None or label is None:
                 tk.Frame(parent, bg=_CLR_BORDER, height=1).pack(fill=tk.X, padx=12, pady=6)
                 continue
+            
+            final_item_id: str = item_id
+
+            def show_panel_cmd(pid: str = final_item_id) -> None:
+                self._show_panel(pid)
+
             btn = tk.Button(
                 parent,
                 text=label,
-                command=lambda pid=item_id: self._show_panel(pid),
+                command=show_panel_cmd,
                 bg=_CLR_SIDEBAR,
                 fg=_CLR_FG,
                 activebackground=_CLR_BTN_ACTIVE,
@@ -1241,8 +1249,16 @@ class GitMirrorApp:
                 pady=5,
             )
             btn.pack(fill=tk.X, padx=4, pady=1)
-            btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=_CLR_BTN))
-            btn.bind("<Leave>", lambda e, b=btn: b.configure(bg=_CLR_SIDEBAR) if b != self._sidebar_buttons.get("_active") else None)
+
+            def on_enter(event: tk.Event, b: tk.Button = btn) -> None:
+                b.configure(bg=_CLR_BTN)
+
+            def on_leave(event: tk.Event, b: tk.Button = btn) -> None:
+                if b != self._sidebar_buttons.get("_active"):
+                    b.configure(bg=_CLR_SIDEBAR)
+
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
             self._sidebar_buttons[item_id] = btn
 
     def _show_panel(self, panel_id: str):

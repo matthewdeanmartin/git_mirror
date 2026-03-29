@@ -4,6 +4,8 @@ Public interface with github.
 This should use manage_config and manage_git for things that are not github specific.
 """
 
+from __future__ import annotations
+
 import logging
 import multiprocessing
 from datetime import datetime

@@ -2,6 +2,8 @@
 Sends the cli commands to the right method
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 

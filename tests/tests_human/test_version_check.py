@@ -35,7 +35,7 @@ def test_http_error_handling():
 
 def test_display_version_check_message_new_version(capsys, mock_response):
     with patch("httpx.get", return_value=mock_response):
-        with patch("git_mirror.__about__.__version__", "1.0.0"):
+        with patch("git_mirror.version_check.__version__", "1.0.0"):
             display_version_check_message()
             captured = capsys.readouterr()
             assert "A newer version of git_mirror is available on PyPI. Upgrade to 2.0.0." in captured.out

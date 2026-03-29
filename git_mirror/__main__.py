@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # import git_mirror.hack.forwarding as argparse
 import argparse
 import logging

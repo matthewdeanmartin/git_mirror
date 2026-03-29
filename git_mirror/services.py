@@ -123,9 +123,9 @@ def list_repos_data(token: str, host: str, config: ConfigData) -> list[RepoInfo]
             client = gh.Github(base_url=config.host_url, login_or_token=token)
         else:
             client = gh.Github(token)
-        user = client.get_user()
+        gh_user = client.get_user()
         repos = []
-        for repo in user.get_repos():
+        for repo in gh_user.get_repos():
             if (
                 (config.include_private or not repo.private)
                 and (config.include_forks or not repo.fork)
@@ -146,8 +146,8 @@ def list_repos_data(token: str, host: str, config: ConfigData) -> list[RepoInfo]
 
         gl = gitlab.Gitlab(config.host_url, private_token=token)
         gl.auth()
-        user = gl.user
-        projects = user.projects.list(all=True) if user else []
+        gl_user = gl.user
+        projects = gl_user.projects.list(all=True) if gl_user else []
         repos = []
         for p in projects:
             if config.include_private or p.visibility != "private":
@@ -208,9 +208,9 @@ def clone_all_repos(token: str, config: ConfigData, dry_run: bool = False) -> Ac
             dry_run=dry_run, prompt_for_changes=False,
         )
         repos_gl = mgr_gl._get_user_repos()
-        for repo_data in repos_gl:
-            name = repo_data.name
-            url = repo_data.http_url_to_repo
+        for repo_data_gl in repos_gl:
+            name = repo_data_gl.name
+            url = repo_data_gl.http_url_to_repo
             dest = base_path / name
             if dest.exists():
                 result.messages.append(f"Already exists: {name}")
