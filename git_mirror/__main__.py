@@ -184,6 +184,8 @@ def main_gitlab(argv: Sequence[str] | None = None) -> int:
 
 def handle_repos(args: argparse.Namespace) -> None:
     token, return_value = validate_host_token(args)
+    if return_value != 0:
+        sys.exit(return_value)
     # modify args
     domain, group_id, return_value = validate_parse_args(args)
     if return_value != 0:

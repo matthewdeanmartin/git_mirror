@@ -1,12 +1,14 @@
 FILES := $(wildcard **/*.py)
 
-UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
-UV_RUN = UV_CACHE_DIR=$(UV_CACHE_DIR) uv run
-PYTEST_BASETEMP = $(CURDIR)/.pytest-tmp
+export UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
+UV_RUN = uv run
+PYTEST_BASETEMP = $(CURDIR)/tmp_pytest
+export PYTEST_BASETEMP
+export SKIP_LLM_PRE_COMMIT := no-commit-to-branch,black,isort,ruff
 
 uv.lock: pyproject.toml
 	@echo "Installing dependencies"
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uv sync --all-extras
+	uv sync --all-extras
 
 .PHONY: test
 test: uv.lock smoke-py smoke-bash
@@ -22,14 +24,14 @@ smoke-py:
 .PHONY: smoke-bash
 smoke-bash:
 	@echo "Running bash smoke scripts"
-	@if [ "$(OS)" = "Windows_NT" ]; then \
-		echo "Skipping bash smoke scripts on Windows; they run in GitHub Actions."; \
-	else \
-		bash scripts/basic_help.sh; \
-		bash scripts/basic_test.sh; \
-		bash scripts/basic_test_dry.sh; \
-		bash scripts/entrypoint_help.sh; \
-	fi
+ifeq ($(OS),Windows_NT)
+	@echo "Skipping bash smoke scripts on Windows; they run in GitHub Actions."
+else
+	@bash scripts/basic_help.sh
+	@bash scripts/basic_test.sh
+	@bash scripts/basic_test_dry.sh
+	@bash scripts/entrypoint_help.sh
+endif
 
 .PHONY: isort
 isort:
@@ -56,9 +58,10 @@ pre-commit:
 	$(UV_RUN) pre-commit run --all-files
 
 .PHONY: pre-commit-llm
+pre-commit-llm: export SKIP = $(SKIP_LLM_PRE_COMMIT)
 pre-commit-llm:
 	@echo "Pre-commit checks (no fix)"
-	SKIP=no-commit-to-branch,black,isort,ruff $(UV_RUN) pre-commit run --all-files
+	$(UV_RUN) pre-commit run --all-files
 
 .PHONY: bandit
 bandit:
@@ -128,12 +131,12 @@ pip-audit:
 
 .PHONY: lint-actions
 lint-actions:
-	@UV_CACHE_DIR=$(UV_CACHE_DIR) uv run zizmor . --config .zizmor.yml --min-severity informational --persona pedantic
-	@UV_CACHE_DIR=$(UV_CACHE_DIR) uv run check-jsonschema --schemafile https://json.schemastore.org/github-workflow.json .github/workflows/*.yml
+	@$(UV_RUN) zizmor . --config .zizmor.yml --min-severity informational --persona pedantic
+	@$(UV_RUN) check-jsonschema --schemafile https://json.schemastore.org/github-workflow.json .github/workflows/*.yml
 
 .PHONY: fix-actions
 fix-actions:
-	@UV_CACHE_DIR=$(UV_CACHE_DIR) uv run gha-update
+	@$(UV_RUN) gha-update
 
 .PHONY: pre-publication
 pre-publication: check-llm check_all-llm lint-actions build-package

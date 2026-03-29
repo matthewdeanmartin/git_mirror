@@ -9,6 +9,10 @@ This repository uses **uv** for dependency management.
 - The virtual environment is located at `./.venv`.
 - Never install libraries into the global Python environment.
 - To sync dependencies, use `uv sync --all-extras`.
+- In PowerShell sandboxes, point uv at a workspace-local cache so it does not try to use a blocked global cache directory.
+- Preferred pattern for ad hoc commands: `$env:UV_CACHE_DIR='.uv-cache'; uv run ...`
+- For pytest in sandboxes, also use a workspace-local temp base that is safe to recreate, for example: `$env:UV_CACHE_DIR='.uv-cache'; uv run pytest --basetemp=tmp_pytest ...`
+- If you are using `make`, prefer the provided targets because the `Makefile` exports a local `UV_CACHE_DIR` for you.
 
 ## Recommended Tasks for AI Agents
 

@@ -1,8 +1,19 @@
 from unittest.mock import patch
 
+from hypothesis import given
+from hypothesis import strategies as st
 import tomlkit
 
-from git_mirror.manage_config import ConfigData, ConfigManager, _prompt_for_target_dir, read_config
+from git_mirror.manage_config import (
+    PUBLIC_GITHUB_API_URL,
+    ConfigData,
+    ConfigManager,
+    _coerce_path,
+    _normalize_github_url,
+    _normalize_url,
+    _prompt_for_target_dir,
+    read_config,
+)
 
 
 def test_read_config_returns_value_from_file(tmp_path):
@@ -181,4 +192,45 @@ def test_initialize_config_writes_config_and_runs_doctor(tmp_path):
     assert github_config["global_template_dir"] == str(tmp_path / "templates")
     mock_doctor.assert_called_once_with("github", attempt_token_setup=True)
     assert target_dir.exists()
+
+
+@given(st.sampled_from(["github.com", "api.github.com"]))
+def test_normalize_github_url_handles_public_hosts(host):
+    normalized = _normalize_github_url(f" https://{host}/ ")
+
+    expected = PUBLIC_GITHUB_API_URL if host == "github.com" else "https://api.github.com"
+    assert normalized == expected
+
+
+@given(
+    host=st.from_regex(r"[a-z][a-z0-9-]{0,10}\.example\.com", fullmatch=True),
+    prefix=st.lists(st.from_regex(r"[a-z][a-z0-9-]{0,8}", fullmatch=True), min_size=0, max_size=3),
+)
+def test_normalize_github_url_adds_api_v3_for_enterprise_hosts(host, prefix):
+    path = "/".join(prefix)
+    raw_url = f"https://{host}" if not path else f"https://{host}/{path}"
+
+    normalized = _normalize_github_url(raw_url)
+
+    assert normalized.startswith(f"https://{host}")
+    assert normalized.endswith("/api/v3")
+
+
+@given(st.from_regex(r"[A-Za-z0-9][A-Za-z0-9./_-]{0,20}", fullmatch=True))
+def test_normalize_url_trims_and_adds_https_for_bare_hosts(raw_value):
+    normalized = _normalize_url(f"  {raw_value}/  ")
+
+    assert normalized.startswith("https://")
+    assert not normalized.endswith("/")
+
+
+@given(st.one_of(st.none(), st.just(""), st.from_regex(r"~?[/A-Za-z0-9._-]{1,20}", fullmatch=True)))
+def test_coerce_path_returns_none_or_path_objects(raw_value):
+    result = _coerce_path(raw_value)
+
+    if raw_value in (None, ""):
+        assert result is None
+    else:
+        assert result is not None
+        assert str(result)
 
