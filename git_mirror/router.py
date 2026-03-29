@@ -6,22 +6,20 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
-import git_mirror.manage_config as mc
-import git_mirror.manage_git as mg
-import git_mirror.manage_github as mgh
-import git_mirror.manage_gitlab as mgl
-from git_mirror.check_cli_deps import check_tool_availability
-from git_mirror.custom_types import SourceHost
-from git_mirror.safe_env import load_env
-from git_mirror.ui import console_with_theme
-
-load_env()
-
-# Configure logging
 LOGGER = logging.getLogger(__name__)
 
-console = console_with_theme()
+_CONSOLE = None
+
+
+def _get_console():
+    global _CONSOLE
+    if _CONSOLE is None:
+        from git_mirror.ui import console_with_theme
+
+        _CONSOLE = console_with_theme()
+    return _CONSOLE
 
 
 def route_simple(
@@ -35,6 +33,9 @@ def route_simple(
         command (str): The command to execute ('clone-all' or 'pull-all').
         config_path (Path): Path to the TOML config file.
     """
+    from git_mirror import manage_config as mc
+
+    console = _get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
@@ -60,10 +61,15 @@ def route_config(
         host (str | None): Optional host to inspect.
         dry_run (bool): Flag to determine whether the operation should be a dry run.
     """
+    from git_mirror import manage_config as mc
+
+    console = _get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
     if command == "list-config":
+        from git_mirror.check_cli_deps import check_tool_availability
+
         config_manager = mc.ConfigManager(config_path=config_path)
         config_manager.list_config()
         print()
@@ -110,10 +116,15 @@ def route_repos(
         template_dir (Path): The directory containing the templates to sync.
         prompt_for_changes (bool): Flag to determine whether to prompt for changes.
     """
+    from git_mirror import manage_config as mc
+
+    console = _get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
     if command == "local-changes":
+        from git_mirror import manage_git as mg
+
         base_path = Path(target_dir).expanduser()
         git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes)
         git_manager.check_for_uncommitted_or_unpushed_changes()
@@ -130,8 +141,10 @@ def route_repos(
             resolved_domain = resolved_domain or config_data.host_url
 
         if backend_host == "github":
+            from git_mirror import manage_github as mgh
+
             base_path = Path(target_dir).expanduser()
-            manager: SourceHost = mgh.GithubRepoManager(
+            manager: Any = mgh.GithubRepoManager(
                 token,
                 base_path,
                 user_name,
@@ -142,6 +155,8 @@ def route_repos(
                 prompt_for_changes=prompt_for_changes,
             )
         elif backend_host == "gitlab":
+            from git_mirror import manage_gitlab as mgl
+
             base_path = Path(target_dir).expanduser()
             manager = mgl.GitlabRepoManager(
                 token,
@@ -158,9 +173,8 @@ def route_repos(
             raise ValueError(f"Unknown host: {backend_host}")
 
         if command == "clone-all" and backend_host == "gitlab" and group_id is not None and group_id != 0:
-            # TODO: confusion with clone all by user name and by group id.
-            # If they are both filled in, then what does the user want?
-            # hack until I support cloning by github org or something.
+            from git_mirror import manage_gitlab as mgl
+
             gl_manager = mgl.GitlabRepoManager(
                 token,
                 base_path,
@@ -196,5 +210,3 @@ def route_repos(
             console.print(f"Unknown command: {command}")
     else:
         console.print(f"Unknown host: {host}")
-
-

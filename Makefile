@@ -175,3 +175,8 @@ check_all: check_docs check_md check_spelling check_changelog
 
 .PHONY: check_all-llm
 check_all-llm: check_docs check_md check_spelling check_changelog
+
+.PHONY: bench
+bench:
+	@echo "Running startup benchmarks"
+	$(UV_RUN) pytest --basetemp=$(PYTEST_BASETEMP) -q -m slow tests/bench_startup.py

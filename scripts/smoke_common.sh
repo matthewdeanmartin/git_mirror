@@ -4,7 +4,7 @@ set -euo pipefail
 SMOKE_ROOT="${SMOKE_ROOT:-$(mktemp -d)}"
 export HOME="$SMOKE_ROOT/home"
 export XDG_CACHE_HOME="$SMOKE_ROOT/xdg-cache"
-export UV_CACHE_DIR="${UV_CACHE_DIR:-$PWD/.uv-cache}"
+export UV_CACHE_DIR="${UV_CACHE_DIR:-$SMOKE_ROOT/.uv-cache}"
 export HISTFILE="$SMOKE_ROOT/bash_history"
 export PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring"
 export PYTEST_CURRENT_TEST="smoke"

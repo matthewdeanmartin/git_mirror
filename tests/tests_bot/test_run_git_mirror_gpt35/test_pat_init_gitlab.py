@@ -1,21 +1,21 @@
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from git_mirror.pat_init_gitlab import check_pat_validity, setup_gitlab_pat
 
-# I'll start by looking for potential issues in the provided code snippet:
-#
-# 1. The function `check_pat_validity` calls an external service
-#    (`https://gitlab.com/api/v4/user`) which may not always be reliable or
-#    accessible during testing. We need to mock the HTTP requests using `httpx` to
-#    prevent making actual requests.
-# 2. The function `setup_gitlab_pat` interacts with user input (`getpass.getpass`
-#    and `input`). We need to mock these interactions to ensure the unit test
-#    remains independent.
-#
-# Now, I will proceed to write some pytest unit tests for the `pat_init_gitlab.py`
-# module.
+
+@pytest.fixture
+def mock_path_home():
+    with patch("pathlib.Path.home", return_value=Path("/fake/home")) as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_path_cwd():
+    with patch("pathlib.Path.cwd", return_value=Path("/fake/cwd")) as mock:
+        yield mock
 
 
 @pytest.fixture
@@ -40,8 +40,13 @@ def test_check_pat_validity_invalid(mock_httpx_get):
 
 @patch("getpass.getpass", return_value="invalid_token")
 @patch("builtins.input", return_value="g")
-def test_setup_gitlab_pat_invalid_pat(mock_input, mock_getpass):
-    with patch("git_mirror.pat_init_gitlab.console.print") as mock_print:
+def test_setup_gitlab_pat_invalid_pat(mock_input, mock_getpass, mock_path_home, mock_path_cwd):
+    with (
+        patch("git_mirror.pat_init_gitlab.console.print") as mock_print,
+        patch("git_mirror.pat_init_gitlab.find_dotenv", return_value=""),
+        patch("git_mirror.pat_init_gitlab.load_dotenv"),
+        patch("git_mirror.pat_init_gitlab.env_info"),
+    ):
         setup_gitlab_pat()
         mock_print.assert_called_with("The provided PAT is invalid.")
 

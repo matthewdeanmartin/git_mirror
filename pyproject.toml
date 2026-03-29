@@ -144,6 +144,9 @@ testpaths = [
 ]
 junit_family = "xunit1"
 norecursedirs = ["vendor", "scripts"]
+markers = [
+    "slow: startup benchmark and other slower-running tests",
+]
 # don't know how to do this in toml
 #addopts = "--strict-markers"
 #markers =

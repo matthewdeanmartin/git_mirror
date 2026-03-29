@@ -82,7 +82,7 @@ def test_cli_config_loading(mock_main_github, tmp_path):
 def test_cli_first_time_init_reparses_to_init(mock_route_simple, tmp_path):
     config_path = tmp_path / "git_mirror.toml"
     with (
-        patch("git_mirror.__main__.default_config_path", return_value=config_path),
+        patch("git_mirror.__main__._default_config_path", return_value=config_path),
         patch("sys.argv", ["git_mirror"]),
     ):
         assert main() == 0

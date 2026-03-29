@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# import git_mirror.hack.forwarding as argparse
 import argparse
 import logging
 import logging.config
@@ -9,31 +8,59 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-import requests_cache
-
-import git_mirror.pat_init as pat_init
-import git_mirror.pat_init_gitlab as pat_init_gitlab
-import git_mirror.router as router
-from git_mirror import logging_config
 from git_mirror.__about__ import __description__, __version__
-from git_mirror.bug_report import BugReporter
-from git_mirror.manage_config import ConfigManager, default_config_path
-from git_mirror.menu import ask_for_host, get_command_info
-from git_mirror.safe_env import load_env
-from git_mirror.ui import console_with_theme
-from git_mirror.version_check import display_version_check_message
-
-# Assuming RepoManager and other necessary imports are defined elsewhere
-
-load_env()
 
 LOGGER = logging.getLogger(__name__)
 
-backend = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
+_CONSOLE = None
+_CACHE_BACKEND = None
+_REQUESTS_CACHE_INSTALLED = False
 
-requests_cache.install_cache("git_mirror_cache", backend=backend, expire_after=300)
 
-console = console_with_theme()
+def _get_console():
+    global _CONSOLE
+    if _CONSOLE is None:
+        from git_mirror.ui import console_with_theme
+
+        _CONSOLE = console_with_theme()
+    return _CONSOLE
+
+
+def _load_env() -> None:
+    from git_mirror.safe_env import load_env
+
+    load_env()
+
+
+def _default_config_path() -> Path:
+    from git_mirror.manage_config import default_config_path
+
+    return default_config_path()
+
+
+def _get_config_manager(config_path: Path):
+    from git_mirror.manage_config import ConfigManager
+
+    return ConfigManager(config_path)
+
+
+def _get_backend():
+    global _CACHE_BACKEND
+    if _CACHE_BACKEND is None:
+        import requests_cache
+
+        _CACHE_BACKEND = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
+    return _CACHE_BACKEND
+
+
+def _install_requests_cache() -> None:
+    global _REQUESTS_CACHE_INSTALLED
+    if _REQUESTS_CACHE_INSTALLED:
+        return
+    import requests_cache
+
+    requests_cache.install_cache("git_mirror_cache", backend=_get_backend(), expire_after=300)
+    _REQUESTS_CACHE_INSTALLED = True
 
 
 def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
@@ -46,20 +73,19 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     Returns:
         tuple[Optional[str], int]: The token and return value.
     """
+    from git_mirror.menu import ask_for_host
+
+    _load_env()
+    console = _get_console()
     host = args.host if hasattr(args, "host") else None
-    config_path = args.config_path if hasattr(args, "config_path") else default_config_path()
-    # HACK: This needs to be redone somehow.
-    config_manager = ConfigManager(config_path)
+    config_path = args.config_path if hasattr(args, "config_path") else _default_config_path()
+    config_manager = _get_config_manager(config_path)
     invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
-    needs_host = args.command not in ("init", "list-config", "doctor")
+    needs_host = args.command not in ("init", "list-config", "doctor", None)
     if invalid_or_missing_host and needs_host:
         host = ask_for_host(config_manager)
         if not host:
             config_manager.initialize_config()
-            # console.print(
-            #     "Please specify a host with --host or use gh_mirror for Github, gl_mirror for Gitlab, or sh_mirror for self hosted. "
-            #     "Specify selfhosted in config file with a host_type of github or gitlab."
-            # )
             return "", 1
         args.host = host
     if not needs_host:
@@ -68,16 +94,15 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     if args.host == "selfhosted" and not config_data:
         console.print(f"No configuration found for {args.host}. Run `git_mirror init` first.")
         return "", 1
-    # github or self hosted github
     selfhosted_type_is_github = args.host == "selfhosted" and config_data and config_data.host_type == "github"
     selfhosted_type_is_gitlab = args.host == "selfhosted" and config_data and config_data.host_type == "gitlab"
-    # SELFHOSTED_ACCESS_TOKEN
     if selfhosted_type_is_github or selfhosted_type_is_gitlab:
         if config_data is None:
-            # Should be impossible due to checks above
             return "", 1
         token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
         if selfhosted_type_is_github and not token:
+            import git_mirror.pat_init as pat_init
+
             console.print("Self hosted Github access token is missing. Let's set it up now.")
             token = pat_init.setup_github_pat(
                 env_var="SELFHOSTED_ACCESS_TOKEN",
@@ -87,6 +112,8 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
             if not token:
                 return "", 1
         if selfhosted_type_is_gitlab and not token:
+            import git_mirror.pat_init_gitlab as pat_init_gitlab
+
             console.print("Self hosted GitLab access token is missing. Let's set it up now.")
             token = pat_init_gitlab.setup_gitlab_pat(
                 env_var="SELFHOSTED_ACCESS_TOKEN",
@@ -98,6 +125,8 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     elif args.host == "github" or selfhosted_type_is_github:
         token = os.getenv("GITHUB_ACCESS_TOKEN")
         if not token:
+            import git_mirror.pat_init as pat_init
+
             console.print("Github access token is missing. Let's set it up now.")
             token = pat_init.setup_github_pat()
             if not token:
@@ -105,6 +134,8 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     elif args.host == "gitlab" or selfhosted_type_is_gitlab:
         token = os.getenv("GITLAB_ACCESS_TOKEN")
         if not token:
+            import git_mirror.pat_init_gitlab as pat_init_gitlab
+
             console.print("GitLab access token is missing. Let's set it up now.")
             token = pat_init_gitlab.setup_gitlab_pat()
             if not token:
@@ -117,19 +148,17 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
 
 
 def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
-
     LOGGER.debug(f"Program name {sys.argv[0]}")
-
+    console = _get_console()
     group_id = 0
     domain = ""
 
-    # Attempt to read from config if arguments are not provided
     if (
         (not args.user_name or not args.target_dir)
         and not args.first_time_init
         and args.command not in ("init", "list-config", "doctor")
     ):
-        config_manager = ConfigManager(args.config_path)
+        config_manager = _get_config_manager(args.config_path)
         if not args.host:
             console.print("Please specify a host, eg. --host github or --host gitlab.")
             return domain, group_id, 1
@@ -163,10 +192,11 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
 def enable_logging(args):
     # No logging above this line!
     if hasattr(args, "verbose") and args.verbose > 0:
+        from git_mirror import logging_config
+
         config = logging_config.generate_config(level="DEBUG", logging_level=args.verbose)
         logging.config.dictConfig(config)
     else:
-        # Essentially, quiet mode
         logging.basicConfig(level=logging.FATAL)
 
 
@@ -183,10 +213,11 @@ def main_gitlab(argv: Sequence[str] | None = None) -> int:
 
 
 def handle_repos(args: argparse.Namespace) -> None:
+    import git_mirror.router as router
+
     token, return_value = validate_host_token(args)
     if return_value != 0:
         sys.exit(return_value)
-    # modify args
     domain, group_id, return_value = validate_parse_args(args)
     if return_value != 0:
         sys.exit(return_value)
@@ -208,6 +239,8 @@ def handle_repos(args: argparse.Namespace) -> None:
 
 
 def handle_config(args: argparse.Namespace) -> None:
+    import git_mirror.router as router
+
     router.route_config(
         command=args.command,
         config_path=args.config_path,
@@ -217,6 +250,8 @@ def handle_config(args: argparse.Namespace) -> None:
 
 
 def handle_simple(args: argparse.Namespace) -> None:
+    import git_mirror.router as router
+
     router.route_simple(
         command=args.command,
         config_path=args.config_path,
@@ -229,6 +264,7 @@ def config_specific_args(parser):
         choices=["github", "gitlab", "selfhosted"],
         help="Limit configuration checks to one configured host.",
     )
+
 
 def main(
     argv: Sequence[str] | None = None,
@@ -257,14 +293,12 @@ def main(
 
         # Interactively initialize configuration
         {program} init
-        
+
         # Interactively select command
         {program} menu""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    # parser.add_argument("command", choices=choices, help="The command to execute.")
 
-    # start global args
     parser.add_argument(
         "-V",
         "--version",
@@ -272,38 +306,28 @@ def main(
         version=f"%(prog)s {__version__}",
         help="Show program's version number and exit.",
     )
-
-    # this has to be here. This is how we intercept the command before main argparsing happens.
     parser.add_argument("--menu", help="Choose a command via menu.")
     parser.add_argument("--gui", action="store_true", help="Launch the graphical user interface.")
 
     subparsers = parser.add_subparsers(help="Subcommands.", dest="command")
 
     repos_commands = {
-        # Account
         "show-account": "Show source code host user account information.",
-        # Repos
         "list-repos": "List repositories.",
         "clone-all": "Clone all repositories.",
         "pull-all": "Pull all repositories.",
         "local-changes": "List local changes.",
         "not-repo": "List directories that are not repositories.",
-        # Branch commands
         "update-from-main": "Update from main branch.",
         "prune-all": "Prune all repositories not found remotely.",
-        # config
         "sync-config": "Sync configuration with source code host.",
-        # CI
         "build-status": "Show build status.",
     }
 
     for command, help_text in repos_commands.items():
-        # Repos command
         repos_parser = subparsers.add_parser(command, help=help_text)
-        # repos specific args
         host_specific_args(repos_parser, use_github, use_gitlab, use_selfhosted)
         global_args(repos_parser)
-        # router to handler
         repos_parser.set_defaults(func=handle_repos)
 
     config_commands = {
@@ -312,12 +336,9 @@ def main(
     }
 
     for command, help_text in config_commands.items():
-        # Repos command
         config_parser = subparsers.add_parser(command, help=help_text)
-        # repos specific args
         config_specific_args(config_parser)
         global_args(config_parser)
-        # router to handler
         config_parser.set_defaults(func=handle_config)
 
     simple_commands = {
@@ -329,11 +350,8 @@ def main(
     for command, help_text in simple_commands.items():
         simple_parser = subparsers.add_parser(command, help=help_text)
         global_args(simple_parser)
-        # router to handler
         if command != "menu":
             simple_parser.set_defaults(func=handle_simple)
-
-    # TODO: UX - help user who hasn't set a host or token.
 
     original_args = list(argv) if argv is not None else sys.argv[1:]
     args: argparse.Namespace = parser.parse_args(argv)
@@ -344,6 +362,8 @@ def main(
         return launch_gui() or 0
 
     if args.command == "menu":
+        from git_mirror.menu import get_command_info
+
         selection = get_command_info(args)
         if selection:
             if sys.argv:
@@ -356,16 +376,14 @@ def main(
             args = parser.parse_args(new_command)
 
     args.use_github = use_github
-    # UX - help user who doesn't enter any specific command and is likely just starting out
     args.first_time_init = False
-    if not original_args and not default_config_path().exists():
-        console.print("This appears to be first time setup. Let's initialize configuration.")
+    if not original_args and not _default_config_path().exists():
+        _get_console().print("This appears to be first time setup. Let's initialize configuration.")
         argv = ["init"]
         args = parser.parse_args(argv)
         args.first_time_init = True
 
     enable_logging(args)
-    LOGGER.debug(f"Cache store at {backend.db_path}")
 
     if use_github:
         args.host = "github"
@@ -373,20 +391,27 @@ def main(
         args.host = "gitlab"
     elif use_selfhosted:
         args.host = "selfhosted"
-    # Can't run any commands except init without a host and token
+
     token, return_value = validate_host_token(args)
     if return_value != 0:
         return return_value
 
+    if args.command not in ("init", "list-config", "doctor", "menu", None):
+        _install_requests_cache()
+        LOGGER.debug(f"Cache store at {_get_backend().db_path}")
+
     if os.environ.get("GITHUB_ACCESS_TOKEN") and "PYTEST_CURRENT_TEST" not in os.environ:
+        from git_mirror.bug_report import BugReporter
+
         reporter = BugReporter(os.environ.get("GITHUB_ACCESS_TOKEN", ""), "matthewdeanmartin/git_mirror")
         reporter.register_global_handler()
 
     if hasattr(args, "func"):
         args.func(args)
 
-    # this happens if no command or after any command finishes
-    if "PYTEST_CURRENT_TEST" not in os.environ:
+    if args.command not in (None,) and "PYTEST_CURRENT_TEST" not in os.environ:
+        from git_mirror.version_check import display_version_check_message
+
         display_version_check_message()
     return 0
 
@@ -395,8 +420,7 @@ def global_args(parser):
     parser.add_argument(
         "--config-path",
         type=Path,
-        default=default_config_path(),
-        # shared=True,
+        default=_default_config_path(),
         action="store",
         help="Path to the TOML config file.",
     )
@@ -449,5 +473,4 @@ def host_specific_args(parser: argparse.ArgumentParser, use_github: bool, use_gi
 
 
 if __name__ == "__main__":
-    # sys.exit(main(["list-repos","--host=selfhosted","--verbose"], use_selfhosted=True))
     sys.exit(main(sys.argv[1:]))
