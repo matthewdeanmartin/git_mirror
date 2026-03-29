@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pre-publication:
-    name: Pre-publication
+  quality-gates:
+    name: Quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -42,35 +42,5 @@ jobs:
       - name: Sync dependencies
         run: uv sync --all-extras
 
-      - name: Run pre-publication checks
-        run: make pre-publication
-
-      - name: Upload distributions
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: packages
-          path: dist/
-          if-no-files-found: error
-          retention-days: 1
-
-  publish:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: pre-publication
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    environment:
-      name: pypi
-      url: https://pypi.org/p/git_mirror
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Download distributions
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: packages
-          path: dist/
-
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+      - name: Run quality gates
+        run: make check-llm
