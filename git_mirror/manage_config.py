@@ -91,7 +91,11 @@ def _normalize_github_url(raw_url: str) -> str:
 def _coerce_path(value: str | Path | None) -> Path | None:
     if value is None or value == "":
         return None
-    return Path(value).expanduser()
+    path = Path(value)
+    try:
+        return path.expanduser()
+    except RuntimeError:
+        return path
 
 
 def _default_host_url(section_name: str, host_type: str | None = None) -> str:
