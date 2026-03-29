@@ -384,7 +384,8 @@ def main(
         args.func(args)
 
     # this happens if no command or after any command finishes
-    display_version_check_message()
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        display_version_check_message()
     return 0
 
 

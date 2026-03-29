@@ -1,31 +1,40 @@
-# isort . && black . && bandit -r . && pylint && pre-commit run --all-files
-
 FILES := $(wildcard **/*.py)
 
-# if you wrap everything in poetry run, it runs slower.
-ifeq ($(origin VIRTUAL_ENV),undefined)
-    VENV := uv run
-else
-    VENV :=
-endif
+UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
+UV_RUN = UV_CACHE_DIR=$(UV_CACHE_DIR) uv run
+PYTEST_BASETEMP = $(CURDIR)/.pytest-tmp
 
 uv.lock: pyproject.toml
-	echo "Installing dependencies"
-	uv sync --all-extras
-
+	@echo "Installing dependencies"
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv sync --all-extras
 
 .PHONY: test
-test: uv.lock
+test: uv.lock smoke-py smoke-bash
 	@echo "Running tests"
-	$(VENV) pytest --doctest-modules git_mirror -n 2
-	# $(VENV) python -m unittest discover
-	$(VENV) py.test tests -vv -n 2 --cov=git_mirror --cov-report=html --cov-fail-under 50
-	$(VENV) bash basic_help.sh
+	$(UV_RUN) pytest --basetemp=$(PYTEST_BASETEMP) --doctest-modules git_mirror -n 2
+	$(UV_RUN) pytest --basetemp=$(PYTEST_BASETEMP) tests -vv -n 2 --cov=git_mirror --cov-report=html --cov-fail-under 50
+
+.PHONY: smoke-py
+smoke-py:
+	@echo "Running CLI smoke tests"
+	$(UV_RUN) pytest --basetemp=$(PYTEST_BASETEMP) tests/tests_human/test_cli_smoke.py -q
+
+.PHONY: smoke-bash
+smoke-bash:
+	@echo "Running bash smoke scripts"
+	@if [ "$(OS)" = "Windows_NT" ]; then \
+		echo "Skipping bash smoke scripts on Windows; they run in GitHub Actions."; \
+	else \
+		bash scripts/basic_help.sh; \
+		bash scripts/basic_test.sh; \
+		bash scripts/basic_test_dry.sh; \
+		bash scripts/entrypoint_help.sh; \
+	fi
 
 .PHONY: isort
 isort:
 	@echo "Formatting imports"
-	$(VENV) isort .
+	$(UV_RUN) isort .
 
 .PHONY: isort-llm
 isort-llm:
@@ -34,8 +43,8 @@ isort-llm:
 .PHONY: black
 black:
 	@echo "Formatting code"
-	$(VENV) black git_mirror --exclude .venv
-	$(VENV) black tests --exclude .venv
+	$(UV_RUN) black git_mirror --exclude .venv
+	$(UV_RUN) black tests --exclude .venv
 
 .PHONY: black-llm
 black-llm:
@@ -44,29 +53,29 @@ black-llm:
 .PHONY: pre-commit
 pre-commit:
 	@echo "Pre-commit checks"
-	$(VENV) pre-commit run --all-files
+	$(UV_RUN) pre-commit run --all-files
 
 .PHONY: pre-commit-llm
 pre-commit-llm:
 	@echo "Pre-commit checks (no fix)"
-	SKIP=no-commit-to-branch,black,isort,ruff $(VENV) pre-commit run --all-files
+	SKIP=no-commit-to-branch,black,isort,ruff $(UV_RUN) pre-commit run --all-files
 
 .PHONY: bandit
 bandit:
 	@echo "Security checks"
-	$(VENV)  bandit git_mirror -r
+	$(UV_RUN) bandit git_mirror -r
 
 .PHONY: pylint
 pylint:
 	@echo "Linting with pylint"
-	$(VENV) ruff check --fix
-	$(VENV) pylint git_mirror --fail-under 9.8
+	$(UV_RUN) ruff check --fix
+	$(UV_RUN) pylint git_mirror --fail-under 9.8
 
 .PHONY: pylint-llm
 pylint-llm:
 	@echo "Linting with pylint (no fix)"
-	$(VENV) ruff check
-	$(VENV) pylint git_mirror --fail-under 9.8
+	$(UV_RUN) ruff check
+	$(UV_RUN) pylint git_mirror --fail-under 9.8
 
 .PHONY: check
 check: mypy test pylint bandit pre-commit
@@ -74,47 +83,61 @@ check: mypy test pylint bandit pre-commit
 .PHONY: check-llm
 check-llm: mypy-llm test pylint-llm bandit-llm pre-commit-llm
 
+.PHONY: build-package
+build-package:
+	rm -rf dist
+	$(UV_RUN) uv build
+
 .PHONY: publish_test
-publish_test:
-	rm -rf dist && uv build && uv publish --repository testpypi
+publish_test: build-package
+	$(UV_RUN) uv publish --repository testpypi
 
 .PHONY: publish
-publish: test
-	rm -rf dist && uv build && uv publish
+publish: pre-publication
+	$(UV_RUN) uv publish
 
 .PHONY: mypy
 mypy:
 	@echo "Running mypy"
-	$(VENV) mypy git_mirror --ignore-missing-imports --check-untyped-defs
+	$(UV_RUN) mypy git_mirror --ignore-missing-imports --check-untyped-defs
 
 .PHONY: mypy-llm
 mypy-llm:
 	@echo "Running mypy (LLM mode)"
-	$(VENV) mypy git_mirror --ignore-missing-imports --check-untyped-defs
+	$(UV_RUN) mypy git_mirror --ignore-missing-imports --check-untyped-defs
 
 .PHONY: ty
 ty:
 	@echo "Running ty"
-	$(VENV) ty check git_mirror
+	$(UV_RUN) ty check git_mirror
 
 .PHONY: ty-llm
 ty-llm:
 	@echo "Running ty (LLM mode)"
-	$(VENV) ty check git_mirror
+	$(UV_RUN) ty check git_mirror
 
 .PHONY: bandit-llm
 bandit-llm:
 	@echo "Running bandit (LLM mode)"
-	$(VENV) bandit git_mirror -r
+	$(UV_RUN) bandit git_mirror -r
 
 .PHONY: pip-audit
 pip-audit:
 	@echo "Running pip-audit"
-	$(VENV) pip-audit
+	$(UV_RUN) pip-audit
 
-.PHONY: pre-release
-pre-release: check_all check bandit interrogate pip-audit
-	@echo "Pre-release checks complete"
+.PHONY: lint-actions
+lint-actions:
+	@UV_CACHE_DIR=$(UV_CACHE_DIR) uv run zizmor . --config .zizmor.yml --min-severity informational --persona pedantic
+	@UV_CACHE_DIR=$(UV_CACHE_DIR) uv run check-jsonschema --schemafile https://json.schemastore.org/github-workflow.json .github/workflows/*.yml
+
+.PHONY: fix-actions
+fix-actions:
+	@UV_CACHE_DIR=$(UV_CACHE_DIR) uv run gha-update
+
+.PHONY: pre-publication
+pre-publication: check-llm check_all-llm lint-actions build-package
+	@echo "Pre-publication checks complete"
 
 .PHONY: docker
 docker:
@@ -122,29 +145,27 @@ docker:
 
 .PHONY: check_docs
 check_docs:
-	$(VENV) interrogate git_mirror --verbose
-	$(VENV) pydoctest --config .pydoctest.json | grep -v "__init__" | grep -v "__main__" | grep -v "Unable to parse"
+	$(UV_RUN) interrogate git_mirror --verbose
+	$(UV_RUN) pydoctest --config .pydoctest.json | grep -v "__init__" | grep -v "__main__" | grep -v "Unable to parse"
 
 .PHONY: make_docs
 make_docs:
-	pdoc git_mirror --html -o docs --force
+	$(UV_RUN) pdoc git_mirror --html -o docs --force
 
 .PHONY: check_md
 check_md:
-	$(VENV) mdformat README.md docs/*.md
-	# $(VENV) linkcheckMarkdown README.md # it is attempting to validate ssl certs
-	$(VENV) markdownlint README.md --config .markdownlintrc
+	$(UV_RUN) mdformat --check README.md docs/*.md
+	$(UV_RUN) markdownlint README.md --config .markdownlintrc
 
 .PHONY: check_spelling
 check_spelling:
-	$(VENV) pylint git_mirror --enable C0402 --rcfile=.pylintrc_spell
-	$(VENV) codespell README.md --ignore-words=private_dictionary.txt
-	$(VENV) codespell git_mirror --ignore-words=private_dictionary.txt
+	$(UV_RUN) pylint git_mirror --enable C0402 --rcfile=.pylintrc_spell
+	$(UV_RUN) codespell README.md --ignore-words=private_dictionary.txt
+	$(UV_RUN) codespell git_mirror --ignore-words=private_dictionary.txt
 
 .PHONY: check_changelog
 check_changelog:
-	# pipx install keepachangelog-manager
-	$(VENV) changelogmanager validate
+	$(UV_RUN) changelogmanager validate
 
 .PHONY: check_all
 check_all: check_docs check_md check_spelling check_changelog

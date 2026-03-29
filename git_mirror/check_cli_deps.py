@@ -15,14 +15,14 @@ def check_tool_availability():
         version=">=1.7.*",
         schema=models.SchemaType.SEMVER,
     )
-    poetry_version = models.CliToolConfig(
-        name="poetry",
+    uv_version = models.CliToolConfig(
+        name="uv",
         version="*",
         schema=models.SchemaType.SEMVER,
     )
     to_check = {
         "git": git_version,
-        "poetry": poetry_version,
+        "uv": uv_version,
     }
     results = cta.process_tools(to_check, no_cache=True, disable_progress_bar=True)
     for result in results:
