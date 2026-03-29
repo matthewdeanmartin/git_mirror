@@ -1,6 +1,6 @@
 [project]
 name = "git_mirror"
-version = "1.0.0"
+version = "2.0.0"
 description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
 authors = [
     {name = "Matthew Martin", email = "matthewdeanmartin@gmail.com"},
@@ -51,6 +51,9 @@ gl_mirror = 'git_mirror.__main__:main_gitlab'
 gh_mirror = 'git_mirror.__main__:main_github'
 sh_mirror = 'git_mirror.__main__:main_selfhosted'
 
+[project.gui-scripts]
+git_mirror_gui = 'git_mirror.gui.app:launch_gui'
+
 
 [dependency-groups]
 dev = ["black>=23.11.0", "pytest>=7.4.3", "pytest-cov>=4.1.0", "pytest-xdist>=3.5.0", "pytest-randomly>=3.15.0", "pytest-sugar>=0.9.7", "pytest-mock>=3.14.0", "pytest-network", "hypothesis>=6.96.0", "tox", "pylint>=3.0.2", "ruff>=0.1.9", "mypy>=1.8.0", "types-toml", "types-colorama", "types-tqdm", "pre-commit>=3.5.0", "metametameta", "interrogate>=1.5.0", "pydoctest>=0.1.22", "pdoc3>=0.10.0", "mdformat>=0.7.17", "linkcheckmd>=1.4.0", "codespell>=2.2.6", "pyenchant>=3.2.2"]
@@ -64,7 +67,7 @@ build-backend = "hatchling.build"
 #"templates" = "git_mirror/templates"
 
 [tool.hatch.build.targets.wheel]
-packages = ["git_mirror"]
+packages = ["git_mirror", "git_mirror/gui"]
 include = [
     "git_mirror/**/*.py",
     "git_mirror/py.typed",

@@ -271,6 +271,7 @@ def main(
 
     # this has to be here. This is how we intercept the command before main argparsing happens.
     parser.add_argument("--menu", help="Choose a command via menu.")
+    parser.add_argument("--gui", action="store_true", help="Launch the graphical user interface.")
 
     subparsers = parser.add_subparsers(help="Subcommands.", dest="command")
 
@@ -318,6 +319,7 @@ def main(
     simple_commands = {
         "menu": "Show menu.",
         "init": "Initialize configuration.",
+        "gui": "Launch the graphical user interface.",
     }
 
     for command, help_text in simple_commands.items():
@@ -331,6 +333,12 @@ def main(
 
     original_args = list(argv) if argv is not None else sys.argv[1:]
     args: argparse.Namespace = parser.parse_args(argv)
+
+    if getattr(args, "gui", False) or args.command == "gui":
+        from git_mirror.gui.app import launch_gui
+
+        return launch_gui() or 0
+
     if args.command == "menu":
         selection = get_command_info(args)
         if selection:

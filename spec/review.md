@@ -292,19 +292,6 @@ Work:
 - add better logging and diagnostics
 - clean up interactive prompts and confirmations
 
-### Phase 5: optional automation features
-
-Goal: reintroduce non-core value without polluting the core product.
-
-Candidates:
-
-- cross-repo template sync
-- `pypi-status`
-- `poetry-relock`
-- PR/MR automation
-
-These should come back only after Phase 1-4 are solid, and ideally live behind a clearly separate “automation” or “language-specific” surface.
-
 ## Recommendation
 
 If the project is going to get back on track, the right move is not “add more features.” It is:
