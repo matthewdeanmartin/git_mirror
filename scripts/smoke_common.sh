@@ -27,3 +27,27 @@ run_smoke() {
     printf '==> %s\n' "$*"
     "$@"
 }
+
+run_cli() {
+    local entrypoint="$1"
+    shift
+
+    case "$entrypoint" in
+        git_mirror)
+            run_smoke uv run python -m git_mirror.__main__ "$@"
+            ;;
+        gh_mirror)
+            run_smoke uv run python -c "import sys; from git_mirror.__main__ import main_github; raise SystemExit(main_github(sys.argv[1:]))" "$@"
+            ;;
+        gl_mirror)
+            run_smoke uv run python -c "import sys; from git_mirror.__main__ import main_gitlab; raise SystemExit(main_gitlab(sys.argv[1:]))" "$@"
+            ;;
+        sh_mirror)
+            run_smoke uv run python -c "import sys; from git_mirror.__main__ import main_selfhosted; raise SystemExit(main_selfhosted(sys.argv[1:]))" "$@"
+            ;;
+        *)
+            printf 'Unknown smoke entrypoint: %s\n' "$entrypoint" >&2
+            return 1
+            ;;
+    esac
+}

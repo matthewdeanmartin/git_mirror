@@ -7,11 +7,11 @@ clear || true
 # shellcheck source=scripts/smoke_common.sh
 . "$(dirname "$0")/smoke_common.sh"
 
-run_smoke uv run git_mirror --help
-run_smoke uv run git_mirror --version
-run_smoke uv run gh_mirror --help
-run_smoke uv run gh_mirror --version
-run_smoke uv run gl_mirror --help
-run_smoke uv run gl_mirror --version
-run_smoke uv run sh_mirror --help
-run_smoke uv run sh_mirror --version
+run_cli git_mirror --help
+run_cli git_mirror --version
+run_cli gh_mirror --help
+run_cli gh_mirror --version
+run_cli gl_mirror --help
+run_cli gl_mirror --version
+run_cli sh_mirror --help
+run_cli sh_mirror --version
