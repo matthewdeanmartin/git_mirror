@@ -1,8 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
-import pytest
-import os
-import git as g
+from unittest.mock import MagicMock, patch
 from git_mirror.services import (
     load_all_configs,
     run_doctor,
@@ -12,11 +9,7 @@ from git_mirror.services import (
     pull_all_repos,
     find_non_repos,
     get_build_statuses,
-    get_token_for_host,
-    RepoStatus,
-    RepoInfo,
-    ActionResult,
-    BuildInfo
+    get_token_for_host
 )
 from git_mirror.manage_config import ConfigData, SetupCheck
 

@@ -68,7 +68,7 @@ def load_all_configs(config_path: Path | None = None) -> dict[str, ConfigData | 
 
 def run_doctor(config_path: Path | None = None, host: str | None = None) -> list[tuple[str, list[Any]]]:
     """Returns list of (host_label, checks) tuples."""
-    from git_mirror.manage_config import SetupCheck, _host_label, _render_checks, _token_env_var
+    from git_mirror.manage_config import SetupCheck, _host_label
 
     cm = ConfigManager(config_path or default_config_path())
     results: list[tuple[str, list[Any]]] = []

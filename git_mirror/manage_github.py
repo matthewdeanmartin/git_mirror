@@ -10,7 +10,7 @@ import logging
 import multiprocessing
 from datetime import datetime
 from pathlib import Path
-from typing import Any, ContextManager, Union
+from typing import Any, ContextManager
 
 import git as g
 import github as gh
@@ -66,7 +66,7 @@ class GithubRepoManager(SourceHost):
         self.token = token
         self.base_dir = base_dir
         # cache user
-        self.user: Union[ghnu.NamedUser, ghau.AuthenticatedUser] | None = None
+        self.user: ghnu.NamedUser | ghau.AuthenticatedUser | None = None
         self.user_login = user_login
         self.include_private = include_private
         self.include_forks = include_forks
