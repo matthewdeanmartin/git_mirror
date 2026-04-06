@@ -1,5 +1,5 @@
 import argparse
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from git_mirror.__main__ import validate_host_token, validate_parse_args
 from git_mirror.manage_config import ConfigData
