@@ -107,7 +107,7 @@ def _default_host_url(section_name: str, host_type: str | None = None) -> str:
     raise ValueError(f"Unknown host type: {provider}")
 
 
-def _token_env_var(config: "ConfigData") -> str:
+def _token_env_var(config: ConfigData) -> str:
     if config.host_name == "selfhosted":
         return "SELFHOSTED_ACCESS_TOKEN"
     if config.host_type == "github":
@@ -115,7 +115,7 @@ def _token_env_var(config: "ConfigData") -> str:
     return "GITLAB_ACCESS_TOKEN"
 
 
-def _host_label(config: "ConfigData") -> str:
+def _host_label(config: ConfigData) -> str:
     if config.host_name == "selfhosted":
         return f"self-hosted {config.host_type}"
     return config.host_type
