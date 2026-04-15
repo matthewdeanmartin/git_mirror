@@ -11,7 +11,6 @@ import threading
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox as messagebox
-import tkinter.filedialog as filedialog
 from pathlib import Path
 from typing import Any, Callable
 
@@ -219,7 +218,7 @@ def _make_heading(parent: tk.Widget, text: str) -> tk.Label:
 
 
 class _BasePanel(tk.Frame):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, bg=_CLR_BG)
         self._app = app
         self._runner = app.runner
@@ -230,7 +229,7 @@ class _BasePanel(tk.Frame):
 
 
 class DashboardPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Dashboard")
 
@@ -288,7 +287,7 @@ class DashboardPanel(_BasePanel):
 
 
 class LocalChangesPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Local Changes")
 
@@ -354,7 +353,7 @@ class LocalChangesPanel(_BasePanel):
 
 
 class ListReposPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Repositories")
 
@@ -419,7 +418,7 @@ class ListReposPanel(_BasePanel):
 
 
 class CloneAllPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Clone All Repositories")
 
@@ -487,7 +486,7 @@ class CloneAllPanel(_BasePanel):
 
 
 class PullAllPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Pull All Repositories")
 
@@ -542,7 +541,7 @@ class PullAllPanel(_BasePanel):
 
 
 class NotRepoPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Non-Repository Directories")
 
@@ -586,7 +585,7 @@ class NotRepoPanel(_BasePanel):
 
 
 class BuildStatusPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Build Status (GitHub Actions)")
 
@@ -653,7 +652,7 @@ class BuildStatusPanel(_BasePanel):
 
 
 class DoctorPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Doctor - Configuration Health")
 
@@ -697,7 +696,7 @@ class DoctorPanel(_BasePanel):
 
 
 class ShowAccountPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Account Information")
 
@@ -786,7 +785,7 @@ class ShowAccountPanel(_BasePanel):
 
 
 class UpdateFromMainPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Update Branches from Main")
 
@@ -836,8 +835,6 @@ class UpdateFromMainPanel(_BasePanel):
         if not config.target_dir:
             return {"messages": [], "errors": ["No target directory configured"]}
         import git_mirror.manage_github as mgh
-        import git_mirror.manage_gitlab as mgl
-        from git_mirror.dummies import Dummy
 
         base_path = config.target_dir.expanduser()
         messages = []
@@ -875,7 +872,7 @@ class UpdateFromMainPanel(_BasePanel):
 
 
 class PruneAllPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Prune Branches")
 
@@ -962,7 +959,7 @@ class PruneAllPanel(_BasePanel):
 
 
 class ConfigPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Configuration")
 
@@ -1037,7 +1034,7 @@ class ConfigPanel(_BasePanel):
 
 
 class SyncConfigPanel(_BasePanel):
-    def __init__(self, parent: tk.Widget, app: "GitMirrorApp"):
+    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
         _make_heading(self, "Sync Config with Remote")
 
