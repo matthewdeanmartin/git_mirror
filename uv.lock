@@ -933,6 +933,33 @@ wheels = [
 ]
 
 [[package]]
+name = "docopt-ng"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/50/8d6806cf13138127692ae6ff79ddeb4e25eb3b0bcc3c1bd033e7e04531a9/docopt_ng-0.9.0.tar.gz", hash = "sha256:91c6da10b5bb6f2e9e25345829fb8278c78af019f6fc40887ad49b060483b1d7", size = 32264, upload-time = "2023-05-30T20:46:25.064Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/4a/c3b77fc1a24510b08918b43a473410c0168f6e657118807015f1f1edceea/docopt_ng-0.9.0-py3-none-any.whl", hash = "sha256:bfe4c8b03f9fca424c24ee0b4ffa84bf7391cb18c29ce0f6a8227a3b01b81ff9", size = 16689, upload-time = "2023-05-30T20:46:45.294Z" },
+]
+
+[[package]]
+name = "docutils"
+version = "0.20.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/53/a5da4f2c5739cf66290fac1431ee52aff6851c7c8ffd8264f13affd7bcdd/docutils-0.20.1.tar.gz", hash = "sha256:f08a4e276c3a1583a86dce3e34aba3fe04d02bba2dd51ed16106244e8a923e3b", size = 2058365, upload-time = "2023-05-16T23:39:19.748Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/87/f238c0670b94533ac0353a4e2a1a771a0cc73277b88bff23d3ae35a256c1/docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6", size = 572666, upload-time = "2023-05-16T23:39:15.976Z" },
+]
+
+[[package]]
+name = "dont-be-lazy"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/7b/5dda8c9e44562e009f5c413ae8bfffadf634f82237d49fd70b3674daf15f/dont_be_lazy-0.1.2.tar.gz", hash = "sha256:cde4c20f8b11efd6dc0142dc8464c1968412e5bb7acafc38703aa1491df7cbba", size = 70007, upload-time = "2026-05-05T00:27:02.041Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/6d/6a334fb3f71923133e3d0fc76e26eb37671dcdae3e5450bdeda5b2232ad8/dont_be_lazy-0.1.2-py3-none-any.whl", hash = "sha256:47b45d3eea83be5f7cae74bc9a9a754bece985b1e1e17184ec623501d2ea2ec3", size = 50821, upload-time = "2026-05-05T00:27:00.548Z" },
+]
+
+[[package]]
 name = "editor"
 version = "1.6.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1154,9 +1181,11 @@ dev = [
     { name = "check-jsonschema", version = "0.36.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "check-jsonschema", version = "0.37.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "codespell" },
+    { name = "dont-be-lazy", marker = "python_full_version >= '3.10'" },
     { name = "gha-update", marker = "python_full_version >= '3.12'" },
     { name = "hypothesis" },
     { name = "interrogate" },
+    { name = "jiggle-version" },
     { name = "linkcheckmd" },
     { name = "mdformat" },
     { name = "metametameta" },
@@ -1165,6 +1194,7 @@ dev = [
     { name = "pip-audit", version = "2.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pip-audit", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pre-commit" },
+    { name = "pydoc-fork", marker = "python_full_version >= '3.10'" },
     { name = "pydoctest" },
     { name = "pyenchant" },
     { name = "pylint" },
@@ -1209,9 +1239,11 @@ dev = [
     { name = "black", specifier = ">=23.11.0" },
     { name = "check-jsonschema", specifier = ">=0.33.3" },
     { name = "codespell", specifier = ">=2.2.6" },
+    { name = "dont-be-lazy", marker = "python_full_version >= '3.10'", specifier = ">=0.1.2" },
     { name = "gha-update", marker = "python_full_version >= '3.12'", specifier = ">=0.2.0,<0.3" },
     { name = "hypothesis", specifier = ">=6.96.0" },
     { name = "interrogate", specifier = ">=1.5.0" },
+    { name = "jiggle-version", specifier = ">=2.1.0" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
     { name = "mdformat", specifier = ">=0.7.17" },
     { name = "metametameta" },
@@ -1219,6 +1251,7 @@ dev = [
     { name = "pdoc3", specifier = ">=0.10.0" },
     { name = "pip-audit" },
     { name = "pre-commit", specifier = ">=3.5.0" },
+    { name = "pydoc-fork", marker = "python_full_version >= '3.10'", specifier = ">=3.0.0" },
     { name = "pydoctest", specifier = ">=0.1.22" },
     { name = "pyenchant", specifier = ">=3.2.2" },
     { name = "pylint", specifier = ">=3.0.2" },
@@ -1420,6 +1453,35 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1e/82/fa43935523efdfcce6abbae9da7f372b627b27142c3419fcf13bf5b0c397/isort-6.1.0.tar.gz", hash = "sha256:9b8f96a14cfee0677e78e941ff62f03769a06d412aabb9e2a90487b3b7e8d481", size = 824325, upload-time = "2025-10-01T16:26:45.027Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/cc/9b681a170efab4868a032631dea1e8446d8ec718a7f657b94d49d1a12643/isort-6.1.0-py3-none-any.whl", hash = "sha256:58d8927ecce74e5087aef019f778d4081a3b6c98f15a80ba35782ca8a2097784", size = 94329, upload-time = "2025-10-01T16:26:43.291Z" },
+]
+
+[[package]]
+name = "jiggle-version"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pathspec" },
+    { name = "requests" },
+    { name = "rich-argparse" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/56/51/543ffc8975bf64c74f0be4acf071466accc586b4b69606eb66fbfb63b725/jiggle_version-2.2.0.tar.gz", hash = "sha256:b1557d240c616d047496f3cec70cb2f2c5245a6adeda31791ce56e3acadfa4ef", size = 11417530, upload-time = "2026-05-24T23:05:09.269Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2a/c5/daed0eea4a504f61d0c6bdd4f210913d336ec756bfec1f85fb11304e41e0/jiggle_version-2.2.0-py3-none-any.whl", hash = "sha256:d9f8e095d4bfe4a51474d140afe8a1dc5a3e5d0894264096f209bc327d7f0b0f", size = 33168, upload-time = "2026-05-24T23:05:07.467Z" },
+]
+
+[[package]]
+name = "jinja2"
+version = "3.1.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe", marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115, upload-time = "2025-03-05T20:05:02.478Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899, upload-time = "2025-03-05T20:05:00.369Z" },
 ]
 
 [[package]]
@@ -2311,6 +2373,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fe/cf/d2d3b9f5699fb1e4615c8e32ff220203e43b248e1dfcc6736ad9057731ca/pycparser-2.23.tar.gz", hash = "sha256:78816d4f24add8f10a06d6f05b4d424ad9e96cfebf68a4ddc99c65c0720d00c2", size = 173734, upload-time = "2025-09-09T13:23:47.91Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/e3/59cd50310fc9b59512193629e1984c1f95e5c8ae6e5d8c69532ccc65a7fe/pycparser-2.23-py3-none-any.whl", hash = "sha256:e5c6e8d3fbad53479cab09ac03729e0a9faf2bee3db8208a550daf5af81a5934", size = 118140, upload-time = "2025-09-09T13:23:46.651Z" },
+]
+
+[[package]]
+name = "pydoc-fork"
+version = "3.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docopt-ng", marker = "python_full_version >= '3.10'" },
+    { name = "docutils", marker = "python_full_version >= '3.10'" },
+    { name = "jinja2", marker = "python_full_version >= '3.10'" },
+    { name = "markdown", marker = "python_full_version >= '3.10'" },
+    { name = "tomli", marker = "python_full_version >= '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cd/1c/20ba0e3ddb78f873f1cc60553e8a500f29d4cef891526e6e4c1cc60caf23/pydoc_fork-3.4.0.tar.gz", hash = "sha256:b9fd3035d66ac81aff1d3bb51febebb49ca821ea1b582b1bc4bf34b487731287", size = 85853, upload-time = "2026-05-24T20:32:05.124Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/f2/304f144279d858eb2576095b14529c50a912da806932bb1956e1c014c5eb/pydoc_fork-3.4.0-py3-none-any.whl", hash = "sha256:aebd96098a50b35c90c7d4cb626f33f79eac92533ca18d55c2a82abfa3e6d0af", size = 47981, upload-time = "2026-05-24T20:32:03.463Z" },
 ]
 
 [[package]]

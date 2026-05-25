@@ -180,3 +180,26 @@ check_all-llm: check_docs check_md check_spelling check_changelog
 bench:
 	@echo "Running startup benchmarks"
 	$(UV_RUN) pytest --basetemp=$(PYTEST_BASETEMP) -q -m slow tests/bench_startup.py
+
+# ── Dogfooding targets (independent, not wired into check) ───────────────────
+
+.PHONY: version-check
+version-check:
+	@uv run jiggle_version check
+
+.PHONY: dev-status
+dev-status:
+	@uvx troml-dev-status validate .
+
+.PHONY: prerelease-check
+prerelease-check: version-check dev-status
+	@echo "Pre-release checks passed."
+
+.PHONY: dont-be-lazy
+dont-be-lazy:
+	@uv run dont_be_lazy --root . --no-color summary
+	@uv run dont_be_lazy --root . --no-color scan git_mirror --no-config-suppressions || true
+
+.PHONY: pydoc-docs
+pydoc-docs:
+	@uv run pydoc_fork git_mirror -o ./pydoc/
