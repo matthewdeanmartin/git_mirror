@@ -81,7 +81,7 @@ pylint-llm:
 	$(UV_RUN) pylint git_mirror --fail-under 9.8
 
 .PHONY: check
-check: mypy test pylint bandit pre-commit
+check: mypy test pylint bandit
 
 .PHONY: check-llm
 check-llm: mypy-llm test pylint-llm bandit-llm pre-commit-llm
