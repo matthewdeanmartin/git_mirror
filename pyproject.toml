@@ -243,5 +243,5 @@ exclude_also = [
 
 
 
-[tool.uv]
+[tool.uv.pip]
 universal = true
