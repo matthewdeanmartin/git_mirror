@@ -288,9 +288,9 @@ Exit criteria: lint + mypy clean; grep gate passes; docs match reality;
 | 3 | keyring credentials | 2 | Human | ✅ done |
 | 4 | Merge router+services into core | 2 | Human | ✅ done |
 | 5 | Repo selection/filtering | 4 | Human | ✅ done |
-| 6 | Status dashboard | 4,5 | Human | ⬜ next |
-| 7 | Harden mutations | 4,5 | Human | ⬜ |
-| 8 | Lint / mypy / dead code / docs / version | all | **Bot, LAST** | ⬜ |
+| 6 | Status dashboard | 4,5 | Human | ✅ done |
+| 7 | Harden mutations | 4,5 | Human | ✅ done |
+| 8 | Lint / mypy / dead code / docs / version | all | **Bot, LAST** | ⬜ remaining |
 
 ### Progress log
 
@@ -315,7 +315,17 @@ Exit criteria: lint + mypy clean; grep gate passes; docs match reality;
   + `build_selection` resolve the effective set; `--only/--tag/--exclude/--include-ignored`
   flags plumb through router into both `GithubRepoManager` (remote + local ops)
   and `GitManager` (local-changes). 10 selection tests added.
-- Phase 8 bot work (lint/mypy/dead-comment cleanup) still pending.
+- **Phase 6 complete.** `core.repo_dashboard` (parallel local scan + optional
+  build merge) returns `DashboardRow` per repo; new `status` CLI command renders
+  one Rich table, attention-first, respects selection, works without a token
+  (token only enriches with CI results). 6 dashboard tests added.
+- **Phase 7 complete.** `pull_repo` skips dirty repos / no-remote repos;
+  `_update_local_branches` refuses dirty repos, isolates invalid repos, aborts an
+  in-progress rebase/merge on conflict, and always restores the original branch.
+  6 safe-mutation tests added. (prune already used `git branch -d` + per-branch
+  confirm + per-repo try/except — left as-is.)
+- **All feature phases (1–7) done. Only Phase 8 (bot lint/mypy/dead-code/docs/
+  version) remains** before tagging 2.0.0.
 
 ## Out of scope for now
 

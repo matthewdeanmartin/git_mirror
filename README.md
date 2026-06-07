@@ -70,6 +70,10 @@ You have forgotten to clone some repos on your secondary laptop. Run `git_mirror
 
 You probably made changes and forgot to pull them. Run `git_mirror pull-all`.
 
+You want the state of your whole fleet at a glance. Run `git_mirror status` for one
+color-coded table: per-repo branch, dirty/clean, ahead/behind, last-commit age, and
+latest CI result, sorted so repos needing attention come first.
+
 You have made changes to many repos and can't remember which. Run `git_mirror local-changes`.
 
 Github doesn't summarize failing builds across all repos. Run `git_mirror build-status`.

@@ -232,6 +232,17 @@ class GithubRepoManager(SourceHost):
         repo_path, lock = args
         try:
             repo = g.Repo(repo_path)
+            if not repo.remotes:
+                with lock:
+                    console.print(f"Skipping {repo_path}: no remote configured.")
+                return
+            if not self.dry_run and repo.is_dirty(untracked_files=False):
+                with lock:
+                    console.print(
+                        f"Skipping {repo_path}: uncommitted changes present. Commit or stash first.",
+                        style="danger",
+                    )
+                return
             origin = repo.remotes.origin
             if not self.dry_run:
                 with lock:
@@ -458,43 +469,86 @@ class GithubRepoManager(SourceHost):
         console = console_with_theme()
         repo_path, github_repo_full_name, prefer_rebase = args.repo_path, args.github_repo_full_name, args.prefer_rebase
         github_repo_full_name = self.user_login + "/" + github_repo_full_name
-        repo = g.Repo(str(repo_path))
+        try:
+            repo = g.Repo(str(repo_path))
+        except g.InvalidGitRepositoryError:
+            console.print(f"{repo_path} is not a valid Git repository.", style="danger")
+            return
         try:
             github_repo = self.client().get_repo(github_repo_full_name)
         except gh.GithubException as e:
             console.print(f"Failed to retrieve info on GitHub repository {github_repo_full_name}: {e}", style="danger")
             return
+
+        # Refuse to mutate a repo with uncommitted work; it is unsafe to
+        # checkout/rebase/merge over it and would surprise the user.
+        if not self.dry_run and repo.is_dirty(untracked_files=False):
+            console.print(
+                f"Skipping {repo_path}: uncommitted changes present. Commit or stash first.",
+                style="danger",
+            )
+            return
+
         # Get the default branch name from GitHub
         default_branch = github_repo.default_branch
+
+        # Remember where we started so we can restore it no matter what.
+        original_branch = None
+        try:
+            original_branch = repo.active_branch.name
+        except (TypeError, ValueError):
+            pass
 
         # Fetch all changes from remote
         origin = repo.remotes.origin
         if not self.dry_run:
             origin.fetch()
 
-        # Update each local branch
-        for branch in repo.heads:  # branches, but mypy doesn't like the alias
-            try:
-                if branch.name == default_branch:
-                    continue
-                if not self.dry_run:
-                    # Checkout the branch
-                    repo.git.checkout(branch)
-                    # Ensure the branch is up to date with its upstream
-                    repo.git.pull()
+        try:
+            # Update each local branch
+            for branch in repo.heads:  # branches, but mypy doesn't like the alias
+                try:
+                    if branch.name == default_branch:
+                        continue
+                    if not self.dry_run:
+                        # Checkout the branch
+                        repo.git.checkout(branch)
+                        # Ensure the branch is up to date with its upstream
+                        repo.git.pull()
 
-                    if prefer_rebase:
-                        # Perform rebase
-                        repo.git.rebase(f"origin/{default_branch}")
+                        if prefer_rebase:
+                            # Perform rebase
+                            repo.git.rebase(f"origin/{default_branch}")
+                        else:
+                            # Perform merge
+                            repo.git.merge(f"origin/{default_branch}")
+
+                        console.print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
                     else:
-                        # Perform merge
-                        repo.git.merge(f"origin/{default_branch}")
+                        console.print(
+                            f"Would have updated branch '{branch}' with latest changes from '{default_branch}'."
+                        )
+                except g.exc.GitCommandError as e:
+                    # A conflict leaves the repo mid-rebase/merge. Abort so the
+                    # next repo (and the user) start from a known-good state.
+                    console.print(f"Failed to update branch '{branch}': {e}", style="danger")
+                    self._abort_in_progress_merge_or_rebase(repo)
+        finally:
+            # Always return to the branch we started on.
+            if not self.dry_run and original_branch:
+                try:
+                    repo.git.checkout(original_branch)
+                except g.exc.GitCommandError:
+                    pass
 
-                    console.print(f"Updated branch '{branch}' with latest changes from '{default_branch}'.")
-                else:
-                    console.print(f"Would have updated branch '{branch}' with latest changes from '{default_branch}'.")
-            except g.exc.GitCommandError as e:
-                console.print(f"Failed to update branch '{branch}': {e}", style="danger")
+    @staticmethod
+    def _abort_in_progress_merge_or_rebase(repo: g.Repo) -> None:
+        """Best-effort cleanup of a half-finished rebase or merge."""
+        for cmd in (["rebase", "--abort"], ["merge", "--abort"]):
+            try:
+                repo.git.execute(["git", *cmd])
+            except g.exc.GitCommandError:
+                pass
 
     @log_duration
     def prune_all(self) -> None:

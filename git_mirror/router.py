@@ -22,6 +22,53 @@ def _get_console():
     return _CONSOLE
 
 
+def _render_dashboard(rows) -> None:
+    """Render the fleet status dashboard as a single Rich table."""
+    from rich.table import Table
+
+    console = _get_console()
+    if not rows:
+        console.print("No repositories found in the target directory.")
+        return
+
+    table = Table(title="Repository Status", show_lines=False)
+    table.add_column("Repo", no_wrap=True)
+    table.add_column("Branch", no_wrap=True)
+    table.add_column("State")
+    table.add_column("Ahead", justify="right")
+    table.add_column("Behind", justify="right")
+    table.add_column("Last commit", justify="right")
+    table.add_column("Build")
+
+    attention = 0
+    for row in rows:
+        if row.needs_attention:
+            attention += 1
+        if row.error:
+            state = f"[red]{row.error}[/red]"
+        elif row.dirty:
+            state = "[yellow]dirty[/yellow]"
+        elif not row.has_remote:
+            state = "[red]no remote[/red]"
+        else:
+            state = "[green]clean[/green]"
+
+        ahead = f"[yellow]{row.ahead}[/yellow]" if row.ahead else "0"
+        behind = f"[yellow]{row.behind}[/yellow]" if row.behind else "0"
+        age = "-" if row.last_commit_age_days is None else f"{row.last_commit_age_days}d"
+
+        build = row.build or "-"
+        if row.build in ("failure", "cancelled", "timed_out"):
+            build = f"[red]{row.build}[/red]"
+        elif row.build == "success":
+            build = "[green]success[/green]"
+
+        table.add_row(row.name, row.branch or "-", state, ahead, behind, age, build)
+
+    console.print(table)
+    console.print(f"{attention} of {len(rows)} repositories need attention.")
+
+
 def route_simple(
     command: str,
     config_path: Path | None = None,
@@ -138,7 +185,18 @@ def route_repos(
         include_ignored=include_ignored,
     )
 
-    if command == "local-changes":
+    if command == "status":
+        config_manager = mc.ConfigManager(config_path=config_path)
+        config_data = config_manager.load_config(host) if host else None
+        base_path = Path(target_dir).expanduser()
+        rows = core.repo_dashboard(
+            base_path,
+            selection=selection,
+            token=token or None,
+            config=config_data,
+        )
+        _render_dashboard(rows)
+    elif command == "local-changes":
         from git_mirror import manage_git as mg
 
         base_path = Path(target_dir).expanduser()

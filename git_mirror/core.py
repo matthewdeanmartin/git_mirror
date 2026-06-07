@@ -59,6 +59,33 @@ class ActionResult:
     errors: list[str] = field(default_factory=list)
 
 
+@dataclass
+class DashboardRow:
+    """One repo's combined local + remote state for the status dashboard."""
+
+    name: str
+    branch: str = ""
+    dirty: bool = False
+    ahead: int = 0
+    behind: int = 0
+    untracked_branches: int = 0
+    has_remote: bool = True
+    last_commit_age_days: int | None = None
+    build: str = ""  # latest CI conclusion, if known
+    error: str | None = None
+
+    @property
+    def needs_attention(self) -> bool:
+        return bool(
+            self.error
+            or self.dirty
+            or self.ahead
+            or self.behind
+            or not self.has_remote
+            or self.build in ("failure", "cancelled", "timed_out")
+        )
+
+
 # ── Manager factory (single construction point for CLI + GUI) ────────
 
 
@@ -233,6 +260,82 @@ def scan_local_changes(target_dir: Path) -> list[RepoStatus]:
             status.error = str(e)
         statuses.append(status)
     return statuses
+
+
+def _dashboard_row_for(repo_dir: Path) -> DashboardRow:
+    """Compute the local state of a single repo (safe to run in a thread)."""
+    from datetime import datetime, timezone
+
+    row = DashboardRow(name=repo_dir.name)
+    try:
+        repo = g.Repo(repo_dir)
+        if repo.is_dirty(untracked_files=True):
+            row.dirty = True
+        row.has_remote = bool(repo.remotes)
+        try:
+            row.branch = repo.active_branch.name
+        except (TypeError, ValueError):
+            row.branch = "(detached)"
+        for branch in repo.heads:
+            tracking = branch.tracking_branch()
+            if tracking is None:
+                row.untracked_branches += 1
+                continue
+            if branch.name == row.branch:
+                row.ahead = sum(1 for _ in repo.iter_commits(f"{tracking}..{branch}"))
+                row.behind = sum(1 for _ in repo.iter_commits(f"{branch}..{tracking}"))
+        try:
+            last = repo.head.commit.committed_datetime
+            now = datetime.now(timezone.utc)
+            row.last_commit_age_days = max(0, (now - last).days)
+        except Exception:
+            row.last_commit_age_days = None
+    except g.InvalidGitRepositoryError:
+        row.error = "Invalid git repository"
+    except Exception as e:  # pragma: no cover - defensive per-repo isolation
+        row.error = str(e)
+    return row
+
+
+def repo_dashboard(
+    target_dir: Path,
+    *,
+    selection: RepoSelection | None = None,
+    token: str | None = None,
+    config: ConfigData | None = None,
+) -> list[DashboardRow]:
+    """Build the combined fleet status, one row per local repo.
+
+    Local git state is gathered in parallel.  If ``token`` and ``config`` are
+    given, the latest GitHub Actions conclusion is merged in per repo.  Rows are
+    sorted attention-first, then by name.
+    """
+    import multiprocessing.dummy as mp_threads
+
+    from git_mirror.manage_git import find_git_repos
+
+    repos = sorted(find_git_repos(target_dir))
+    if selection is not None:
+        repos = [r for r in repos if selection.is_selected(Path(r).name)]
+
+    if not repos:
+        return []
+
+    pool_size = min(len(repos), 8)
+    with mp_threads.Pool(pool_size) as pool:
+        rows = pool.map(_dashboard_row_for, repos)
+
+    if token and config:
+        try:
+            builds = {b.repo_name: b.conclusion for b in get_build_statuses(token, config)}
+            for row in rows:
+                if row.name in builds:
+                    row.build = builds[row.name]
+        except Exception as e:  # pragma: no cover - network optional
+            LOGGER.debug(f"Could not fetch build statuses for dashboard: {e}")
+
+    rows.sort(key=lambda r: (not r.needs_attention, r.name.lower()))
+    return rows
 
 
 def list_repos_data(token: str, host: str, config: ConfigData) -> list[RepoInfo]:

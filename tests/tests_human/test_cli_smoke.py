@@ -60,6 +60,7 @@ def test_entrypoint_smoke(entrypoint: str, args: list[str], tmp_path: Path):
         ["menu", "--help"],
         ["gui", "--help"],
         ["list-repos", "--help"],
+        ["status", "--help"],
         ["clone-all", "--help"],
         ["pull-all", "--help"],
         ["local-changes", "--help"],

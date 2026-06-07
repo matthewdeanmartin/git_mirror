@@ -96,6 +96,11 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
         return "", 1
     from git_mirror.utils import credentials
 
+    # `status` works locally; use a token to enrich with build info if present,
+    # but never block the user to set one up.
+    if args.command == "status":
+        return credentials.get_token(args.host) or "", 0
+
     if args.host == "selfhosted":
         if config_data is None:
             return "", 1
@@ -289,6 +294,7 @@ def main(
     repos_commands = {
         "show-account": "Show source code host user account information.",
         "list-repos": "List repositories.",
+        "status": "Show a combined status dashboard for all local repositories.",
         "clone-all": "Clone all repositories.",
         "pull-all": "Pull all repositories.",
         "local-changes": "List local changes.",
