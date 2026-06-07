@@ -1,0 +1,38 @@
+---
+site_name: git-mirror
+site_url: https://git-mirror.readthedocs.io/
+site_author: Matthew Martin <matthewdeanmartin@gmail.com>
+site_description: Batch git operations across a folder of GitHub repositories.
+repo_url: https://github.com/matthewdeanmartin/git_mirror
+theme:
+  name: readthedocs
+  features: [navigation.footer]
+edit_uri: edit/main/docs/
+markdown_extensions:
+  - attr_list
+  - codehilite
+  - toc:
+      permalink: true
+nav:
+  - Home: README.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - Usage: usage.md
+  - Read the Docs: read-the-docs.md
+  - Release Process: release-process.md
+  - Change Log: changelog.md
+  - License: license.md
+validation:
+  nav:
+    omitted_files: warn
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google

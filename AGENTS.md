@@ -14,6 +14,10 @@ This repository uses **uv** for dependency management.
 - For pytest in sandboxes, also use a workspace-local temp base that is safe to recreate, for example: `$env:UV_CACHE_DIR='.uv-cache'; uv run pytest --basetemp=tmp_pytest ...`
 - If you are using `make`, prefer the provided targets because the `Makefile` exports a local `UV_CACHE_DIR` for you.
 
+### Codex-only harness note
+
+This note is for Codex, not other LLMs. If uv/cache writes are blocked by the Codex harness, do not burn the session debugging `.uv-cache`, `.venv`, `site`, `dist`, `htmlcov`, or `tmp_pytest`. Try `$env:UV_CACHE_DIR='C:\tmp\uv-cache-gitmirror'; uv run ...` if writes are allowed; otherwise do the requested work, record which checks could not run, and stop.
+
 ## Recommended Tasks for AI Agents
 
 When performing automated checks, AI agents should use the `*-llm` tasks to avoid side-effects like formatting which can cause synchronization issues in the agent's internal state.

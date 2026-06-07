@@ -213,7 +213,13 @@ def test_normalize_github_url_adds_api_v3_for_enterprise_hosts(host, prefix):
     assert normalized.endswith("/api/v3")
 
 
-@given(st.from_regex(r"[A-Za-z0-9][A-Za-z0-9./_-]{0,20}", fullmatch=True))
+@given(
+    st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), whitelist_characters="./_-"),
+        min_size=1,
+        max_size=21,
+    ).filter(lambda value: value[0].isalnum())
+)
 def test_normalize_url_trims_and_adds_https_for_bare_hosts(raw_value):
     normalized = normalize_url(f"  {raw_value}/  ")
 

@@ -170,10 +170,8 @@ class GitManager:
             try:
                 # Compare local branch commit with remote branch commit
                 if branch.tracking_branch():
-                    ahead_count, behind_count = repo.iter_commits(
-                        f"{branch}..{branch.tracking_branch()}"
-                    ), repo.iter_commits(f"{branch.tracking_branch()}..{branch}")
-                    if sum(1 for _ in ahead_count) > 0:
+                    unpushed_commits = repo.iter_commits(f"{branch.tracking_branch()}..{branch}")
+                    if sum(1 for _ in unpushed_commits) > 0:
                         console.print(f"{repo_dir} has unpushed commits on branch {branch}.")
                     else:
                         LOGGER.info(f"{repo_dir} is up to date with remote on branch {branch}.")

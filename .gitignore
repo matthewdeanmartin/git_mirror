@@ -164,3 +164,5 @@ cython_debug/
 .pytest-tmp
 tmp_pytest_targeted
 .venv
+/tmp_pytest/
+tmp_pytest

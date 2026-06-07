@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added Read the Docs and MkDocs documentation.
+- Added changelog-driven draft release and PyPI publishing workflows.
+
+### Changed
+
+- Rewrote the README to describe the current GitHub-focused scope honestly.
+
+## [2.0.0] - 2026-06-07
+
+### Added
+
+- Added GitHub Enterprise support through the self-hosted GitHub configuration path.
+- Added OS keychain credential storage with environment variable and legacy `.env` fallback.
+- Added the combined `status` dashboard for local repository state and optional GitHub Actions status.
+- Added per-repository tags and ignore flags for selecting subsets of repositories.
+- Added the desktop GUI entry point.
+
+### Changed
+
+- Re-focused the CLI on safe GitHub repository maintenance across many local checkouts.
+- Reworked setup around `git_mirror init` and `git_mirror doctor`.
+
+### Removed
+
+- Removed GitLab support.
+- Removed old Python package maintenance commands from the active CLI.
+
 ## [1.0.0] - 2026-03-27
 
 ### Changed
