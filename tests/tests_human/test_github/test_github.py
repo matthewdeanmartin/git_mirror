@@ -50,7 +50,7 @@ def test_get_user_repos_includes_correct_repos(github_repo_manager, mock_github,
     mock_user.get_repos.return_value = [mock_github_repo]
 
     # Call the method under test
-    repos = github_repo_manager._get_user_repos()
+    repos = github_repo_manager.get_user_repos()
 
     # Assertions
     assert len(repos) == 1
@@ -66,7 +66,7 @@ def test_get_user_repos_handles_github_exception(github_repo_manager, mock_githu
     mock_github.return_value.get_user.return_value = mock_user
 
     # Call the method under test expecting to catch the exception and return empty list
-    repos = github_repo_manager._get_user_repos()
+    repos = github_repo_manager.get_user_repos()
 
     # Assertions
     assert repos == []

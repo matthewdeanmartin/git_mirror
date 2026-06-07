@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch
 
-from git_mirror.file_system import setup_app_directories
+from git_mirror.utils.file_system import setup_app_directories
 
 # 1. We need to test if the directories are created correctly when
 #    `setup_app_directories` is called.
@@ -21,10 +21,10 @@ def test_setup_app_directories(mocker):
     cache_dir = "cache_dir_path"
 
     with (
-        patch("git_mirror.file_system.user_config_dir", return_value=config_dir),
-        patch("git_mirror.file_system.user_data_dir", return_value=data_dir),
-        patch("git_mirror.file_system.user_cache_dir", return_value=cache_dir),
-        patch("git_mirror.file_system.os.makedirs") as _mock_makedirs,
+        patch("git_mirror.utils.file_system.user_config_dir", return_value=config_dir),
+        patch("git_mirror.utils.file_system.user_data_dir", return_value=data_dir),
+        patch("git_mirror.utils.file_system.user_cache_dir", return_value=cache_dir),
+        patch("git_mirror.utils.file_system.os.makedirs") as mock_makedirs,
     ):
 
         result = setup_app_directories(app_name)

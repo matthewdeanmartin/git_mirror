@@ -1,6 +1,6 @@
 import pytest
 
-from git_mirror.bug_report import BugReporter
+from git_mirror.utils.bug_report import BugReporter
 
 # After reviewing the `BugReporter` class, I don't see any specific bugs. The code
 # looks well-structured and the methods are clear in their purpose.

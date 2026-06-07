@@ -1,8 +1,14 @@
 # git_mirror
 
-Make all your local git repos look like Github or Gitlab.
+Batch git operations across a whole folder of GitHub repositories.
+
+Point git_mirror at a folder full of GitHub repos and operate on all of them at once — see their
+combined state, keep them in sync, and clean them up — safely, in parallel, without 30 terminal tabs.
 
 (has nothing to do with keeping identical copies of repos on different remote servers, maybe I'll change the name.)
+
+> **Version 2.0 is a breaking change: GitLab support has been removed.** git_mirror now targets
+> GitHub and self-hosted GitHub Enterprise only. See `spec/refocus.md` for the rationale and roadmap.
 
 Supports
 
@@ -40,9 +46,19 @@ gh_mirror menu
 
 The setup wizard will help create or validate the right token, then tell you what is still broken if anything fails.
 
+### Credential storage
+
+As of 2.0, `git_mirror init` stores your PAT in the **OS keychain** by default
+(via [keyring](https://pypi.org/project/keyring/)). Tokens are resolved in this
+order, first hit wins:
+
+1. An explicit environment variable (`GITHUB_ACCESS_TOKEN` / `SELFHOSTED_ACCESS_TOKEN`) — handy for CI.
+2. The OS keychain.
+3. A plaintext `.env` file (legacy; `git_mirror doctor` will offer to migrate it).
+
 ```bash
+# Still supported, e.g. for CI:
 GITHUB_ACCESS_TOKEN=PAT
-GITLAB_ACCESS_TOKEN=PAT
 SELFHOSTED_ACCESS_TOKEN=PAT
 ```
 
@@ -54,20 +70,39 @@ You have forgotten to clone some repos on your secondary laptop. Run `git_mirror
 
 You probably made changes and forgot to pull them. Run `git_mirror pull-all`.
 
+You want the state of your whole fleet at a glance. Run `git_mirror status` for one
+color-coded table: per-repo branch, dirty/clean, ahead/behind, last-commit age, and
+latest CI result, sorted so repos needing attention come first.
+
 You have made changes to many repos and can't remember which. Run `git_mirror local-changes`.
 
 Github doesn't summarize failing builds across all repos. Run `git_mirror build-status`.
 
 Your local folder has a bunch of stray folders that aren't even repos. Run `git_mirror not-repo`.
 
-You care about some repos more than others, use config to focus on a subset of repos. (PENDING FEATURE)
+You care about some repos more than others. Focus on a subset with selection flags or config:
+
+```bash
+git_mirror pull-all --only repo-a,repo-b      # act on just these
+git_mirror pull-all --tag work                 # act on repos tagged "work" in config
+git_mirror pull-all --exclude scratch          # skip these
+git_mirror pull-all --include-ignored          # also act on repos marked ignore=true
+```
+
+Tags and ignores live in the per-repo config table populated by `git_mirror sync-config`:
+
+```toml
+[tool.git-mirror.github.repos]
+my-lib = { tags = ["work"] }
+old-experiment = { ignore = true }
+```
 
 ```text
 usage: git_mirror [-h] [-V] [--menu MENU]
                   {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,menu,init}
                   ...
 
-Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools.
+Batch git operations across a folder of GitHub repositories. See readme for how this differs from the many other multi-repo tools.
 
 positional arguments:
   {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,menu,init}
@@ -114,23 +149,16 @@ target_dir = "f:/github/"
 include_private = false
 include_forks = false
 
-[tool.git-mirror.gitlab]
-host_type = "gitlab"
-host_url = "https://gitlab.com"
-user_name = "matthewdeanmartin"
-target_dir = "f:/gitlab/"
-include_private = true
-include_forks = false
-group_id = 542
-
 [tool.git-mirror.selfhosted]
-host_type = "gitlab"
-host_url = "http://git.example.com"
+host_type = "github"
+host_url = "https://ghe.example.com/api/v3"
 user_name = "mmartin"
 target_dir = "e:/self/"
 include_private = true
 include_forks = false
 ```
+
+`selfhosted` is for GitHub Enterprise (a GitHub-compatible API). Its `host_type` must be `github`.
 
 ## Examples
 

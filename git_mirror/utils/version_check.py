@@ -4,7 +4,7 @@ from packaging.version import Version
 
 # Import the current version of your package
 from git_mirror.__about__ import __version__
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.ui import console_with_theme
 
 console = console_with_theme()
 

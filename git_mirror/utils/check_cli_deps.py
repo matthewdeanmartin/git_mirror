@@ -1,7 +1,7 @@
 import cli_tool_audit as cta
 import cli_tool_audit.models as models
 
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.ui import console_with_theme
 
 console = console_with_theme()
 

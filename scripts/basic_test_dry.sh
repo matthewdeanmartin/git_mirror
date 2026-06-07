@@ -4,9 +4,10 @@ set -euo pipefail
 # shellcheck source=scripts/smoke_common.sh
 . "$(dirname "$0")/smoke_common.sh"
 
-for entrypoint in gh_mirror gl_mirror sh_mirror; do
+for entrypoint in gh_mirror sh_mirror; do
     run_cli "$entrypoint" show-account --help
     run_cli "$entrypoint" list-repos --help
+    run_cli "$entrypoint" status --help
     run_cli "$entrypoint" clone-all --help
     run_cli "$entrypoint" pull-all --help
     run_cli "$entrypoint" local-changes --help

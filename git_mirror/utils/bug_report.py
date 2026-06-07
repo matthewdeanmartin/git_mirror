@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.ui import console_with_theme
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class BugReporter:
         Returns:
             str: The masked text.
         """
-        token_names = ("GITHUB_ACCESS_TOKEN", "GITLAB_ACCESS_TOKEN", "SELFHOSTED_ACCESS_TOKEN")
+        token_names = ("GITHUB_ACCESS_TOKEN", "SELFHOSTED_ACCESS_TOKEN")
         for token in token_names:
             if os.environ.get(token):
                 secret = os.environ.get(token, "")  # default to make mypy happy
@@ -118,7 +118,7 @@ class BugReporter:
 
         response = input(
             "An error occurred. Would you like to report this bug? "
-            "It will be posted as a public issue using your gitlab token as credentials. (yes/no): "
+            "It will be posted as a public issue using your github token as credentials. (yes/no): "
         )
         if response.lower().startswith("y"):
             issue = self.report_issue(issue_title, issue_body)

@@ -19,7 +19,7 @@ from git_mirror.manage_github import GithubRepoManager
 #     - Mock the `gh.Github` class and ensure the method returns an instance of
 #       `gh.Github`.
 #
-# 03. Test the `_thread_safe_repos` method:
+# 03. Test the `thread_safe_repos` method:
 #
 #     - Mock a list of `ghr.Repository` objects and ensure that the method
 #       transforms them into the expected format.
@@ -150,13 +150,13 @@ def test_thread_safe_repos_method(mock_repo):
         },
     ]
 
-    repos = mock_repo._thread_safe_repos(mock_repo_data)
+    repos = mock_repo.thread_safe_repos(mock_repo_data)
 
     for dictionary in expected_output:
         dictionary["name"] = ANY
     assert repos == expected_output
 
 
-# In this test, we are testing the `_thread_safe_repos` method of the
+# In this test, we are testing the `thread_safe_repos` method of the
 # `GitRepoManager` class. We are providing mock data for repositories and checking
 # if the method transforms the data into the expected format.

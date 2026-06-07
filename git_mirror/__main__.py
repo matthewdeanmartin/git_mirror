@@ -12,55 +12,55 @@ from git_mirror.__about__ import __description__, __version__
 
 LOGGER = logging.getLogger(__name__)
 
-_CONSOLE = None
-_CACHE_BACKEND = None
-_REQUESTS_CACHE_INSTALLED = False
+CONSOLE = None
+CACHE_BACKEND = None
+REQUESTS_CACHE_INSTALLED = False
 
 
-def _get_console():
-    global _CONSOLE
-    if _CONSOLE is None:
-        from git_mirror.ui import console_with_theme
+def get_console():
+    global CONSOLE
+    if CONSOLE is None:
+        from git_mirror.utils.ui import console_with_theme
 
-        _CONSOLE = console_with_theme()
-    return _CONSOLE
-
-
-def _load_env() -> None:
-    from git_mirror.safe_env import load_env
-
-    load_env()
+        CONSOLE = console_with_theme()
+    return CONSOLE
 
 
-def _default_config_path() -> Path:
-    from git_mirror.manage_config import default_config_path
+def load_env() -> None:
+    from git_mirror.utils.safe_env import load_env as _load_env
 
-    return default_config_path()
+    _load_env()
 
 
-def _get_config_manager(config_path: Path):
+def default_config_path() -> Path:
+    from git_mirror.manage_config import default_config_path as _default_config_path
+
+    return _default_config_path()
+
+
+def get_config_manager(config_path: Path):
     from git_mirror.manage_config import ConfigManager
 
     return ConfigManager(config_path)
 
 
-def _get_backend():
-    global _CACHE_BACKEND
-    if _CACHE_BACKEND is None:
+def get_backend():
+    global CACHE_BACKEND
+    if CACHE_BACKEND is None:
         import requests_cache
 
-        _CACHE_BACKEND = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
-    return _CACHE_BACKEND
+        CACHE_BACKEND = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
+    return CACHE_BACKEND
 
 
-def _install_requests_cache() -> None:
-    global _REQUESTS_CACHE_INSTALLED
-    if _REQUESTS_CACHE_INSTALLED:
+def install_requests_cache() -> None:
+    global REQUESTS_CACHE_INSTALLED
+    if REQUESTS_CACHE_INSTALLED:
         return
     import requests_cache
 
-    requests_cache.install_cache("git_mirror_cache", backend=_get_backend(), expire_after=300)
-    _REQUESTS_CACHE_INSTALLED = True
+    requests_cache.install_cache("git_mirror_cache", backend=get_backend(), expire_after=300)
+    REQUESTS_CACHE_INSTALLED = True
 
 
 def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
@@ -75,12 +75,12 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     """
     from git_mirror.menu import ask_for_host
 
-    _load_env()
-    console = _get_console()
+    load_env()
+    console = get_console()
     host = args.host if hasattr(args, "host") else None
-    config_path = args.config_path if hasattr(args, "config_path") else _default_config_path()
-    config_manager = _get_config_manager(config_path)
-    invalid_or_missing_host = not host or host not in ("github", "gitlab", "selfhosted")
+    config_path = args.config_path if hasattr(args, "config_path") else default_config_path()
+    config_manager = get_config_manager(config_path)
+    invalid_or_missing_host = not host or host not in ("github", "selfhosted")
     needs_host = args.command not in ("init", "list-config", "doctor", None)
     if invalid_or_missing_host and needs_host:
         host = ask_for_host(config_manager)
@@ -94,16 +94,21 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     if args.host == "selfhosted" and not config_data:
         console.print(f"No configuration found for {args.host}. Run `git_mirror init` first.")
         return "", 1
-    selfhosted_type_is_github = args.host == "selfhosted" and config_data and config_data.host_type == "github"
-    selfhosted_type_is_gitlab = args.host == "selfhosted" and config_data and config_data.host_type == "gitlab"
-    if selfhosted_type_is_github or selfhosted_type_is_gitlab:
+    from git_mirror.utils import credentials
+
+    # `status` works locally; use a token to enrich with build info if present,
+    # but never block the user to set one up.
+    if args.command == "status":
+        return credentials.get_token(args.host) or "", 0
+
+    if args.host == "selfhosted":
         if config_data is None:
             return "", 1
-        token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
-        if selfhosted_type_is_github and not token:
+        token = credentials.get_token("selfhosted")
+        if not token:
             import git_mirror.pat_init as pat_init
 
-            console.print("Self hosted Github access token is missing. Let's set it up now.")
+            console.print("Self hosted GitHub access token is missing. Let's set it up now.")
             token = pat_init.setup_github_pat(
                 env_var="SELFHOSTED_ACCESS_TOKEN",
                 api_url=config_data.host_url,
@@ -111,33 +116,13 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
             )
             if not token:
                 return "", 1
-        if selfhosted_type_is_gitlab and not token:
-            import git_mirror.pat_init_gitlab as pat_init_gitlab
-
-            console.print("Self hosted GitLab access token is missing. Let's set it up now.")
-            token = pat_init_gitlab.setup_gitlab_pat(
-                env_var="SELFHOSTED_ACCESS_TOKEN",
-                host_url=config_data.host_url,
-                host_label="self-hosted GitLab",
-            )
-            if not token:
-                return "", 1
-    elif args.host == "github" or selfhosted_type_is_github:
-        token = os.getenv("GITHUB_ACCESS_TOKEN")
+    elif args.host == "github":
+        token = credentials.get_token("github")
         if not token:
             import git_mirror.pat_init as pat_init
 
             console.print("Github access token is missing. Let's set it up now.")
             token = pat_init.setup_github_pat()
-            if not token:
-                return "", 1
-    elif args.host == "gitlab" or selfhosted_type_is_gitlab:
-        token = os.getenv("GITLAB_ACCESS_TOKEN")
-        if not token:
-            import git_mirror.pat_init_gitlab as pat_init_gitlab
-
-            console.print("GitLab access token is missing. Let's set it up now.")
-            token = pat_init_gitlab.setup_gitlab_pat()
             if not token:
                 return "", 1
     elif args.command in ("init", "list-config", "doctor"):
@@ -147,10 +132,9 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     return token, 0
 
 
-def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
+def validate_parse_args(args: argparse.Namespace) -> tuple[str, int]:
     LOGGER.debug(f"Program name {sys.argv[0]}")
-    console = _get_console()
-    group_id = 0
+    console = get_console()
     domain = ""
 
     if (
@@ -158,10 +142,10 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
         and not args.first_time_init
         and args.command not in ("init", "list-config", "doctor")
     ):
-        config_manager = _get_config_manager(args.config_path)
+        config_manager = get_config_manager(args.config_path)
         if not args.host:
-            console.print("Please specify a host, eg. --host github or --host gitlab.")
-            return domain, group_id, 1
+            console.print("Please specify a host, eg. --host github or --host selfhosted.")
+            return domain, 1
         config_data = config_manager.load_config(args.host)
         config_path = args.config_path
         if config_data and config_path.exists():
@@ -173,10 +157,8 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
                 args.include_private = config_data.include_private
             if not args.include_forks:
                 args.include_forks = config_data.include_forks
-            if not args.use_github and not args.domain:
+            if not getattr(args, "domain", None):
                 domain = config_data.host_url
-            if not args.use_github and not args.group_id:
-                group_id = config_data.group_id
             if hasattr(args, "global_template_dir") and not args.global_template_dir:
                 args.global_template_dir = config_data.global_template_dir
     if (
@@ -185,14 +167,14 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int, int]:
         and args.command not in ("init", "list-config", "doctor")
     ):
         console.print("user-name and target-dir are required if not specified in ~/git_mirror.toml.")
-        return domain, group_id, 1
-    return domain, group_id, 0
+        return domain, 1
+    return domain, 0
 
 
 def enable_logging(args):
     # No logging above this line!
     if hasattr(args, "verbose") and args.verbose > 0:
-        from git_mirror import logging_config
+        from git_mirror.utils import logging_config
 
         config = logging_config.generate_config(level="DEBUG", logging_level=args.verbose)
         logging.config.dictConfig(config)
@@ -201,15 +183,11 @@ def enable_logging(args):
 
 
 def main_selfhosted(argv: Sequence[str] | None = None) -> int:
-    return main(argv, use_gitlab=False, use_github=False, use_selfhosted=True)
+    return main(argv, use_github=False, use_selfhosted=True)
 
 
 def main_github(argv: Sequence[str] | None = None) -> int:
-    return main(argv, use_gitlab=False, use_github=True, use_selfhosted=False)
-
-
-def main_gitlab(argv: Sequence[str] | None = None) -> int:
-    return main(argv, use_gitlab=True, use_github=False, use_selfhosted=False)
+    return main(argv, use_github=True, use_selfhosted=False)
 
 
 def handle_repos(args: argparse.Namespace) -> None:
@@ -218,9 +196,12 @@ def handle_repos(args: argparse.Namespace) -> None:
     token, return_value = validate_host_token(args)
     if return_value != 0:
         sys.exit(return_value)
-    domain, group_id, return_value = validate_parse_args(args)
+    domain, return_value = validate_parse_args(args)
     if return_value != 0:
         sys.exit(return_value)
+    def csv(value: str | None) -> list[str]:
+        return [item.strip() for item in value.split(",") if item.strip()] if value else []
+
     router.route_repos(
         command=args.command,
         user_name=args.user_name,
@@ -231,10 +212,13 @@ def handle_repos(args: argparse.Namespace) -> None:
         include_forks=args.include_forks,
         config_path=args.config_path,
         domain=domain,
-        group_id=group_id,
         logging_level=args.verbose,
         dry_run=args.dry_run,
         prompt_for_changes=not args.yes,
+        only=csv(getattr(args, "only", None)),
+        tags=csv(getattr(args, "tag", None)),
+        exclude=csv(getattr(args, "exclude", None)),
+        include_ignored=getattr(args, "include_ignored", False),
     )
 
 
@@ -261,23 +245,19 @@ def handle_simple(args: argparse.Namespace) -> None:
 def config_specific_args(parser):
     parser.add_argument(
         "--host",
-        choices=["github", "gitlab", "selfhosted"],
+        choices=["github", "selfhosted"],
         help="Limit configuration checks to one configured host.",
     )
 
 
 def main(
     argv: Sequence[str] | None = None,
-    use_gitlab: bool = False,
     use_github: bool = False,
     use_selfhosted: bool = False,
 ) -> int:
     program = "git_mirror"
-    if not (use_github or use_gitlab or use_selfhosted):
-        if sys.argv[0].endswith("gl_mirror"):
-            use_gitlab = True
-            program = "gl_mirror"
-        elif sys.argv[0].endswith("gh_mirror"):
+    if not (use_github or use_selfhosted):
+        if sys.argv[0].endswith("gh_mirror"):
             use_github = True
             program = "gh_mirror"
         elif sys.argv[0].endswith("sh_mirror"):
@@ -314,6 +294,7 @@ def main(
     repos_commands = {
         "show-account": "Show source code host user account information.",
         "list-repos": "List repositories.",
+        "status": "Show a combined status dashboard for all local repositories.",
         "clone-all": "Clone all repositories.",
         "pull-all": "Pull all repositories.",
         "local-changes": "List local changes.",
@@ -326,7 +307,7 @@ def main(
 
     for command, help_text in repos_commands.items():
         repos_parser = subparsers.add_parser(command, help=help_text)
-        host_specific_args(repos_parser, use_github, use_gitlab, use_selfhosted)
+        host_specific_args(repos_parser, use_github, use_selfhosted)
         global_args(repos_parser)
         repos_parser.set_defaults(func=handle_repos)
 
@@ -377,8 +358,8 @@ def main(
 
     args.use_github = use_github
     args.first_time_init = False
-    if not original_args and not _default_config_path().exists():
-        _get_console().print("This appears to be first time setup. Let's initialize configuration.")
+    if not original_args and not default_config_path().exists():
+        get_console().print("This appears to be first time setup. Let's initialize configuration.")
         argv = ["init"]
         args = parser.parse_args(argv)
         args.first_time_init = True
@@ -387,8 +368,6 @@ def main(
 
     if use_github:
         args.host = "github"
-    elif use_gitlab:
-        args.host = "gitlab"
     elif use_selfhosted:
         args.host = "selfhosted"
 
@@ -397,20 +376,24 @@ def main(
         return return_value
 
     if args.command not in ("init", "list-config", "doctor", "menu", None):
-        _install_requests_cache()
-        LOGGER.debug(f"Cache store at {_get_backend().db_path}")
+        install_requests_cache()
+        LOGGER.debug(f"Cache store at {get_backend().db_path}")
 
-    if os.environ.get("GITHUB_ACCESS_TOKEN") and "PYTEST_CURRENT_TEST" not in os.environ:
-        from git_mirror.bug_report import BugReporter
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        from git_mirror.utils import credentials
 
-        reporter = BugReporter(os.environ.get("GITHUB_ACCESS_TOKEN", ""), "matthewdeanmartin/git_mirror")
-        reporter.register_global_handler()
+        bug_token = credentials.get_token("github")
+        if bug_token:
+            from git_mirror.utils.bug_report import BugReporter
+
+            reporter = BugReporter(bug_token, "matthewdeanmartin/git_mirror")
+            reporter.register_global_handler()
 
     if hasattr(args, "func"):
         args.func(args)
 
     if args.command not in (None,) and "PYTEST_CURRENT_TEST" not in os.environ:
-        from git_mirror.version_check import display_version_check_message
+        from git_mirror.utils.version_check import display_version_check_message
 
         display_version_check_message()
     return 0
@@ -420,7 +403,7 @@ def global_args(parser):
     parser.add_argument(
         "--config-path",
         type=Path,
-        default=_default_config_path(),
+        default=default_config_path(),
         action="store",
         help="Path to the TOML config file.",
     )
@@ -443,12 +426,9 @@ def global_args(parser):
     )
 
 
-def host_specific_args(parser: argparse.ArgumentParser, use_github: bool, use_gitlab: bool, use_selfhosted: bool):
-    host_choices = ["gitlab", "github"]
-    if use_gitlab:
-        host_choices = ["gitlab"]
-        host_default = "gitlab"
-    elif use_github:
+def host_specific_args(parser: argparse.ArgumentParser, use_github: bool, use_selfhosted: bool):
+    host_choices = ["github", "selfhosted"]
+    if use_github:
         host_choices = ["github"]
         host_default = "github"
     elif use_selfhosted:
@@ -461,15 +441,24 @@ def host_specific_args(parser: argparse.ArgumentParser, use_github: bool, use_gi
         "--host",
         choices=host_choices,
         default=host_default,
-        help="Source host, use gl_mirror or gh_mirror to skip this.",
+        help="Source host, use gh_mirror or sh_mirror to skip this.",
     )
     parser.add_argument("--user-name", help="The username.")
-    if not use_github:
-        parser.add_argument("--group-id", help="The gitlab group id.")
-        parser.add_argument("--domain", help="The gitlab (compatible) domain.")
+    parser.add_argument("--domain", help="The GitHub Enterprise API base URL (selfhosted only).")
     parser.add_argument("--target-dir", type=Path, help="The directory where repositories will be cloned or pulled.")
     parser.add_argument("--include-forks", action="store_true", help="Include forked repositories.")
     parser.add_argument("--include-private", action="store_true", help="Include private repositories.")
+    parser.add_argument(
+        "--only",
+        help="Comma-separated repo names to act on exclusively (overrides config ignores).",
+    )
+    parser.add_argument("--tag", help="Comma-separated tags; act only on repos carrying any of these tags.")
+    parser.add_argument("--exclude", help="Comma-separated repo names to skip.")
+    parser.add_argument(
+        "--include-ignored",
+        action="store_true",
+        help="Include repos marked ignore = true in config.",
+    )
 
 
 if __name__ == "__main__":

@@ -51,7 +51,7 @@ def test_loop_actions(github_repo_manager):
     ]
 
     # Execute
-    messages = manager._loop_actions(mock_statuses)
+    messages = manager.loop_actions(mock_statuses)
 
     # Assert
     assert messages == expected_messages
@@ -60,7 +60,7 @@ def test_loop_actions(github_repo_manager):
 def list_list_repo_actions(github_repo_manager):
     # Setup
     manager = github_repo_manager
-    manager._loop_actions = MagicMock()
+    manager.loop_actions = MagicMock()
 
     # Create mock statuses
     mock_statuses = [
@@ -103,7 +103,7 @@ def list_list_repo_actions(github_repo_manager):
         ),
     ]
 
-    manager._loop_actions.return_value = expected_messages
+    manager.loop_actions.return_value = expected_messages
     # Execute
     messages = manager.list_repo_builds(mock_statuses)
 

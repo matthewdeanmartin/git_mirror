@@ -17,7 +17,7 @@ def test_write_repos_to_toml(tmp_path):
 
     existing_config = {}
     repos = ["repo1", "repo2"]
-    config_manager._write_repos_to_toml(repos, existing_config)
+    config_manager.write_repos_to_toml(repos, existing_config)
 
     # Read back the file to check if it was written correctly
     with open(toml_path, encoding="utf-8") as file:

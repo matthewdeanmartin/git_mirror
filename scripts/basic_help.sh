@@ -11,7 +11,5 @@ run_cli git_mirror --help
 run_cli git_mirror --version
 run_cli gh_mirror --help
 run_cli gh_mirror --version
-run_cli gl_mirror --help
-run_cli gl_mirror --version
 run_cli sh_mirror --help
 run_cli sh_mirror --version

@@ -8,8 +8,8 @@ from typing import Any
 
 import inquirer
 
-from git_mirror.manage_config import ConfigManager
-from git_mirror.ui import console_with_theme
+from git_mirror.manage_config import SUPPORTED_HOSTS, ConfigManager
+from git_mirror.utils.ui import console_with_theme
 
 console = console_with_theme()
 
@@ -19,7 +19,6 @@ class CommandInfo:
     command: str
     host: str | None = None
     user_name: str | None = None
-    group_id: int | None = None
     domain: str | None = None
     target_dir: Path | None = None
     include_forks: bool = False
@@ -108,7 +107,7 @@ def ask_for_host(config_manager: ConfigManager) -> str:
     configured_options = [service for service, is_configured in config_status.items() if is_configured]
     unconfigured_options = [service for service, is_configured in config_status.items() if not is_configured]
 
-    if len(configured_options) == 3:
+    if len(configured_options) == len(SUPPORTED_HOSTS):
         message = "Select a source host"
         choices = configured_options
     else:
@@ -131,6 +130,6 @@ def ask_for_host(config_manager: ConfigManager) -> str:
         console.print(f"Selected for configuration: {config_answers['services_to_configure']}", style="bold green")
         # Here you would call your configuration function(s) for the selected services
         return ""
-    else:
-        console.print(f"Using {answers['service']}", style="bold green")
-        return answers["service"]
+
+    console.print(f"Using {answers['service']}", style="bold green")
+    return answers["service"]

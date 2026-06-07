@@ -26,6 +26,6 @@ def setup_app_directories(app_name: str):
 
 if __name__ == "__main__":
     # Example usage
-    app_name = "my_app"
-    directories = setup_app_directories(app_name)
+    EXAMPLE_APP_NAME = "my_app"
+    directories = setup_app_directories(EXAMPLE_APP_NAME)
     print(directories)

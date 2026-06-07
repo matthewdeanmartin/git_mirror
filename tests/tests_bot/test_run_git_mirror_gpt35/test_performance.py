@@ -1,7 +1,7 @@
 import logging
 import time
 
-from git_mirror.performance import log_duration
+from git_mirror.utils.performance import log_duration
 
 # Let's review the code and identify any potential issues before writing unit
 # tests:

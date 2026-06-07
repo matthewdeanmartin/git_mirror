@@ -9,9 +9,9 @@ from pathlib import Path
 
 import git as g
 
-from git_mirror.performance import log_duration
-from git_mirror.safe_env import load_env
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.performance import log_duration
+from git_mirror.utils.safe_env import load_env
+from git_mirror.utils.ui import console_with_theme
 
 load_env()
 
@@ -71,6 +71,7 @@ class GitManager:
         base_dir: Path,
         dry_run: bool = False,
         prompt_for_changes: bool = True,
+        selection=None,
     ):
         """
         Initializes base directory for git operations.
@@ -79,10 +80,12 @@ class GitManager:
             base_dir (Path): Base directory path where repositories will be cloned.
             dry_run (bool): Flag to determine whether the operation should be a dry run.
             prompt_for_changes (bool): Flag to determine whether the operation should prompt for changes.
+            selection: Optional RepoSelection limiting which local repos are acted on.
         """
         self.base_dir = base_dir
         self.dry_run = dry_run
         self.prompt_for_changes = prompt_for_changes
+        self.selection = selection
 
     def local_repos_with_file_in_root(self, file_name: str) -> list[Path]:
         """
@@ -110,6 +113,8 @@ class GitManager:
         """
         console = console_with_theme()
         repos = list(find_git_repos(self.base_dir))
+        if self.selection is not None:
+            repos = [r for r in repos if self.selection.is_selected(Path(r).name)]
         console.print(f"Checking {len(repos)} repositories for uncommitted changes and unpushed commits.")
         have_uncommitted = 0
         if single_threaded or len(repos) < 2:
@@ -142,15 +147,15 @@ class GitManager:
                 if conclusion:
                     console.print(conclusion)
 
-                self._check_for_unpushed_commits(repo, repo_dir)
+                self.check_for_unpushed_commits(repo, repo_dir)
 
             except g.InvalidGitRepositoryError:
                 console.print(f"{repo_dir} is not a valid Git repository.")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 console.print(f"Error checking {repo_dir}: {e}", style="danger")
         return have_uncommitted
 
-    def _check_for_unpushed_commits(self, repo: g.Repo, repo_dir: Path) -> int:
+    def check_for_unpushed_commits(self, repo: g.Repo, repo_dir: Path) -> int:
         """
         Checks if the repository has commits that haven't been pushed to its tracked remote branches.
 
@@ -165,7 +170,7 @@ class GitManager:
             try:
                 # Compare local branch commit with remote branch commit
                 if branch.tracking_branch():
-                    ahead_count, _behind_count = repo.iter_commits(
+                    ahead_count, behind_count = repo.iter_commits(
                         f"{branch}..{branch.tracking_branch()}"
                     ), repo.iter_commits(f"{branch.tracking_branch()}..{branch}")
                     if sum(1 for _ in ahead_count) > 0:

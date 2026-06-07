@@ -14,11 +14,6 @@ ENTRYPOINT_RUNNERS = {
         "-c",
         "import sys; from git_mirror.__main__ import main_github; raise SystemExit(main_github(sys.argv[1:]))",
     ],
-    "gl_mirror": [
-        sys.executable,
-        "-c",
-        "import sys; from git_mirror.__main__ import main_gitlab; raise SystemExit(main_gitlab(sys.argv[1:]))",
-    ],
     "sh_mirror": [
         sys.executable,
         "-c",
@@ -27,7 +22,7 @@ ENTRYPOINT_RUNNERS = {
 }
 
 
-def _smoke_env(tmp_path: Path) -> dict[str, str]:
+def smoke_env(tmp_path: Path) -> dict[str, str]:
     env = os.environ.copy()
     env["HOME"] = str(tmp_path / "home")
     env["XDG_CACHE_HOME"] = str(tmp_path / "xdg-cache")
@@ -35,21 +30,20 @@ def _smoke_env(tmp_path: Path) -> dict[str, str]:
     env["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
     env["PYTEST_CURRENT_TEST"] = "smoke"
     env.setdefault("GITHUB_ACCESS_TOKEN", "smoke-token")
-    env.setdefault("GITLAB_ACCESS_TOKEN", "smoke-token")
     env.setdefault("SELFHOSTED_ACCESS_TOKEN", "smoke-token")
     Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
     Path(env["XDG_CACHE_HOME"]).mkdir(parents=True, exist_ok=True)
     return env
 
 
-@pytest.mark.parametrize("entrypoint", ["git_mirror", "gh_mirror", "gl_mirror", "sh_mirror"])
+@pytest.mark.parametrize("entrypoint", ["git_mirror", "gh_mirror", "sh_mirror"])
 @pytest.mark.parametrize("args", [["--help"], ["--version"]])
 def test_entrypoint_smoke(entrypoint: str, args: list[str], tmp_path: Path):
     result = subprocess.run(
         [*ENTRYPOINT_RUNNERS[entrypoint], *args],
         capture_output=True,
         text=True,
-        env=_smoke_env(tmp_path),
+        env=smoke_env(tmp_path),
         check=False,
     )
 
@@ -66,6 +60,7 @@ def test_entrypoint_smoke(entrypoint: str, args: list[str], tmp_path: Path):
         ["menu", "--help"],
         ["gui", "--help"],
         ["list-repos", "--help"],
+        ["status", "--help"],
         ["clone-all", "--help"],
         ["pull-all", "--help"],
         ["local-changes", "--help"],
@@ -84,7 +79,7 @@ def test_git_mirror_command_surface(args: list[str], tmp_path: Path):
         [*ENTRYPOINT_RUNNERS["git_mirror"], *resolved_args],
         capture_output=True,
         text=True,
-        env=_smoke_env(tmp_path),
+        env=smoke_env(tmp_path),
         check=False,
     )
 
@@ -104,7 +99,7 @@ def test_bash_smoke_scripts(script_name: str, tmp_path: Path):
         [bash_path, str(Path("scripts") / script_name)],
         capture_output=True,
         text=True,
-        env=_smoke_env(tmp_path),
+        env=smoke_env(tmp_path),
         check=False,
     )
 

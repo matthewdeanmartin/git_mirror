@@ -4,7 +4,7 @@ from unittest.mock import ANY, patch
 import pytest
 from git import GitCommandError
 
-from git_mirror.dummies import Dummy
+from git_mirror.utils.dummies import Dummy
 from git_mirror.manage_github import GithubRepoManager
 
 LOGGER = logging.getLogger(__name__)
@@ -31,6 +31,8 @@ def test_pull_repo_success(mock_repo_class, github_repo_manager, tmp_path):
     repo_path = tmp_path / repo_name
     create_fake_repo(tmp_path, repo_name)
 
+    mock_repo_class.return_value.is_dirty.return_value = False
+
     github_repo_manager.pull_repo((repo_path, Dummy()))
 
     mock_repo_class.assert_called_once_with(repo_path)
@@ -43,6 +45,7 @@ def test_pull_repo_failure(mock_repo_class, github_repo_manager, tmp_path):
     repo_path = tmp_path / repo_name
     create_fake_repo(tmp_path, repo_name)
 
+    mock_repo_class.return_value.is_dirty.return_value = False
     # Simulate a GitCommandError on pull
     mock_repo_class.return_value.remotes.origin.pull.side_effect = GitCommandError("pull", "error")
 

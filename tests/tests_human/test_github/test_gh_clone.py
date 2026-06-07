@@ -5,7 +5,7 @@ import pytest
 from git.exc import GitCommandError
 from github import Repository as ghRepository  # Assuming this import based on context
 
-from git_mirror.dummies import Dummy
+from git_mirror.utils.dummies import Dummy
 from git_mirror.manage_github import GithubRepoManager
 
 
@@ -46,10 +46,10 @@ def mock_repo():
 
 
 @patch("git.Repo.clone_from")
-@patch("git_mirror.manage_github.GithubRepoManager._get_user_repos")
+@patch("git_mirror.manage_github.GithubRepoManager.get_user_repos")
 def test_clone_all(mock_get_user_repos, mock_clone_from, github_repo_manager, mock_repo):
     # Setup
-    # mock_repo= github_repo_manager._thread_safe_repos([mock_repo])
+    # mock_repo= github_repo_manager.thread_safe_repos([mock_repo])
     mock_get_user_repos.return_value = [mock_repo]
 
     # Execute
@@ -67,8 +67,8 @@ def test_clone_repo_already_exists(mock_clone_from, github_repo_manager, mock_gi
 
     # Execute
 
-    mock_github_repo = github_repo_manager._thread_safe_repos([mock_github_repo])[0]
-    github_repo_manager._clone_repo((mock_github_repo, Dummy()))
+    mock_github_repo = github_repo_manager.thread_safe_repos([mock_github_repo])[0]
+    github_repo_manager.clone_repo((mock_github_repo, Dummy()))
 
     # Assert
     mock_clone_from.assert_not_called()
@@ -77,8 +77,8 @@ def test_clone_repo_already_exists(mock_clone_from, github_repo_manager, mock_gi
 @patch("git.Repo.clone_from")
 def test_clone_repo_clone_success(mock_clone_from, github_repo_manager, mock_repo):
     # Execute
-    mock_repo = github_repo_manager._thread_safe_repos([mock_repo])[0]
-    github_repo_manager._clone_repo((mock_repo, Dummy()))
+    mock_repo = github_repo_manager.thread_safe_repos([mock_repo])[0]
+    github_repo_manager.clone_repo((mock_repo, Dummy()))
 
     # Assert
     mock_clone_from.assert_called_once_with(
@@ -89,8 +89,8 @@ def test_clone_repo_clone_success(mock_clone_from, github_repo_manager, mock_rep
 @patch("git.Repo.clone_from", side_effect=GitCommandError("clone", "error"))
 def test_clone_repo_clone_failure(mock_clone_from, github_repo_manager, mock_repo):
     # Execute
-    mock_repo = github_repo_manager._thread_safe_repos([mock_repo])[0]
-    github_repo_manager._clone_repo((mock_repo, Dummy()))
+    mock_repo = github_repo_manager.thread_safe_repos([mock_repo])[0]
+    github_repo_manager.clone_repo((mock_repo, Dummy()))
 
     # Assert
     mock_clone_from.assert_called_once()

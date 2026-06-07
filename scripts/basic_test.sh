@@ -6,7 +6,6 @@ set -euo pipefail
 
 run_cli git_mirror list-config --config-path "$CONFIG_PATH"
 run_cli git_mirror list-config --config-path "$CONFIG_PATH" --host github
-run_cli git_mirror list-config --config-path "$CONFIG_PATH" --host gitlab
 run_cli git_mirror list-config --config-path "$CONFIG_PATH" --host selfhosted
 
 run_cli git_mirror doctor --help

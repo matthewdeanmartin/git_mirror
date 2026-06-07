@@ -34,8 +34,8 @@ from git_mirror.manage_config import ConfigManager
 )  # Simulate user input to not add another host after the first
 @patch("git_mirror.manage_config.ask_for_section", return_value=None)  # Simulate no more sections to add
 @patch(
-    "git_mirror.manage_config.ConfigManager.load_if_exists", return_value=({}, {"gitlab": {}})
-)  # Simulate existing gitlab config
+    "git_mirror.manage_config.ConfigManager.load_if_exists", return_value=({}, {"selfhosted": {}})
+)  # Simulate existing selfhosted config
 @patch("git_mirror.manage_config.os.makedirs")
 def test_initialize_config_already_done(
     mock_makedirs, mock_load_if_exists, mock_ask_for_section, mock_input, mock_toml_dumps, mock_file
@@ -47,4 +47,4 @@ def test_initialize_config_already_done(
 
     # Assertions to verify behavior
     mock_ask_for_section.assert_called()  # Verify ask_for_section was called
-    assert "gitlab" in already_configured  # Verify gitlab is recognized as already configured
+    assert "selfhosted" in already_configured  # Verify selfhosted is recognized as already configured

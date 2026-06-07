@@ -4,8 +4,8 @@ import httpx
 import pytest
 from packaging import version
 
-from git_mirror.ui import console_with_theme
-from git_mirror.version_check import call_pypi_with_version_check, display_version_check_message
+from git_mirror.utils.ui import console_with_theme
+from git_mirror.utils.version_check import call_pypi_with_version_check, display_version_check_message
 
 # I don't see any bugs in the `version_check.py` module. Now, I will proceed with
 # writing pytest unit tests for this module to achieve good test coverage. I will
