@@ -18,10 +18,6 @@ nav:
   - Installation: installation.md
   - Configuration: configuration.md
   - Usage: usage.md
-  - Read the Docs: read-the-docs.md
-  - Release Process: release-process.md
-  - Change Log: changelog.md
-  - License: license.md
 validation:
   nav:
     omitted_files: warn
