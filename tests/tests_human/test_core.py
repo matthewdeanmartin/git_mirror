@@ -30,7 +30,7 @@ def test_run_doctor():
         mock_config.host_type = "github"
         mock_cm.load_config_objects.return_value = {"github": mock_config}
         mock_cm.load_config.return_value = mock_config
-        mock_cm._run_checks.return_value = [SetupCheck("github", True, "OK", "")]
+        mock_cm.run_checks.return_value = [SetupCheck("github", True, "OK", "")]
         
         results = run_doctor()
         assert len(results) == 1
@@ -137,8 +137,8 @@ def test_clone_all_repos_github():
         
         mock_exists.return_value = False
         mock_mgr = MockMgr.return_value
-        mock_mgr._get_user_repos.return_value = [{"name": "repo1", "html_url": "http://url"}]
-        mock_mgr._thread_safe_repos.side_effect = lambda x: x
+        mock_mgr.get_user_repos.return_value = [{"name": "repo1", "html_url": "http://url"}]
+        mock_mgr.thread_safe_repos.side_effect = lambda x: x
         
         result = clone_all_repos("token", config)
         assert result.success is True

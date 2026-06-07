@@ -10,23 +10,23 @@ from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
-_CONSOLE = None
+CONSOLE = None
 
 
-def _get_console():
-    global _CONSOLE
-    if _CONSOLE is None:
+def get_console():
+    global CONSOLE
+    if CONSOLE is None:
         from git_mirror.utils.ui import console_with_theme
 
-        _CONSOLE = console_with_theme()
-    return _CONSOLE
+        CONSOLE = console_with_theme()
+    return CONSOLE
 
 
-def _render_dashboard(rows) -> None:
+def render_dashboard(rows) -> None:
     """Render the fleet status dashboard as a single Rich table."""
     from rich.table import Table
 
-    console = _get_console()
+    console = get_console()
     if not rows:
         console.print("No repositories found in the target directory.")
         return
@@ -82,7 +82,7 @@ def route_simple(
     """
     from git_mirror import manage_config as mc
 
-    console = _get_console()
+    console = get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
@@ -110,7 +110,7 @@ def route_config(
     """
     from git_mirror import manage_config as mc
 
-    console = _get_console()
+    console = get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
@@ -172,7 +172,7 @@ def route_repos(
     from git_mirror import core
     from git_mirror import manage_config as mc
 
-    console = _get_console()
+    console = get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
@@ -195,7 +195,7 @@ def route_repos(
             token=token or None,
             config=config_data,
         )
-        _render_dashboard(rows)
+        render_dashboard(rows)
     elif command == "local-changes":
         from git_mirror import manage_git as mg
 

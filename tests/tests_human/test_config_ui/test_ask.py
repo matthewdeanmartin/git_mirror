@@ -35,8 +35,8 @@ def test_ask_for_section_all_hosts_configured():
 @patch("os.makedirs")
 def test_ask_for_section_target_dir_creation(mock_makedirs, mock_exists, mock_prompt):
     # Adjust mock_prompt_responses as necessary to simulate user opting to create the directory
-    _result = ask_for_section(["selfhosted"])
-    assert _result.host_name == "github"
+    result = ask_for_section(["selfhosted"])
+    assert result.host_name == "github"
     mock_makedirs.assert_called_once()
 
 

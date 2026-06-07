@@ -7,7 +7,7 @@ import pytest
 from git_mirror.pat_init import (
     get_authenticated_user,
     check_pat_validity,
-    _save_pat,
+    save_pat,
     setup_github_pat,
 )
 
@@ -60,7 +60,7 @@ def test_check_pat_validity_false(mock_httpx_get):
 def test_save_pat_global(mock_home, mock_set_key):
     mock_home.return_value = Path("/home/user")
     with patch.dict(os.environ, {}, clear=True):
-        result = _save_pat("g", "GITHUB_ACCESS_TOKEN", "new_token")
+        result = save_pat("g", "GITHUB_ACCESS_TOKEN", "new_token")
         assert result is True
         mock_set_key.assert_called_once_with(Path("/home/user") / ".env", "GITHUB_ACCESS_TOKEN", "new_token")
         assert os.environ["GITHUB_ACCESS_TOKEN"] == "new_token"
@@ -68,13 +68,13 @@ def test_save_pat_global(mock_home, mock_set_key):
 @patch("git_mirror.pat_init.set_key")
 def test_save_pat_local(mock_set_key):
     with patch.dict(os.environ, {}, clear=True):
-        result = _save_pat("l", "GITHUB_ACCESS_TOKEN", "new_token")
+        result = save_pat("l", "GITHUB_ACCESS_TOKEN", "new_token")
         assert result is True
         mock_set_key.assert_called_once_with(Path(".env"), "GITHUB_ACCESS_TOKEN", "new_token")
         assert os.environ["GITHUB_ACCESS_TOKEN"] == "new_token"
 
 def test_save_pat_invalid():
-    result = _save_pat("invalid", "GITHUB_ACCESS_TOKEN", "new_token")
+    result = save_pat("invalid", "GITHUB_ACCESS_TOKEN", "new_token")
     assert result is False
 
 @patch("git_mirror.pat_init.env_info")
@@ -112,7 +112,7 @@ def test_setup_github_pat_new_invalid(mock_getpass, mock_get_token, mock_check_v
 @patch("git_mirror.utils.credentials.get_token")
 @patch("getpass.getpass")
 @patch("builtins.input")
-@patch("git_mirror.pat_init._save_pat")
+@patch("git_mirror.pat_init.save_pat")
 def test_setup_github_pat_save_fails(mock_save, mock_input, mock_getpass, mock_get_token, mock_check_valid, mock_load, mock_find, mock_env_info):
     mock_get_token.return_value = None
     mock_check_valid.side_effect = [False, True]

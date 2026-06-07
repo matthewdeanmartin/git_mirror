@@ -28,7 +28,7 @@ def test_validate_host_token_sets_up_selfhosted_github_token_with_configured_url
 
     with (
         patch.dict("os.environ", {}, clear=True),
-        patch("git_mirror.__main__._get_config_manager") as mock_manager_factory,
+        patch("git_mirror.__main__.get_config_manager") as mock_manager_factory,
         patch("git_mirror.pat_init.setup_github_pat", return_value="token") as mock_setup,
     ):
         mock_manager_factory.return_value.load_config.return_value = config
@@ -70,7 +70,7 @@ def test_validate_parse_args_populates_missing_values_from_config(tmp_path):
         global_template_dir=None,
     )
 
-    with patch("git_mirror.__main__._get_config_manager") as mock_manager_factory:
+    with patch("git_mirror.__main__.get_config_manager") as mock_manager_factory:
         mock_manager_factory.return_value.load_config.return_value = config
         domain, status = validate_parse_args(args)
 
@@ -97,7 +97,7 @@ def test_validate_parse_args_requires_host_when_config_lookup_is_needed(tmp_path
         config_path=tmp_path / "git_mirror.toml",
     )
 
-    with patch("git_mirror.__main__._get_console") as mock_console:
+    with patch("git_mirror.__main__.get_console") as mock_console:
         domain, status = validate_parse_args(args)
 
     assert (domain, status) == ("", 1)

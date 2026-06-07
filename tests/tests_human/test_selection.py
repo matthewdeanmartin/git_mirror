@@ -7,49 +7,49 @@ from git_mirror.core import RepoSelection, build_selection
 from git_mirror.manage_config import ConfigManager
 
 
-def _sel(**kw):
+def sel(**kw):
     overrides = kw.pop("overrides", {})
     return RepoSelection(overrides=overrides, **kw)
 
 
 def test_default_selection_keeps_everything():
-    s = _sel()
+    s = sel()
     assert s.filter(["a", "b", "c"]) == ["a", "b", "c"]
 
 
 def test_exclude_drops_named():
-    s = _sel(exclude={"b"})
+    s = sel(exclude={"b"})
     assert s.filter(["a", "b", "c"]) == ["a", "c"]
 
 
 def test_only_keeps_named():
-    s = _sel(only={"a", "c"})
+    s = sel(only={"a", "c"})
     assert s.filter(["a", "b", "c"]) == ["a", "c"]
 
 
 def test_only_and_exclude_combine():
-    s = _sel(only={"a", "b"}, exclude={"b"})
+    s = sel(only={"a", "b"}, exclude={"b"})
     assert s.filter(["a", "b", "c"]) == ["a"]
 
 
 def test_ignore_in_config_is_skipped():
-    s = _sel(overrides={"b": {"ignore": True, "tags": []}})
+    s = sel(overrides={"b": {"ignore": True, "tags": []}})
     assert s.filter(["a", "b"]) == ["a"]
 
 
 def test_include_ignored_overrides_config():
-    s = _sel(overrides={"b": {"ignore": True, "tags": []}}, include_ignored=True)
+    s = sel(overrides={"b": {"ignore": True, "tags": []}}, include_ignored=True)
     assert s.filter(["a", "b"]) == ["a", "b"]
 
 
 def test_only_overrides_ignore():
-    s = _sel(overrides={"b": {"ignore": True, "tags": []}}, only={"b"})
+    s = sel(overrides={"b": {"ignore": True, "tags": []}}, only={"b"})
     assert s.filter(["a", "b"]) == ["b"]
 
 
 def test_tag_filtering():
     overrides = {"a": {"tags": ["work"]}, "b": {"tags": ["fun"]}, "c": {"tags": []}}
-    s = _sel(overrides=overrides, tags={"work"})
+    s = sel(overrides=overrides, tags={"work"})
     assert s.filter(["a", "b", "c"]) == ["a"]
 
 

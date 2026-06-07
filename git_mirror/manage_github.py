@@ -85,7 +85,7 @@ class GithubRepoManager(SourceHost):
             return gh.Github(base_url=self.host_domain, login_or_token=self.token)
         return gh.Github(self.token)
 
-    def _thread_safe_repos(self, data: list[ghr.Repository]) -> list[dict[str, Any]]:
+    def thread_safe_repos(self, data: list[ghr.Repository]) -> list[dict[str, Any]]:
         repos = []
         for repo in data:
             repos.append(
@@ -99,7 +99,7 @@ class GithubRepoManager(SourceHost):
             )
         return repos
 
-    def _get_user_repos(self, ignore_users_filters: bool = False) -> list[ghr.Repository]:
+    def get_user_repos(self, ignore_users_filters: bool = False) -> list[ghr.Repository]:
         """
         Fetches the user's repositories from GitHub, optionally including private repositories and forks.
 
@@ -132,7 +132,7 @@ class GithubRepoManager(SourceHost):
             console.print(f"Failed to fetch repositories: {e}", style="danger")
             return []
 
-    def _select_dirs(self, directories: list[Path]) -> list[Path]:
+    def select_dirs(self, directories: list[Path]) -> list[Path]:
         """Filter local repo directories through the active selection (by name)."""
         if self.selection is None:
             return directories
@@ -141,7 +141,7 @@ class GithubRepoManager(SourceHost):
     @log_duration
     def clone_all(self, single_threaded: bool = False):
         console = console_with_theme()
-        repos = self._get_user_repos()
+        repos = self.get_user_repos()
         if self.prompt_for_changes:
             answer = inquirer.prompt(
                 [
@@ -157,18 +157,18 @@ class GithubRepoManager(SourceHost):
         console.print(f"Cloning {len(repos)} repositories.")
 
         if single_threaded or len(repos) < 4:  # or features.CACHING:
-            for repo in self._thread_safe_repos(repos):
-                self._clone_repo((repo, Dummy()))
+            for repo in self.thread_safe_repos(repos):
+                self.clone_repo((repo, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 manager = multiprocessing.Manager()
                 lock = manager.Lock()
-                results = pool.map(self._clone_repo, [(repo, lock) for repo in self._thread_safe_repos(repos)])
+                results = pool.map(self.clone_repo, [(repo, lock) for repo in self.thread_safe_repos(repos)])
                 for output in results:
                     if output:
                         console.print(output, end="")
 
-    def _clone_repo(self, repo_args: tuple[dict[str, Any], ContextManager[Any]]) -> None:
+    def clone_repo(self, repo_args: tuple[dict[str, Any], ContextManager[Any]]) -> None:
         """
         Clones the given repository into the target directory.
 
@@ -203,7 +203,7 @@ class GithubRepoManager(SourceHost):
     @log_duration
     def pull_all(self, single_threaded: bool = False):
         console = console_with_theme()
-        directories = self._select_dirs(mg.find_git_repos(self.base_dir))
+        directories = self.select_dirs(mg.find_git_repos(self.base_dir))
         console.print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
@@ -264,7 +264,7 @@ class GithubRepoManager(SourceHost):
         Uses both git and github because of fork checking.
         """
         console = console_with_theme()
-        user_repos = {repo.name: repo for repo in self._get_user_repos(ignore_users_filters=True)}
+        user_repos = {repo.name: repo for repo in self.get_user_repos(ignore_users_filters=True)}
 
         no_remote = 0
         not_found = 0
@@ -312,15 +312,15 @@ class GithubRepoManager(SourceHost):
             self.user = self.client().get_user()
 
         messages = []
-        repos = self._get_user_repos()
+        repos = self.get_user_repos()
         console.print(f"Checking {len(repos)} repositories for build statuses.")
         for repo in repos:
             console.print(f"Repository: {repo.name}")
             statuses = repo.get_workflow_runs()
-            messages.extend(self._loop_actions(statuses))
+            messages.extend(self.loop_actions(statuses))
         return messages
 
-    def _loop_actions(self, statuses) -> list[tuple[str, str]]:
+    def loop_actions(self, statuses) -> list[tuple[str, str]]:
         console = console_with_theme()
         actions_per_repo = 1
         status_count = 0
@@ -344,7 +344,7 @@ class GithubRepoManager(SourceHost):
         return messages
 
     @staticmethod
-    def _get_latest_commit_date(repo: g.Repo) -> datetime:
+    def get_latest_commit_date(repo: g.Repo) -> datetime:
         """
         Gets the date of the latest commit in the repository.
 
@@ -365,7 +365,7 @@ class GithubRepoManager(SourceHost):
         Returns:
             List[str]: A list of repository names.
         """
-        return [repo.full_name for repo in self._get_user_repos()]
+        return [repo.full_name for repo in self.get_user_repos()]
 
     @log_duration
     def list_repos(self) -> Table | None:
@@ -440,17 +440,17 @@ class GithubRepoManager(SourceHost):
             prefer_rebase (bool): Whether to prefer rebasing instead of merging.
         """
         console = console_with_theme()
-        directories = self._select_dirs(mg.find_git_repos(self.base_dir))
+        directories = self.select_dirs(mg.find_git_repos(self.base_dir))
         console.print(f"Merging/rebasing {len(directories)} main to local repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
-                self._update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, Dummy()))
+                self.update_local_branches(UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, Dummy()))
         else:
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 manager = multiprocessing.Manager()
                 lock = manager.Lock()
                 results = pool.map(
-                    self._update_local_branches,
+                    self.update_local_branches,
                     (UpdateBranchArgs(repo_dir, repo_dir.name, prefer_rebase, lock) for repo_dir in directories),
                 )
                 for output in results:
@@ -458,8 +458,7 @@ class GithubRepoManager(SourceHost):
                         if output:
                             console.print(output, end="")
 
-    # def _update_local_branches(self, repo_path: Path, github_repo_full_name: str, prefer_rebase: bool = False):
-    def _update_local_branches(self, args: UpdateBranchArgs):
+    def update_local_branches(self, args: UpdateBranchArgs):
         """
         Updates each local branch with the latest changes from the main/master branch on GitHub.
 
@@ -532,7 +531,7 @@ class GithubRepoManager(SourceHost):
                     # A conflict leaves the repo mid-rebase/merge. Abort so the
                     # next repo (and the user) start from a known-good state.
                     console.print(f"Failed to update branch '{branch}': {e}", style="danger")
-                    self._abort_in_progress_merge_or_rebase(repo)
+                    self.abort_in_progress_merge_or_rebase(repo)
         finally:
             # Always return to the branch we started on.
             if not self.dry_run and original_branch:
@@ -542,7 +541,7 @@ class GithubRepoManager(SourceHost):
                     pass
 
     @staticmethod
-    def _abort_in_progress_merge_or_rebase(repo: g.Repo) -> None:
+    def abort_in_progress_merge_or_rebase(repo: g.Repo) -> None:
         """Best-effort cleanup of a half-finished rebase or merge."""
         for cmd in (["rebase", "--abort"], ["merge", "--abort"]):
             try:
@@ -556,7 +555,7 @@ class GithubRepoManager(SourceHost):
         Prunes all local branches that have been deleted on GitHub.
         """
         console = console_with_theme()
-        repos = self._select_dirs(mg.find_git_repos(self.base_dir))
+        repos = self.select_dirs(mg.find_git_repos(self.base_dir))
         console.print(f"Ready to Pruning {len(repos)} repositories of branches no longer on remote.")
         if self.prompt_for_changes:
             answer = inquirer.prompt(
@@ -568,9 +567,9 @@ class GithubRepoManager(SourceHost):
 
         for repo_dir in repos:
             if repo_dir.is_dir():
-                self._delete_local_branches_if_not_on_github(repo_dir, f"{self.user_login}/{repo_dir.name}")
+                self.delete_local_branches_if_not_on_github(repo_dir, f"{self.user_login}/{repo_dir.name}")
 
-    def _delete_local_branches_if_not_on_github(self, repo_path: Path, github_repo_full_name: str):
+    def delete_local_branches_if_not_on_github(self, repo_path: Path, github_repo_full_name: str):
         """
         Loops through all local branches, checks if they exist on GitHub, and prompts the user for deletion if they don't.
 

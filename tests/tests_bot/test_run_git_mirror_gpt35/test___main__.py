@@ -85,7 +85,7 @@ def test_validate_host_token_selfhosted_github_uses_selfhosted_setup():
     )
 
     with (
-        patch("git_mirror.__main__._get_config_manager") as mock_manager_factory,
+        patch("git_mirror.__main__.get_config_manager") as mock_manager_factory,
         patch.dict("os.environ", {}, clear=True),
         patch("git_mirror.pat_init.setup_github_pat", return_value="selfhosted-token") as mock_setup,
     ):
@@ -128,7 +128,7 @@ def test_validate_parse_args_reads_values_from_config():
         global_template_dir=Path("templates"),
     )
 
-    with patch("git_mirror.__main__._get_config_manager") as mock_manager_factory:
+    with patch("git_mirror.__main__.get_config_manager") as mock_manager_factory:
         mock_manager_factory.return_value.load_config.return_value = config
         domain, return_value = validate_parse_args(args)
 
@@ -157,7 +157,7 @@ def test_validate_parse_args_requires_host_when_config_lookup_needed():
 
 def test_help_path_does_not_install_requests_cache_or_check_versions():
     with (
-        patch("git_mirror.__main__._install_requests_cache") as mock_install_cache,
+        patch("git_mirror.__main__.install_requests_cache") as mock_install_cache,
         patch("git_mirror.__main__.validate_host_token", return_value=(None, 0)) as mock_validate_host_token,
         patch("git_mirror.utils.version_check.display_version_check_message") as mock_version_check,
     ):

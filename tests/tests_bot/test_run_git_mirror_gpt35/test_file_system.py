@@ -24,7 +24,7 @@ def test_setup_app_directories(mocker):
         patch("git_mirror.utils.file_system.user_config_dir", return_value=config_dir),
         patch("git_mirror.utils.file_system.user_data_dir", return_value=data_dir),
         patch("git_mirror.utils.file_system.user_cache_dir", return_value=cache_dir),
-        patch("git_mirror.utils.file_system.os.makedirs") as _mock_makedirs,
+        patch("git_mirror.utils.file_system.os.makedirs") as mock_makedirs,
     ):
 
         result = setup_app_directories(app_name)

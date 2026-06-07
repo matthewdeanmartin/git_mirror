@@ -8,10 +8,10 @@ from git_mirror.manage_config import (
     PUBLIC_GITHUB_API_URL,
     ConfigData,
     ConfigManager,
-    _coerce_path,
-    _normalize_github_url,
-    _normalize_url,
-    _prompt_for_target_dir,
+    coerce_path,
+    normalize_github_url,
+    normalize_url,
+    prompt_for_target_dir,
     read_config,
 )
 
@@ -37,7 +37,7 @@ def test_prompt_for_target_dir_reprompts_with_new_string_value(tmp_path):
             {"target_dir": str(replacement_dir)},
         ]
 
-        result = _prompt_for_target_dir(str(missing_dir))
+        result = prompt_for_target_dir(str(missing_dir))
 
     assert result == replacement_dir
     mock_makedirs.assert_not_called()
@@ -111,7 +111,7 @@ def test_doctor_returns_true_for_valid_github_config(tmp_path):
     with (
         patch.dict("os.environ", {"GITHUB_ACCESS_TOKEN": "token"}, clear=True),
         patch("git_mirror.manage_config.pat_init.get_authenticated_user", return_value={"login": "octocat"}),
-        patch("git_mirror.manage_config._render_checks") as mock_render_checks,
+        patch("git_mirror.manage_config.render_checks") as mock_render_checks,
         patch("git_mirror.manage_config.console.print") as mock_print,
     ):
         result = manager.doctor(host="github")
@@ -147,7 +147,7 @@ def test_doctor_returns_false_when_token_username_differs_from_config(tmp_path):
     with (
         patch.dict("os.environ", {"GITHUB_ACCESS_TOKEN": "token"}, clear=True),
         patch("git_mirror.manage_config.pat_init.get_authenticated_user", return_value={"login": "actual-user"}),
-        patch("git_mirror.manage_config._render_checks") as mock_render_checks,
+        patch("git_mirror.manage_config.render_checks") as mock_render_checks,
         patch("git_mirror.manage_config.console.print") as mock_print,
     ):
         result = manager.doctor(host="github")
@@ -193,7 +193,7 @@ def test_initialize_config_writes_config_and_runs_doctor(tmp_path):
 
 @given(st.sampled_from(["github.com", "api.github.com"]))
 def test_normalize_github_url_handles_public_hosts(host):
-    normalized = _normalize_github_url(f" https://{host}/ ")
+    normalized = normalize_github_url(f" https://{host}/ ")
 
     expected = PUBLIC_GITHUB_API_URL if host == "github.com" else "https://api.github.com"
     assert normalized == expected
@@ -207,7 +207,7 @@ def test_normalize_github_url_adds_api_v3_for_enterprise_hosts(host, prefix):
     path = "/".join(prefix)
     raw_url = f"https://{host}" if not path else f"https://{host}/{path}"
 
-    normalized = _normalize_github_url(raw_url)
+    normalized = normalize_github_url(raw_url)
 
     assert normalized.startswith(f"https://{host}")
     assert normalized.endswith("/api/v3")
@@ -215,7 +215,7 @@ def test_normalize_github_url_adds_api_v3_for_enterprise_hosts(host, prefix):
 
 @given(st.from_regex(r"[A-Za-z0-9][A-Za-z0-9./_-]{0,20}", fullmatch=True))
 def test_normalize_url_trims_and_adds_https_for_bare_hosts(raw_value):
-    normalized = _normalize_url(f"  {raw_value}/  ")
+    normalized = normalize_url(f"  {raw_value}/  ")
 
     assert normalized.startswith("https://")
     assert not normalized.endswith("/")
@@ -223,7 +223,7 @@ def test_normalize_url_trims_and_adds_https_for_bare_hosts(raw_value):
 
 @given(st.one_of(st.none(), st.just(""), st.from_regex(r"~?[/A-Za-z0-9._-]{1,20}", fullmatch=True)))
 def test_coerce_path_returns_none_or_path_objects(raw_value):
-    result = _coerce_path(raw_value)
+    result = coerce_path(raw_value)
 
     if raw_value in (None, ""):
         assert result is None

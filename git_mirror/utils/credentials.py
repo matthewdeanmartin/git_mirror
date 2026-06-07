@@ -33,7 +33,7 @@ console = console_with_theme()
 SERVICE_NAME = "git_mirror"
 
 # host_name -> environment variable that holds its token.
-_ENV_VAR_BY_HOST = {
+ENV_VAR_BY_HOST = {
     "github": "GITHUB_ACCESS_TOKEN",
     "selfhosted": "SELFHOSTED_ACCESS_TOKEN",
 }
@@ -41,7 +41,7 @@ _ENV_VAR_BY_HOST = {
 
 def env_var_for_host(host_name: str) -> str:
     """Return the environment-variable name used for a host's token."""
-    return _ENV_VAR_BY_HOST.get(host_name, "GITHUB_ACCESS_TOKEN")
+    return ENV_VAR_BY_HOST.get(host_name, "GITHUB_ACCESS_TOKEN")
 
 
 class TokenSource(str, Enum):
@@ -53,7 +53,7 @@ class TokenSource(str, Enum):
     MISSING = "not found"
 
 
-def _keyring():
+def keyring():
     """Import keyring lazily; return the module or None if unusable."""
     try:
         import keyring
@@ -64,8 +64,8 @@ def _keyring():
         return None
 
 
-def _keyring_get(host_name: str) -> str | None:
-    kr = _keyring()
+def keyring_get(host_name: str) -> str | None:
+    kr = keyring()
     if kr is None:
         return None
     try:
@@ -75,7 +75,7 @@ def _keyring_get(host_name: str) -> str | None:
         return None
 
 
-def _dotenv_get(env_var: str) -> str | None:
+def dotenv_get(env_var: str) -> str | None:
     """Read a value straight from the resolved .env file without mutating env."""
     try:
         from dotenv import dotenv_values, find_dotenv
@@ -104,13 +104,13 @@ def resolve_token(host_name: str) -> tuple[str | None, TokenSource]:
     """
     env_var = env_var_for_host(host_name)
     env_value = os.environ.get(env_var)
-    dotenv_value = _dotenv_get(env_var)
+    dotenv_value = dotenv_get(env_var)
 
     # A real, exported env var (one that is NOT merely the dotenv value) wins.
     if env_value and env_value != dotenv_value:
         return env_value, TokenSource.ENV
 
-    keyring_value = _keyring_get(host_name)
+    keyring_value = keyring_get(host_name)
     if keyring_value:
         return keyring_value, TokenSource.KEYRING
 
@@ -133,7 +133,7 @@ def get_token(host_name: str) -> str | None:
 
 def set_token(host_name: str, token: str) -> bool:
     """Store a token in the OS keychain. Returns True on success."""
-    kr = _keyring()
+    kr = keyring()
     if kr is None:
         return False
     try:
@@ -149,7 +149,7 @@ def set_token(host_name: str, token: str) -> bool:
 
 def delete_token(host_name: str) -> bool:
     """Remove a token from the OS keychain. Returns True if something was removed."""
-    kr = _keyring()
+    kr = keyring()
     if kr is None:
         return False
     try:
@@ -177,7 +177,7 @@ def migrate_dotenv_to_keychain(host_name: str) -> bool:
 
 def keyring_available() -> bool:
     """True if a usable, non-null keyring backend is configured."""
-    kr = _keyring()
+    kr = keyring()
     if kr is None:
         return False
     try:

@@ -13,8 +13,8 @@ def test_env_var_for_host():
 def test_resolve_token_explicit_env_wins_over_keyring():
     with (
         patch.dict("os.environ", {"GITHUB_ACCESS_TOKEN": "env-token"}, clear=True),
-        patch("git_mirror.utils.credentials._dotenv_get", return_value=None),
-        patch("git_mirror.utils.credentials._keyring_get", return_value="keyring-token"),
+        patch("git_mirror.utils.credentials.dotenv_get", return_value=None),
+        patch("git_mirror.utils.credentials.keyring_get", return_value="keyring-token"),
     ):
         token, source = credentials.resolve_token("github")
 
@@ -26,8 +26,8 @@ def test_resolve_token_keyring_wins_over_dotenv_loaded_env():
     # Simulate safe_env having loaded the .env value into the process env.
     with (
         patch.dict("os.environ", {"GITHUB_ACCESS_TOKEN": "dotenv-token"}, clear=True),
-        patch("git_mirror.utils.credentials._dotenv_get", return_value="dotenv-token"),
-        patch("git_mirror.utils.credentials._keyring_get", return_value="keyring-token"),
+        patch("git_mirror.utils.credentials.dotenv_get", return_value="dotenv-token"),
+        patch("git_mirror.utils.credentials.keyring_get", return_value="keyring-token"),
     ):
         token, source = credentials.resolve_token("github")
 
@@ -38,8 +38,8 @@ def test_resolve_token_keyring_wins_over_dotenv_loaded_env():
 def test_resolve_token_falls_back_to_dotenv():
     with (
         patch.dict("os.environ", {}, clear=True),
-        patch("git_mirror.utils.credentials._dotenv_get", return_value="dotenv-token"),
-        patch("git_mirror.utils.credentials._keyring_get", return_value=None),
+        patch("git_mirror.utils.credentials.dotenv_get", return_value="dotenv-token"),
+        patch("git_mirror.utils.credentials.keyring_get", return_value=None),
     ):
         token, source = credentials.resolve_token("github")
 
@@ -50,8 +50,8 @@ def test_resolve_token_falls_back_to_dotenv():
 def test_resolve_token_missing():
     with (
         patch.dict("os.environ", {}, clear=True),
-        patch("git_mirror.utils.credentials._dotenv_get", return_value=None),
-        patch("git_mirror.utils.credentials._keyring_get", return_value=None),
+        patch("git_mirror.utils.credentials.dotenv_get", return_value=None),
+        patch("git_mirror.utils.credentials.keyring_get", return_value=None),
     ):
         token, source = credentials.resolve_token("github")
 
@@ -62,7 +62,7 @@ def test_resolve_token_missing():
 def test_set_token_writes_to_keyring_and_env():
     fake_kr = type("FakeKR", (), {"set_password": lambda self, s, u, p: None})()
     with (
-        patch("git_mirror.utils.credentials._keyring", return_value=fake_kr),
+        patch("git_mirror.utils.credentials.keyring", return_value=fake_kr),
         patch.dict("os.environ", {}, clear=True),
     ):
         assert credentials.set_token("github", "new-token") is True
@@ -72,7 +72,7 @@ def test_set_token_writes_to_keyring_and_env():
 
 
 def test_set_token_returns_false_without_keyring():
-    with patch("git_mirror.utils.credentials._keyring", return_value=None):
+    with patch("git_mirror.utils.credentials.keyring", return_value=None):
         assert credentials.set_token("github", "x") is False
 
 
@@ -85,7 +85,7 @@ def test_migrate_dotenv_to_keychain_moves_token():
 
     with (
         patch("git_mirror.utils.credentials.resolve_token", return_value=("dotenv-token", TokenSource.DOTENV)),
-        patch("git_mirror.utils.credentials._keyring", return_value=FakeKR()),
+        patch("git_mirror.utils.credentials.keyring", return_value=FakeKR()),
         patch.dict("os.environ", {}, clear=True),
     ):
         assert credentials.migrate_dotenv_to_keychain("github") is True

@@ -6,14 +6,14 @@ from git_mirror.router import route_config, route_repos, route_simple
 
 def test_route_simple_unknown_command():
     mock_console = MagicMock()
-    with patch("git_mirror.router._get_console", return_value=mock_console):
+    with patch("git_mirror.router.get_console", return_value=mock_console):
         route_simple("unknown-command")
     mock_console.print.assert_called_once_with("Unknown command: unknown-command")
 
 
 def test_route_config_unknown_command():
     mock_console = MagicMock()
-    with patch("git_mirror.router._get_console", return_value=mock_console):
+    with patch("git_mirror.router.get_console", return_value=mock_console):
         route_config("unknown-command")
     mock_console.print.assert_called_once_with("Unknown command: unknown-command")
 

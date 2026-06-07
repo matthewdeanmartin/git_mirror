@@ -10,7 +10,7 @@ from git_mirror.manage_github import GithubRepoManager
 from git_mirror.utils.dummies import Dummy
 
 
-def _manager(tmp_path, dry_run=False):
+def manager(tmp_path, dry_run=False):
     return GithubRepoManager(
         token="t",
         base_dir=tmp_path,
@@ -21,7 +21,7 @@ def _manager(tmp_path, dry_run=False):
 
 
 def test_pull_repo_skips_dirty_repo(tmp_path):
-    mgr = _manager(tmp_path)
+    mgr = manager(tmp_path)
     fake_repo = MagicMock()  # truthy .remotes with an .origin attribute
     fake_repo.is_dirty.return_value = True
 
@@ -33,7 +33,7 @@ def test_pull_repo_skips_dirty_repo(tmp_path):
 
 
 def test_pull_repo_skips_repo_without_remote(tmp_path):
-    mgr = _manager(tmp_path)
+    mgr = manager(tmp_path)
     fake_repo = MagicMock()
     fake_repo.remotes = []
 
@@ -43,7 +43,7 @@ def test_pull_repo_skips_repo_without_remote(tmp_path):
 
 
 def test_pull_repo_pulls_clean_repo(tmp_path):
-    mgr = _manager(tmp_path)
+    mgr = manager(tmp_path)
     fake_repo = MagicMock()  # truthy .remotes
     fake_repo.is_dirty.return_value = False
 
@@ -54,7 +54,7 @@ def test_pull_repo_pulls_clean_repo(tmp_path):
 
 
 def test_update_skips_dirty_repo(tmp_path):
-    mgr = _manager(tmp_path)
+    mgr = manager(tmp_path)
     fake_repo = MagicMock()
     fake_repo.is_dirty.return_value = True
 
@@ -63,14 +63,14 @@ def test_update_skips_dirty_repo(tmp_path):
         patch.object(GithubRepoManager, "client") as mock_client,
     ):
         mock_client.return_value.get_repo.return_value.default_branch = "main"
-        mgr._update_local_branches(UpdateBranchArgs(tmp_path / "repo", "repo", False, Dummy()))
+        mgr.update_local_branches(UpdateBranchArgs(tmp_path / "repo", "repo", False, Dummy()))
 
     # Dirty repo: never fetch/checkout.
     fake_repo.remotes.origin.fetch.assert_not_called()
 
 
 def test_update_aborts_on_conflict_and_restores_branch(tmp_path):
-    mgr = _manager(tmp_path)
+    mgr = manager(tmp_path)
 
     fake_repo = MagicMock()
     fake_repo.is_dirty.return_value = False
@@ -88,10 +88,10 @@ def test_update_aborts_on_conflict_and_restores_branch(tmp_path):
     with (
         patch("git_mirror.manage_github.g.Repo", return_value=fake_repo),
         patch.object(GithubRepoManager, "client") as mock_client,
-        patch.object(GithubRepoManager, "_abort_in_progress_merge_or_rebase") as mock_abort,
+        patch.object(GithubRepoManager, "abort_in_progress_merge_or_rebase") as mock_abort,
     ):
         mock_client.return_value.get_repo.return_value.default_branch = "main"
-        mgr._update_local_branches(UpdateBranchArgs(tmp_path / "repo", "repo", False, Dummy()))
+        mgr.update_local_branches(UpdateBranchArgs(tmp_path / "repo", "repo", False, Dummy()))
 
     # Conflict must trigger an abort...
     mock_abort.assert_called_once()
@@ -100,7 +100,7 @@ def test_update_aborts_on_conflict_and_restores_branch(tmp_path):
 
 
 def test_update_invalid_repo_is_isolated(tmp_path):
-    mgr = _manager(tmp_path)
+    mgr = manager(tmp_path)
     with patch("git_mirror.manage_github.g.Repo", side_effect=g.InvalidGitRepositoryError("bad")):
         # Should return quietly, not raise, so the batch continues.
-        mgr._update_local_branches(UpdateBranchArgs(tmp_path / "repo", "repo", False, Dummy()))
+        mgr.update_local_branches(UpdateBranchArgs(tmp_path / "repo", "repo", False, Dummy()))

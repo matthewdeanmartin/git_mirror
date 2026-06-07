@@ -12,55 +12,55 @@ from git_mirror.__about__ import __description__, __version__
 
 LOGGER = logging.getLogger(__name__)
 
-_CONSOLE = None
-_CACHE_BACKEND = None
-_REQUESTS_CACHE_INSTALLED = False
+CONSOLE = None
+CACHE_BACKEND = None
+REQUESTS_CACHE_INSTALLED = False
 
 
-def _get_console():
-    global _CONSOLE
-    if _CONSOLE is None:
+def get_console():
+    global CONSOLE
+    if CONSOLE is None:
         from git_mirror.utils.ui import console_with_theme
 
-        _CONSOLE = console_with_theme()
-    return _CONSOLE
+        CONSOLE = console_with_theme()
+    return CONSOLE
 
 
-def _load_env() -> None:
-    from git_mirror.utils.safe_env import load_env
+def load_env() -> None:
+    from git_mirror.utils.safe_env import load_env as _load_env
 
-    load_env()
-
-
-def _default_config_path() -> Path:
-    from git_mirror.manage_config import default_config_path
-
-    return default_config_path()
+    _load_env()
 
 
-def _get_config_manager(config_path: Path):
+def default_config_path() -> Path:
+    from git_mirror.manage_config import default_config_path as _default_config_path
+
+    return _default_config_path()
+
+
+def get_config_manager(config_path: Path):
     from git_mirror.manage_config import ConfigManager
 
     return ConfigManager(config_path)
 
 
-def _get_backend():
-    global _CACHE_BACKEND
-    if _CACHE_BACKEND is None:
+def get_backend():
+    global CACHE_BACKEND
+    if CACHE_BACKEND is None:
         import requests_cache
 
-        _CACHE_BACKEND = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
-    return _CACHE_BACKEND
+        CACHE_BACKEND = requests_cache.SQLiteCache(use_cache_dir=True, fast_save=True)
+    return CACHE_BACKEND
 
 
-def _install_requests_cache() -> None:
-    global _REQUESTS_CACHE_INSTALLED
-    if _REQUESTS_CACHE_INSTALLED:
+def install_requests_cache() -> None:
+    global REQUESTS_CACHE_INSTALLED
+    if REQUESTS_CACHE_INSTALLED:
         return
     import requests_cache
 
-    requests_cache.install_cache("git_mirror_cache", backend=_get_backend(), expire_after=300)
-    _REQUESTS_CACHE_INSTALLED = True
+    requests_cache.install_cache("git_mirror_cache", backend=get_backend(), expire_after=300)
+    REQUESTS_CACHE_INSTALLED = True
 
 
 def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
@@ -75,11 +75,11 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     """
     from git_mirror.menu import ask_for_host
 
-    _load_env()
-    console = _get_console()
+    load_env()
+    console = get_console()
     host = args.host if hasattr(args, "host") else None
-    config_path = args.config_path if hasattr(args, "config_path") else _default_config_path()
-    config_manager = _get_config_manager(config_path)
+    config_path = args.config_path if hasattr(args, "config_path") else default_config_path()
+    config_manager = get_config_manager(config_path)
     invalid_or_missing_host = not host or host not in ("github", "selfhosted")
     needs_host = args.command not in ("init", "list-config", "doctor", None)
     if invalid_or_missing_host and needs_host:
@@ -134,7 +134,7 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
 
 def validate_parse_args(args: argparse.Namespace) -> tuple[str, int]:
     LOGGER.debug(f"Program name {sys.argv[0]}")
-    console = _get_console()
+    console = get_console()
     domain = ""
 
     if (
@@ -142,7 +142,7 @@ def validate_parse_args(args: argparse.Namespace) -> tuple[str, int]:
         and not args.first_time_init
         and args.command not in ("init", "list-config", "doctor")
     ):
-        config_manager = _get_config_manager(args.config_path)
+        config_manager = get_config_manager(args.config_path)
         if not args.host:
             console.print("Please specify a host, eg. --host github or --host selfhosted.")
             return domain, 1
@@ -199,7 +199,7 @@ def handle_repos(args: argparse.Namespace) -> None:
     domain, return_value = validate_parse_args(args)
     if return_value != 0:
         sys.exit(return_value)
-    def _csv(value: str | None) -> list[str]:
+    def csv(value: str | None) -> list[str]:
         return [item.strip() for item in value.split(",") if item.strip()] if value else []
 
     router.route_repos(
@@ -215,9 +215,9 @@ def handle_repos(args: argparse.Namespace) -> None:
         logging_level=args.verbose,
         dry_run=args.dry_run,
         prompt_for_changes=not args.yes,
-        only=_csv(getattr(args, "only", None)),
-        tags=_csv(getattr(args, "tag", None)),
-        exclude=_csv(getattr(args, "exclude", None)),
+        only=csv(getattr(args, "only", None)),
+        tags=csv(getattr(args, "tag", None)),
+        exclude=csv(getattr(args, "exclude", None)),
         include_ignored=getattr(args, "include_ignored", False),
     )
 
@@ -358,8 +358,8 @@ def main(
 
     args.use_github = use_github
     args.first_time_init = False
-    if not original_args and not _default_config_path().exists():
-        _get_console().print("This appears to be first time setup. Let's initialize configuration.")
+    if not original_args and not default_config_path().exists():
+        get_console().print("This appears to be first time setup. Let's initialize configuration.")
         argv = ["init"]
         args = parser.parse_args(argv)
         args.first_time_init = True
@@ -376,8 +376,8 @@ def main(
         return return_value
 
     if args.command not in ("init", "list-config", "doctor", "menu", None):
-        _install_requests_cache()
-        LOGGER.debug(f"Cache store at {_get_backend().db_path}")
+        install_requests_cache()
+        LOGGER.debug(f"Cache store at {get_backend().db_path}")
 
     if "PYTEST_CURRENT_TEST" not in os.environ:
         from git_mirror.utils import credentials
@@ -403,7 +403,7 @@ def global_args(parser):
     parser.add_argument(
         "--config-path",
         type=Path,
-        default=_default_config_path(),
+        default=default_config_path(),
         action="store",
         help="Path to the TOML config file.",
     )

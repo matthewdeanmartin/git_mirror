@@ -46,15 +46,15 @@ def check_pat_validity(token: str, api_url: str = DEFAULT_GITHUB_API_URL) -> boo
     return get_authenticated_user(token, api_url=api_url) is not None
 
 
-def _host_name_for_env_var(env_var: str) -> str:
+def host_name_for_env_var(env_var: str) -> str:
     return "selfhosted" if env_var == "SELFHOSTED_ACCESS_TOKEN" else "github"
 
 
-def _save_pat(choice: str, env_var: str, new_pat: str) -> bool:
+def save_pat(choice: str, env_var: str, new_pat: str) -> bool:
     if choice == "k":
         from git_mirror.utils import credentials
 
-        host_name = _host_name_for_env_var(env_var)
+        host_name = host_name_for_env_var(env_var)
         if credentials.set_token(host_name, new_pat):
             console.print("PAT saved to the OS keychain.")
         else:
@@ -100,7 +100,7 @@ def setup_github_pat(
     console.print()
     dotenv_path = Path(find_dotenv())
     load_dotenv(dotenv_path)
-    host_name = _host_name_for_env_var(env_var)
+    host_name = host_name_for_env_var(env_var)
     existing_pat = credentials.get_token(host_name)
 
     if existing_pat and check_pat_validity(existing_pat, api_url=api_url):
@@ -126,7 +126,7 @@ def setup_github_pat(
         .lower()
     ) or "k"
 
-    if not _save_pat(choice, env_var, new_pat):
+    if not save_pat(choice, env_var, new_pat):
         return None
     return new_pat
 

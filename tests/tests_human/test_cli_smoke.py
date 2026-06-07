@@ -22,7 +22,7 @@ ENTRYPOINT_RUNNERS = {
 }
 
 
-def _smoke_env(tmp_path: Path) -> dict[str, str]:
+def smoke_env(tmp_path: Path) -> dict[str, str]:
     env = os.environ.copy()
     env["HOME"] = str(tmp_path / "home")
     env["XDG_CACHE_HOME"] = str(tmp_path / "xdg-cache")
@@ -43,7 +43,7 @@ def test_entrypoint_smoke(entrypoint: str, args: list[str], tmp_path: Path):
         [*ENTRYPOINT_RUNNERS[entrypoint], *args],
         capture_output=True,
         text=True,
-        env=_smoke_env(tmp_path),
+        env=smoke_env(tmp_path),
         check=False,
     )
 
@@ -79,7 +79,7 @@ def test_git_mirror_command_surface(args: list[str], tmp_path: Path):
         [*ENTRYPOINT_RUNNERS["git_mirror"], *resolved_args],
         capture_output=True,
         text=True,
-        env=_smoke_env(tmp_path),
+        env=smoke_env(tmp_path),
         check=False,
     )
 
@@ -99,7 +99,7 @@ def test_bash_smoke_scripts(script_name: str, tmp_path: Path):
         [bash_path, str(Path("scripts") / script_name)],
         capture_output=True,
         text=True,
-        env=_smoke_env(tmp_path),
+        env=smoke_env(tmp_path),
         check=False,
     )
 

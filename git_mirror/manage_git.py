@@ -147,7 +147,7 @@ class GitManager:
                 if conclusion:
                     console.print(conclusion)
 
-                self._check_for_unpushed_commits(repo, repo_dir)
+                self.check_for_unpushed_commits(repo, repo_dir)
 
             except g.InvalidGitRepositoryError:
                 console.print(f"{repo_dir} is not a valid Git repository.")
@@ -155,7 +155,7 @@ class GitManager:
                 console.print(f"Error checking {repo_dir}: {e}", style="danger")
         return have_uncommitted
 
-    def _check_for_unpushed_commits(self, repo: g.Repo, repo_dir: Path) -> int:
+    def check_for_unpushed_commits(self, repo: g.Repo, repo_dir: Path) -> int:
         """
         Checks if the repository has commits that haven't been pushed to its tracked remote branches.
 
@@ -170,7 +170,7 @@ class GitManager:
             try:
                 # Compare local branch commit with remote branch commit
                 if branch.tracking_branch():
-                    ahead_count, _behind_count = repo.iter_commits(
+                    ahead_count, behind_count = repo.iter_commits(
                         f"{branch}..{branch.tracking_branch()}"
                     ), repo.iter_commits(f"{branch.tracking_branch()}..{branch}")
                     if sum(1 for _ in ahead_count) > 0:

@@ -216,7 +216,7 @@ def load_all_configs(config_path: Path | None = None) -> dict[str, ConfigData | 
 
 def run_doctor(config_path: Path | None = None, host: str | None = None) -> list[tuple[str, list[Any]]]:
     """Returns list of (host_label, checks) tuples."""
-    from git_mirror.manage_config import SetupCheck, _host_label
+    from git_mirror.manage_config import SetupCheck, host_label
 
     cm = ConfigManager(config_path or default_config_path())
     results: list[tuple[str, list[Any]]] = []
@@ -227,8 +227,8 @@ def run_doctor(config_path: Path | None = None, host: str | None = None) -> list
         if not config:
             results.append((h, [SetupCheck(h, False, "No configuration found", "Run init")]))
             continue
-        checks = cm._run_checks(config)
-        results.append((_host_label(config), checks))
+        checks = cm.run_checks(config)
+        results.append((host_label(config), checks))
     return results
 
 
@@ -262,7 +262,7 @@ def scan_local_changes(target_dir: Path) -> list[RepoStatus]:
     return statuses
 
 
-def _dashboard_row_for(repo_dir: Path) -> DashboardRow:
+def dashboard_row_for(repo_dir: Path) -> DashboardRow:
     """Compute the local state of a single repo (safe to run in a thread)."""
     from datetime import datetime, timezone
 
@@ -323,7 +323,7 @@ def repo_dashboard(
 
     pool_size = min(len(repos), 8)
     with mp_threads.Pool(pool_size) as pool:
-        rows = pool.map(_dashboard_row_for, repos)
+        rows = pool.map(dashboard_row_for, repos)
 
     if token and config:
         try:
@@ -374,8 +374,8 @@ def clone_all_repos(token: str, config: ConfigData, dry_run: bool = False) -> Ac
     base_path = config.target_dir.expanduser()
 
     mgr = manager_from_config(token, config, dry_run=dry_run, prompt_for_changes=False)
-    repos = mgr._get_user_repos()
-    for repo_data in mgr._thread_safe_repos(repos):
+    repos = mgr.get_user_repos()
+    for repo_data in mgr.thread_safe_repos(repos):
         name = repo_data["name"]
         url = repo_data["html_url"]
         dest = base_path / name

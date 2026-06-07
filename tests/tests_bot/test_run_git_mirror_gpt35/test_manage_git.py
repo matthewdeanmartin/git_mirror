@@ -164,7 +164,7 @@ def test_check_for_uncommitted_or_unpushed_changes_multiprocessing(tmp_path, con
 # Feel free to add more unit tests or tests for other methods as needed.
 # ### Unit Test
 #
-# Test _check_for_unpushed_commits method of GitManager
+# Test check_for_unpushed_commits method of GitManager
 def test_check_for_unpushed_commits(tmp_path, console_with_theme_mock):
     base_dir = Path(tmp_path)
     manager = GitManager(base_dir)
@@ -181,7 +181,7 @@ def test_check_for_unpushed_commits(tmp_path, console_with_theme_mock):
 
             git_mock.Repo.return_value = repo_instance
 
-            result = manager._check_for_unpushed_commits(repo_instance, repo_dir)
+            result = manager.check_for_unpushed_commits(repo_instance, repo_dir)
 
             assert result == 1  # Assuming at least one commit is unpushed
             console_mock().print.assert_called()

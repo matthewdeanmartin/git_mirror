@@ -61,7 +61,7 @@ def read_config(config_path: Path, key: str) -> str | None:
     return None
 
 
-def _normalize_url(raw_url: str) -> str:
+def normalize_url(raw_url: str) -> str:
     value = raw_url.strip()
     if not value:
         raise ValueError("Host URL is required.")
@@ -70,8 +70,8 @@ def _normalize_url(raw_url: str) -> str:
     return value.rstrip("/")
 
 
-def _normalize_github_url(raw_url: str) -> str:
-    value = _normalize_url(raw_url)
+def normalize_github_url(raw_url: str) -> str:
+    value = normalize_url(raw_url)
     parsed = urlparse(value)
     host = parsed.netloc.lower()
     path = parsed.path.rstrip("/")
@@ -86,7 +86,7 @@ def _normalize_github_url(raw_url: str) -> str:
     return urlunparse(parsed._replace(path=path, params="", query="", fragment=""))
 
 
-def _coerce_path(value: str | Path | None) -> Path | None:
+def coerce_path(value: str | Path | None) -> Path | None:
     if value is None or value == "":
         return None
     path = Path(value)
@@ -96,20 +96,20 @@ def _coerce_path(value: str | Path | None) -> Path | None:
         return path
 
 
-def _default_host_url(section_name: str, host_type: str | None = None) -> str:
+def default_host_url(section_name: str, host_type: str | None = None) -> str:
     provider = host_type or section_name
     if provider in ("github", "selfhosted"):
         return PUBLIC_GITHUB_API_URL
     raise ValueError(f"Unknown host type: {provider}")
 
 
-def _token_env_var(config: ConfigData) -> str:
+def token_env_var(config: ConfigData) -> str:
     if config.host_name == "selfhosted":
         return "SELFHOSTED_ACCESS_TOKEN"
     return "GITHUB_ACCESS_TOKEN"
 
 
-def _host_label(config: ConfigData) -> str:
+def host_label(config: ConfigData) -> str:
     if config.host_name == "selfhosted":
         return "self-hosted GitHub"
     return config.host_type
@@ -135,10 +135,10 @@ class SetupCheck:
     fix: str | None = None
 
 
-def _render_checks(config: ConfigData, checks: list[SetupCheck]) -> None:
+def render_checks(config: ConfigData, checks: list[SetupCheck]) -> None:
     text = Text()
     text.append(f"Config key: {config.host_name}\n", style="bold cyan")
-    text.append(f"Provider: {_host_label(config)}\n", style="bold cyan")
+    text.append(f"Provider: {host_label(config)}\n", style="bold cyan")
     text.append(f"Host URL: {config.host_url}\n", style="bold cyan")
     text.append(f"Username: {config.user_name}\n", style="bold cyan")
     if config.target_dir:
@@ -149,10 +149,10 @@ def _render_checks(config: ConfigData, checks: list[SetupCheck]) -> None:
         text.append(f"{prefix} {check.name}: {check.details}\n", style=style)
         if check.fix:
             text.append(f"      Fix: {check.fix}\n", style="yellow")
-    console.print(Panel(text, title=f"Doctor: {_host_label(config)}", border_style="blue"))
+    console.print(Panel(text, title=f"Doctor: {host_label(config)}", border_style="blue"))
 
 
-def _prompt_for_target_dir(initial_value: str) -> Path:
+def prompt_for_target_dir(initial_value: str) -> Path:
     target_dir = Path(initial_value).expanduser()
     while not target_dir.exists():
         answer = inquirer.prompt(
@@ -181,7 +181,7 @@ def ask_for_section(already_configured: list[str]) -> ConfigData | None:
     ]
     answers = inquirer.prompt(first_questions)
 
-    target_dir = _prompt_for_target_dir(answers["target_dir"])
+    target_dir = prompt_for_target_dir(answers["target_dir"])
     section_name = answers["host_name"]
     host_type = "github"
 
@@ -189,9 +189,9 @@ def ask_for_section(already_configured: list[str]) -> ConfigData | None:
         entered_url = inquirer.prompt(
             [inquirer.Text("host_url", message="Enter your self-hosted GitHub Enterprise URL")]
         )["host_url"]
-        host_url = _normalize_github_url(entered_url)
+        host_url = normalize_github_url(entered_url)
     else:
-        host_url = _default_host_url(section_name)
+        host_url = default_host_url(section_name)
 
     data = ConfigData(
         host_name=section_name,
@@ -242,7 +242,7 @@ class ConfigManager:
         if not found:
             console.print("No configuration found. Run `git_mirror init` to create a new configuration.")
 
-    def _write_config(self, config_section: ConfigData, toml_config: TOMLDocument) -> None:
+    def write_config(self, config_section: ConfigData, toml_config: TOMLDocument) -> None:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         section: dict[str, Any] = {
             "host_type": config_section.host_type,
@@ -257,7 +257,7 @@ class ConfigManager:
         with open(self.config_path, "w", encoding="utf-8") as file:
             file.write(tomlkit.dumps(toml_config))
 
-    def _run_checks(self, config: ConfigData, attempt_token_setup: bool = False) -> list[SetupCheck]:
+    def run_checks(self, config: ConfigData, attempt_token_setup: bool = False) -> list[SetupCheck]:
         checks = [
             SetupCheck("Config section", True, f"Configuration is stored under [tool.git-mirror.{config.host_name}]"),
             SetupCheck("Host type", config.host_type == "github", f"Provider is {config.host_type}"),
@@ -277,13 +277,13 @@ class ConfigManager:
 
         from git_mirror.utils import credentials
 
-        token_env_var = _token_env_var(config)
+        token_env_var_name = token_env_var(config)
         token, source = credentials.resolve_token(config.host_name)
         if not token and attempt_token_setup:
             token = pat_init.setup_github_pat(
-                env_var=token_env_var,
+                env_var=token_env_var_name,
                 api_url=config.host_url,
-                host_label=_host_label(config),
+                host_label=host_label(config),
             )
             if token:
                 token, source = credentials.resolve_token(config.host_name)
@@ -293,8 +293,8 @@ class ConfigManager:
                 SetupCheck(
                     "Access token",
                     False,
-                    f"No token found (checked OS keychain, {token_env_var}, and .env).",
-                    f"Run `git_mirror init` or set {token_env_var}, then rerun `git_mirror doctor --host {config.host_name}`.",
+                    f"No token found (checked OS keychain, {token_env_var_name}, and .env).",
+                    f"Run `git_mirror init` or set {token_env_var_name}, then rerun `git_mirror doctor --host {config.host_name}`.",
                 )
             )
             return checks
@@ -350,8 +350,8 @@ class ConfigManager:
                 overall_ok = False
                 console.print(f"No configuration found for {configured_host}.")
                 continue
-            checks = self._run_checks(config, attempt_token_setup=attempt_token_setup)
-            _render_checks(config, checks)
+            checks = self.run_checks(config, attempt_token_setup=attempt_token_setup)
+            render_checks(config, checks)
             overall_ok = overall_ok and all(check.ok for check in checks)
 
         if overall_ok:
@@ -380,9 +380,9 @@ class ConfigManager:
                 console.print(f"Creating directory {config_section.target_dir}")
                 os.makedirs(config_section.target_dir, exist_ok=True)
 
-            self._write_config(config_section, toml_config)
+            self.write_config(config_section, toml_config)
             console.print(
-                f"Saved configuration for {_host_label(config_section)} to {self.config_path.resolve()}",
+                f"Saved configuration for {host_label(config_section)} to {self.config_path.resolve()}",
                 style="bold green",
             )
             self.doctor(config_section.host_name, attempt_token_setup=True)
@@ -409,7 +409,7 @@ class ConfigManager:
             if not tool_config:
                 return None
 
-            target_dir = _coerce_path(tool_config.get("target_dir"))
+            target_dir = coerce_path(tool_config.get("target_dir"))
             if not target_dir:
                 raise ValueError(f"target_dir not found in config file at {self.config_path.resolve()}")
             if not target_dir.exists():
@@ -422,8 +422,8 @@ class ConfigManager:
                     f"GitLab support was removed in git_mirror 2.0. The [tool.git-mirror.{host}] section in "
                     f"{self.config_path.resolve()} is configured for GitLab. Remove it or reconfigure it for GitHub."
                 )
-            host_url = tool_config.get("host_url") or tool_config.get("url") or _default_host_url(host, host_type)
-            global_template_dir = _coerce_path(tool_config.get("global_template_dir"))
+            host_url = tool_config.get("host_url") or tool_config.get("url") or default_host_url(host, host_type)
+            global_template_dir = coerce_path(tool_config.get("global_template_dir"))
             return ConfigData(
                 host_name=host,
                 host_type=host_type,
@@ -458,7 +458,7 @@ class ConfigManager:
             }
         return overrides
 
-    def _write_repos_to_toml(self, repos: list[str], existing_config: dict[str, Any]) -> None:
+    def write_repos_to_toml(self, repos: list[str], existing_config: dict[str, Any]) -> None:
         """
         Writes GitHub repository names to a TOML config file with specified attributes.
 

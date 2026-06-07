@@ -30,7 +30,7 @@ def test_repo_dashboard_sorts_attention_first(tmp_path):
 
     with (
         patch("git_mirror.manage_git.find_git_repos", return_value=repos),
-        patch("git_mirror.core._dashboard_row_for", side_effect=fake_row),
+        patch("git_mirror.core.dashboard_row_for", side_effect=fake_row),
     ):
         rows = core.repo_dashboard(tmp_path)
 
@@ -44,7 +44,7 @@ def test_repo_dashboard_respects_selection(tmp_path):
 
     with (
         patch("git_mirror.manage_git.find_git_repos", return_value=repos),
-        patch("git_mirror.core._dashboard_row_for", side_effect=lambda p: DashboardRow(name=Path(p).name)),
+        patch("git_mirror.core.dashboard_row_for", side_effect=lambda p: DashboardRow(name=Path(p).name)),
     ):
         rows = core.repo_dashboard(tmp_path, selection=selection)
 
@@ -57,7 +57,7 @@ def test_repo_dashboard_merges_builds(tmp_path):
 
     with (
         patch("git_mirror.manage_git.find_git_repos", return_value=repos),
-        patch("git_mirror.core._dashboard_row_for", side_effect=lambda p: DashboardRow(name=Path(p).name)),
+        patch("git_mirror.core.dashboard_row_for", side_effect=lambda p: DashboardRow(name=Path(p).name)),
         patch(
             "git_mirror.core.get_build_statuses",
             return_value=[BuildInfo(repo_name="repo1", conclusion="failure", status_message="x")],
@@ -75,7 +75,7 @@ def test_repo_dashboard_build_fetch_failure_is_isolated(tmp_path):
 
     with (
         patch("git_mirror.manage_git.find_git_repos", return_value=repos),
-        patch("git_mirror.core._dashboard_row_for", side_effect=lambda p: DashboardRow(name=Path(p).name)),
+        patch("git_mirror.core.dashboard_row_for", side_effect=lambda p: DashboardRow(name=Path(p).name)),
         patch("git_mirror.core.get_build_statuses", side_effect=RuntimeError("network down")),
     ):
         rows = core.repo_dashboard(tmp_path, token="t", config=config)
