@@ -19,9 +19,9 @@ def generate_config(level: str = "DEBUG", logging_level: int = 1) -> dict[str, A
         dict: The logging configuration.
     """
     if logging_level == 2:
-        format = "%(log_color)s%(levelname)-8s%(reset)s %(module)s %(green)s%(message)s"
+        log_format = "%(log_color)s%(levelname)-8s%(reset)s %(module)s %(green)s%(message)s"
     else:
-        format = "%(log_color)s%(levelname)-8s%(reset)s %(green)s%(message)s"
+        log_format = "%(log_color)s%(levelname)-8s%(reset)s %(green)s%(message)s"
     config: dict[str, Any] = {
         "version": 1,
         "disable_existing_loggers": True,
@@ -29,7 +29,7 @@ def generate_config(level: str = "DEBUG", logging_level: int = 1) -> dict[str, A
             "standard": {"format": "[%(levelname)s] %(name)s: %(message)s"},
             "colored": {
                 "()": "colorlog.ColoredFormatter",
-                "format": format,
+                "format": log_format,
             },
         },
         "handlers": {

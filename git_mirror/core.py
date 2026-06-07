@@ -256,7 +256,7 @@ def scan_local_changes(target_dir: Path) -> list[RepoStatus]:
                     pass
         except g.InvalidGitRepositoryError:
             status.error = "Invalid git repository"
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             status.error = str(e)
         statuses.append(status)
     return statuses
@@ -288,11 +288,11 @@ def _dashboard_row_for(repo_dir: Path) -> DashboardRow:
             last = repo.head.commit.committed_datetime
             now = datetime.now(timezone.utc)
             row.last_commit_age_days = max(0, (now - last).days)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             row.last_commit_age_days = None
     except g.InvalidGitRepositoryError:
         row.error = "Invalid git repository"
-    except Exception as e:  # pragma: no cover - defensive per-repo isolation
+    except Exception as e:  # pragma: no cover - defensive per-repo isolation # pylint: disable=broad-exception-caught
         row.error = str(e)
     return row
 
@@ -331,7 +331,7 @@ def repo_dashboard(
             for row in rows:
                 if row.name in builds:
                     row.build = builds[row.name]
-        except Exception as e:  # pragma: no cover - network optional
+        except Exception as e:  # pragma: no cover - network optional # pylint: disable=broad-exception-caught
             LOGGER.debug(f"Could not fetch build statuses for dashboard: {e}")
 
     rows.sort(key=lambda r: (not r.needs_attention, r.name.lower()))
@@ -413,7 +413,7 @@ def pull_all_repos(target_dir: Path, dry_run: bool = False) -> ActionResult:
                     result.messages.append(f"Pulled: {repo_dir.name}")
             else:
                 result.messages.append(f"No remote: {repo_dir.name}")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             result.errors.append(f"Failed to pull {repo_dir.name}: {e}")
     if result.errors:
         result.success = False

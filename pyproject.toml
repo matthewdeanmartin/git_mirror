@@ -167,22 +167,7 @@ use_parentheses = true
 
 [tool.ruff]
 line-length = 320
-
-# Enable Pyflakes `E` and `F` codes by default.
-select = ["E", "F",
-    "D", # docs
-    "UP", # pyupgrade
-    "B", # bugbear
-]
-ignore = [
-    "D301", # messes with doctests
-    "E722",
-    # only track structural problems with docstrings, not whitespace, nor missing
-    "D200", "D212", "D415", "D411", "D205", "D102", "D103", "D100", "D107", "D101", "D104", "D105",
-    "UP007", "UP038", # Not sure if | is well supported in lowever versions of python
-    "UP035"
-]
-
+target-version = "py39"
 # Exclude a variety of commonly ignored directories.
 exclude = [
     "dead_code",
@@ -206,13 +191,27 @@ exclude = [
     "node_modules",
     "venv",
 ]
-per-file-ignores = { }
 
+[tool.ruff.lint]
+# Enable Pyflakes `E` and `F` codes by default.
+select = ["E", "F",
+    "D", # docs
+    "UP", # pyupgrade
+    "B", # bugbear
+]
+ignore = [
+    "D301", # messes with doctests
+    "E722",
+    # only track structural problems with docstrings, not whitespace, nor missing
+    "D200", "D212", "D415", "D411", "D205", "D102", "D103", "D100", "D107", "D101", "D104", "D105",
+    "UP007", # Not sure if | is well supported in lowever versions of python
+    "UP035"
+]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-# Assume Python 3.10.
-target-version = "py311"
+[tool.ruff.lint.per-file-ignores]
+# Exclude a variety of commonly ignored directories.
 
 
 [tool.ruff.lint.pydocstyle]

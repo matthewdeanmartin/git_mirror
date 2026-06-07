@@ -130,6 +130,6 @@ def ask_for_host(config_manager: ConfigManager) -> str:
         console.print(f"Selected for configuration: {config_answers['services_to_configure']}", style="bold green")
         # Here you would call your configuration function(s) for the selected services
         return ""
-    else:
-        console.print(f"Using {answers['service']}", style="bold green")
-        return answers["service"]
+
+    console.print(f"Using {answers['service']}", style="bold green")
+    return answers["service"]

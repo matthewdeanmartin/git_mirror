@@ -38,7 +38,7 @@ def load_env() -> None:
 
         load_dotenv()  # Load environment variables from .env file in cwd() if present
         LOADED = True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         console.print(f"Error loading .env file: {e}", style="danger")
         console.print("Continuing without .env file.", style="danger")
 

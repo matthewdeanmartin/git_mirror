@@ -151,7 +151,7 @@ class GitManager:
 
             except g.InvalidGitRepositoryError:
                 console.print(f"{repo_dir} is not a valid Git repository.")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 console.print(f"Error checking {repo_dir}: {e}", style="danger")
         return have_uncommitted
 

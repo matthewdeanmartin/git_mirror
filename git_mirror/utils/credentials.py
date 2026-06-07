@@ -59,7 +59,7 @@ def _keyring():
         import keyring
 
         return keyring
-    except Exception as exc:  # pragma: no cover - import guard
+    except Exception as exc:  # pragma: no cover - import guard # pylint: disable=broad-exception-caught
         LOGGER.debug(f"keyring unavailable: {exc}")
         return None
 
@@ -70,7 +70,7 @@ def _keyring_get(host_name: str) -> str | None:
         return None
     try:
         return kr.get_password(SERVICE_NAME, host_name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         LOGGER.debug(f"keyring read failed for {host_name}: {exc}")
         return None
 
@@ -89,7 +89,7 @@ def _dotenv_get(env_var: str) -> str | None:
         if found:
             values.update(dotenv_values(found))
         return values.get(env_var)
-    except Exception as exc:  # pragma: no cover - defensive
+    except Exception as exc:  # pragma: no cover - defensive # pylint: disable=broad-exception-caught
         LOGGER.debug(f"dotenv read failed for {env_var}: {exc}")
         return None
 
@@ -141,7 +141,7 @@ def set_token(host_name: str, token: str) -> bool:
         # Make it visible to the current process immediately.
         os.environ[env_var_for_host(host_name)] = token
         return True
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         LOGGER.debug(f"keyring write failed for {host_name}: {exc}")
         console.print(f"Could not save to the OS keychain: {exc}", style="danger")
         return False
@@ -184,5 +184,6 @@ def keyring_available() -> bool:
         backend = kr.get_keyring()
         # The null backend (used in CI/tests) is not real storage.
         return type(backend).__name__ != "Keyring" or "null" not in type(backend).__module__
-    except Exception:  # pragma: no cover - defensive
+    except Exception:  # pragma: no cover - defensive # pylint: disable=broad-exception-caught
         return False
+

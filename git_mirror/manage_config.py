@@ -305,14 +305,8 @@ class ConfigManager:
             if answer.strip().lower().startswith("y") and credentials.migrate_dotenv_to_keychain(config.host_name):
                 token, source = credentials.resolve_token(config.host_name)
                 warn_plaintext = source == credentials.TokenSource.DOTENV
-        checks.append(
-            SetupCheck(
-                "Access token",
-                True,
-                f"Token found in {source.value}.",
-                "Run `git_mirror init` to move it into the OS keychain." if warn_plaintext else None,
-            )
-        )
+        if not token:
+            return checks
         authenticated_user = pat_init.get_authenticated_user(token, api_url=config.host_url)
         valid = authenticated_user is not None
         username = authenticated_user.get("login", "") if authenticated_user else ""

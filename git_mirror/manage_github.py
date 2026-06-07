@@ -251,7 +251,7 @@ class GithubRepoManager(SourceHost):
             else:
                 with lock:
                     console.print(f"Would have pulled latest changes in {repo_path}")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             with lock:
                 console.print(f"Failed to pull repo at {repo_path}: {e}", style="danger")
 
@@ -343,8 +343,8 @@ class GithubRepoManager(SourceHost):
                 console.print(status_message)  # Default, no color
         return messages
 
-    @classmethod
-    def _get_latest_commit_date(self, repo: g.Repo) -> datetime:
+    @staticmethod
+    def _get_latest_commit_date(repo: g.Repo) -> datetime:
         """
         Gets the date of the latest commit in the repository.
 

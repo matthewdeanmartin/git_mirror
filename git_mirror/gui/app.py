@@ -61,7 +61,7 @@ class _BackgroundRunner:
                 result = func(*args)
                 if on_success:
                     self._root.after(0, on_success, result)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 if on_error:
                     self._root.after(0, on_error, exc)
 
@@ -924,7 +924,7 @@ class PruneAllPanel(_BasePanel):
             try:
                 mgr.prune_all()
                 messages.append("Prune complete.")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 errors.append(str(e))
         else:
             messages.append("Prune is currently GitHub-only in the GUI.")
@@ -990,15 +990,22 @@ class ConfigPanel(_BasePanel):
             self._output.insert(tk.END, "  Click 'Init New Host' to set up a host.\n", "dim")
         self._output.configure(state=tk.DISABLED)
         self._status.set("Config loaded")
-
     def _open_config(self):
-        import subprocess
+        import os
+
         from git_mirror.manage_config import default_config_path
+
         path = default_config_path()
         if path.exists():
-            subprocess.Popen(["notepad", str(path)])
+            try:
+                os.startfile(path)  # nosec
+            except AttributeError:
+                # Not on Windows, though this GUI is currently Windows-focused
+                import subprocess  # nosec
+
+                subprocess.Popen(["notepad", str(path)])  # nosec
         else:
-            messagebox.showinfo("Config", f"Config file not found at {path}")
+            messagebox.showinfo("Config Not Found", f"No config file found at {path}")
 
     def _init_host(self):
         messagebox.showinfo(
@@ -1006,9 +1013,8 @@ class ConfigPanel(_BasePanel):
             "To initialize a new host interactively, run from the command line:\n\n"
             "  git_mirror init\n\n"
             "The init wizard requires terminal input and is not available in the GUI.\n"
-            "After init, restart the GUI to see the new configuration.",
+            "After initializing, click 'Refresh Dashboard' to see the new host.",
         )
-
     def _on_error(self, exc: Exception):
         _output_set(self._output, f"Error: {exc}", "error")
         self._status.set(f"Error: {exc}")
@@ -1248,7 +1254,7 @@ class GitMirrorApp:
             self._current_panel.destroy()
 
         # Update sidebar highlight
-        for sid, btn in self._sidebar_buttons.items():
+        for _sid, btn in self._sidebar_buttons.items():
             btn.configure(bg=_CLR_SIDEBAR)
         if panel_id in self._sidebar_buttons:
             self._sidebar_buttons[panel_id].configure(bg=_CLR_BTN)

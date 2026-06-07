@@ -1,0 +1,25 @@
+    def _open_config(self):
+        import os
+
+        from git_mirror.manage_config import default_config_path
+
+        path = default_config_path()
+        if path.exists():
+            try:
+                os.startfile(path)
+            except AttributeError:
+                # Not on Windows, though this GUI is currently Windows-focused
+                import subprocess
+
+                subprocess.Popen(["notepad", str(path)])
+        else:
+            messagebox.showinfo("Config Not Found", f"No config file found at {path}")
+
+    def _init_host(self):
+        messagebox.showinfo(
+            "Init",
+            "To initialize a new host interactively, run from the command line:\n\n"
+            "  git_mirror init\n\n"
+            "The init wizard requires terminal input and is not available in the GUI.\n"
+            "After initializing, click 'Refresh Dashboard' to see the new host.",
+        )
