@@ -16,6 +16,7 @@ Version 2.x is GitHub-focused. Public GitHub and self-hosted GitHub Enterprise a
 - Updates local branches from the main branch.
 - Prunes branches that no longer exist remotely.
 - Syncs a per-repository configuration table so selected repositories can be tagged or ignored.
+- Provides a terminal menu and Tkinter GUI for the same core workflows.
 
 ## What it does not do
 
@@ -32,5 +33,8 @@ Install the package, run the guided setup, and then ask the doctor command what 
 pipx install git-mirror
 git_mirror init
 git_mirror doctor
+git_mirror sync-config --host github
 git_mirror status --host github
 ```
+
+Use `--dry-run` before mutating commands such as `clone-all`, `pull-all`, `update-from-main`, and `prune-all` when you want to preview the work.

@@ -6,7 +6,7 @@ Run the guided setup first:
 git_mirror init
 ```
 
-By default, configuration is written to `~/git_mirror.toml`. Use `--config-path` to point at a different file.
+By default, configuration is written to `~/git_mirror.toml`. Use `--config-path` to point at a different file. Repository commands can also accept `--user-name`, `--target-dir`, `--include-private`, and `--include-forks` on the command line, but the config file is the normal workflow.
 
 ## GitHub
 
@@ -39,10 +39,10 @@ include_forks = false
 `git_mirror init` stores personal access tokens in the operating system keychain when possible. Tokens are resolved in this order:
 
 1. Environment variables: `GITHUB_ACCESS_TOKEN` or `SELFHOSTED_ACCESS_TOKEN`.
-2. The OS keychain.
-3. A legacy plaintext `.env` file.
+1. The OS keychain.
+1. A legacy plaintext `.env` file.
 
-Run `git_mirror doctor` after setup to validate the configured target directory, token, and account.
+Run `git_mirror doctor` after setup to validate the configured target directory, token, and account. `status` can run from local Git data without a token, but token-backed commands and GitHub Actions enrichment need credentials.
 
 ## Repository selection
 
@@ -68,3 +68,5 @@ git_mirror status --host github --tag work
 git_mirror pull-all --host github --exclude old-demo
 git_mirror status --host github --include-ignored
 ```
+
+`--only` overrides config ignores for the named repositories. `--tag` selects repositories carrying any listed tag. `--exclude` skips repositories for that invocation.

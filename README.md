@@ -2,9 +2,9 @@
 
 Batch Git maintenance across a folder of local GitHub repositories.
 
-`git-mirror` is for developers who keep many repositories checked out and want a single command for the boring, repetitive work: clone everything, pull everything, scan local changes, check build status, and clean up branches.
+`git-mirror` is for developers who keep many repositories checked out and want one command for routine maintenance: clone repositories for an account, pull local checkouts, inspect local changes, check GitHub Actions status, update branches from the main branch, and prune branches that no longer exist on GitHub.
 
-Despite the name, it is not a service for mirroring repositories between remotes. It does not keep GitHub, GitLab, or another server in sync. Version 2.x supports public GitHub and self-hosted GitHub Enterprise only; GitLab support was removed.
+Despite the name, it is not a remote-to-remote mirroring service. It does not keep GitHub, GitLab, or another server in sync. Version 2.x supports public GitHub and self-hosted GitHub Enterprise only; GitLab support was removed from the active command surface.
 
 ## Install
 
@@ -14,7 +14,7 @@ git_mirror init
 git_mirror doctor
 ```
 
-The setup wizard creates or validates your configuration and helps store a GitHub token in the OS keychain when possible.
+The setup wizard creates or validates your configuration and helps store a GitHub token in the OS keychain when possible. `doctor` reports missing config values, missing target directories, and token problems before you run repository commands.
 
 ## Commands
 
@@ -39,7 +39,20 @@ git_mirror sync-config --host github
 git_mirror not-repo --host github
 ```
 
-Use `--dry-run` to preview supported mutating commands and `--yes` to skip confirmation prompts in automation.
+Use `--dry-run` to preview supported mutating commands and `--yes` to skip confirmation prompts in automation. Use `git_mirror menu` for an interactive terminal menu or `git_mirror gui` / `git_mirror_gui` for the Tkinter desktop interface.
+
+## Typical Workflow
+
+```bash
+git_mirror init
+git_mirror doctor
+git_mirror sync-config --host github
+git_mirror status --host github
+git_mirror pull-all --host github --dry-run
+git_mirror pull-all --host github
+```
+
+After `sync-config`, edit `~/git_mirror.toml` if you want to tag important repositories or ignore old ones. Selection flags such as `--only`, `--tag`, `--exclude`, and `--include-ignored` work across repository commands.
 
 ## Configuration
 
@@ -68,8 +81,8 @@ include_forks = false
 Tokens are resolved in this order:
 
 1. Environment variables: `GITHUB_ACCESS_TOKEN` or `SELFHOSTED_ACCESS_TOKEN`.
-2. The OS keychain.
-3. A legacy plaintext `.env` file.
+1. The OS keychain.
+1. A legacy plaintext `.env` file.
 
 ## Repository Selection
 
@@ -102,9 +115,10 @@ git_mirror status --host github --include-ignored
 - It does not run arbitrary shell scripts across repositories.
 - It does not currently support GitLab.
 - It does not replace `gh`; it covers a narrower multi-repository workflow.
+- It does not hide destructive actions: mutating commands support `--dry-run`, and slow or risky work prompts unless `--yes` is passed.
 
 ## Documentation
 
 Full documentation is published at [git-mirror.readthedocs.io](https://git-mirror.readthedocs.io/).
 
-The changelog is in [CHANGELOG.md](CHANGELOG.md).
+The Read the Docs build is configured by the root `.readthedocs.yaml` file and the MkDocs site in `docs/`. The changelog is in [CHANGELOG.md](CHANGELOG.md).
