@@ -46,7 +46,18 @@ gh_mirror menu
 
 The setup wizard will help create or validate the right token, then tell you what is still broken if anything fails.
 
+### Credential storage
+
+As of 2.0, `git_mirror init` stores your PAT in the **OS keychain** by default
+(via [keyring](https://pypi.org/project/keyring/)). Tokens are resolved in this
+order, first hit wins:
+
+1. An explicit environment variable (`GITHUB_ACCESS_TOKEN` / `SELFHOSTED_ACCESS_TOKEN`) — handy for CI.
+2. The OS keychain.
+3. A plaintext `.env` file (legacy; `git_mirror doctor` will offer to migrate it).
+
 ```bash
+# Still supported, e.g. for CI:
 GITHUB_ACCESS_TOKEN=PAT
 SELFHOSTED_ACCESS_TOKEN=PAT
 ```
@@ -65,7 +76,22 @@ Github doesn't summarize failing builds across all repos. Run `git_mirror build-
 
 Your local folder has a bunch of stray folders that aren't even repos. Run `git_mirror not-repo`.
 
-You care about some repos more than others, use config to focus on a subset of repos. (PENDING FEATURE)
+You care about some repos more than others. Focus on a subset with selection flags or config:
+
+```bash
+git_mirror pull-all --only repo-a,repo-b      # act on just these
+git_mirror pull-all --tag work                 # act on repos tagged "work" in config
+git_mirror pull-all --exclude scratch          # skip these
+git_mirror pull-all --include-ignored          # also act on repos marked ignore=true
+```
+
+Tags and ignores live in the per-repo config table populated by `git_mirror sync-config`:
+
+```toml
+[tool.git-mirror.github.repos]
+my-lib = { tags = ["work"] }
+old-experiment = { ignore = true }
+```
 
 ```text
 usage: git_mirror [-h] [-V] [--menu MENU]

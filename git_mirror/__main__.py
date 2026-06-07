@@ -94,10 +94,12 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
     if args.host == "selfhosted" and not config_data:
         console.print(f"No configuration found for {args.host}. Run `git_mirror init` first.")
         return "", 1
+    from git_mirror.utils import credentials
+
     if args.host == "selfhosted":
         if config_data is None:
             return "", 1
-        token = os.getenv("SELFHOSTED_ACCESS_TOKEN")
+        token = credentials.get_token("selfhosted")
         if not token:
             import git_mirror.pat_init as pat_init
 
@@ -110,7 +112,7 @@ def validate_host_token(args: argparse.Namespace) -> tuple[str | None, int]:
             if not token:
                 return "", 1
     elif args.host == "github":
-        token = os.getenv("GITHUB_ACCESS_TOKEN")
+        token = credentials.get_token("github")
         if not token:
             import git_mirror.pat_init as pat_init
 
@@ -192,6 +194,9 @@ def handle_repos(args: argparse.Namespace) -> None:
     domain, return_value = validate_parse_args(args)
     if return_value != 0:
         sys.exit(return_value)
+    def _csv(value: str | None) -> list[str]:
+        return [item.strip() for item in value.split(",") if item.strip()] if value else []
+
     router.route_repos(
         command=args.command,
         user_name=args.user_name,
@@ -205,6 +210,10 @@ def handle_repos(args: argparse.Namespace) -> None:
         logging_level=args.verbose,
         dry_run=args.dry_run,
         prompt_for_changes=not args.yes,
+        only=_csv(getattr(args, "only", None)),
+        tags=_csv(getattr(args, "tag", None)),
+        exclude=_csv(getattr(args, "exclude", None)),
+        include_ignored=getattr(args, "include_ignored", False),
     )
 
 
@@ -364,11 +373,15 @@ def main(
         _install_requests_cache()
         LOGGER.debug(f"Cache store at {_get_backend().db_path}")
 
-    if os.environ.get("GITHUB_ACCESS_TOKEN") and "PYTEST_CURRENT_TEST" not in os.environ:
-        from git_mirror.utils.bug_report import BugReporter
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        from git_mirror.utils import credentials
 
-        reporter = BugReporter(os.environ.get("GITHUB_ACCESS_TOKEN", ""), "matthewdeanmartin/git_mirror")
-        reporter.register_global_handler()
+        bug_token = credentials.get_token("github")
+        if bug_token:
+            from git_mirror.utils.bug_report import BugReporter
+
+            reporter = BugReporter(bug_token, "matthewdeanmartin/git_mirror")
+            reporter.register_global_handler()
 
     if hasattr(args, "func"):
         args.func(args)
@@ -429,6 +442,17 @@ def host_specific_args(parser: argparse.ArgumentParser, use_github: bool, use_se
     parser.add_argument("--target-dir", type=Path, help="The directory where repositories will be cloned or pulled.")
     parser.add_argument("--include-forks", action="store_true", help="Include forked repositories.")
     parser.add_argument("--include-private", action="store_true", help="Include private repositories.")
+    parser.add_argument(
+        "--only",
+        help="Comma-separated repo names to act on exclusively (overrides config ignores).",
+    )
+    parser.add_argument("--tag", help="Comma-separated tags; act only on repos carrying any of these tags.")
+    parser.add_argument("--exclude", help="Comma-separated repo names to skip.")
+    parser.add_argument(
+        "--include-ignored",
+        action="store_true",
+        help="Include repos marked ignore = true in config.",
+    )
 
 
 if __name__ == "__main__":

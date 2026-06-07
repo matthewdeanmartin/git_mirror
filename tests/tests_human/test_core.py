@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from git_mirror.services import (
+from git_mirror.core import (
     load_all_configs,
     run_doctor,
     scan_local_changes,
@@ -14,7 +14,7 @@ from git_mirror.services import (
 from git_mirror.manage_config import ConfigData, SetupCheck
 
 def test_load_all_configs():
-    with patch("git_mirror.services.ConfigManager") as MockConfigManager:
+    with patch("git_mirror.core.ConfigManager") as MockConfigManager:
         mock_cm = MockConfigManager.return_value
         mock_cm.load_config_objects.return_value = {"github": None}
         
@@ -23,7 +23,7 @@ def test_load_all_configs():
         MockConfigManager.assert_called_once()
 
 def test_run_doctor():
-    with patch("git_mirror.services.ConfigManager") as MockConfigManager:
+    with patch("git_mirror.core.ConfigManager") as MockConfigManager:
         mock_cm = MockConfigManager.return_value
         mock_config = MagicMock()
         mock_config.host_name = "github"
@@ -39,7 +39,7 @@ def test_run_doctor():
         assert results[0][1][0].ok is True
 
 def test_run_doctor_no_config():
-    with patch("git_mirror.services.ConfigManager") as MockConfigManager:
+    with patch("git_mirror.core.ConfigManager") as MockConfigManager:
         mock_cm = MockConfigManager.return_value
         mock_cm.load_config_objects.return_value = {"github": None}
         mock_cm.load_config.return_value = None
@@ -52,7 +52,7 @@ def test_run_doctor_no_config():
         assert len(results) == 0
 
 def test_run_doctor_no_config_with_host():
-    with patch("git_mirror.services.ConfigManager") as MockConfigManager:
+    with patch("git_mirror.core.ConfigManager") as MockConfigManager:
         mock_cm = MockConfigManager.return_value
         mock_cm.load_config_objects.return_value = {"github": None}
         mock_cm.load_config.return_value = None
@@ -64,7 +64,7 @@ def test_run_doctor_no_config_with_host():
 
 def test_scan_local_changes():
     with patch("git_mirror.manage_git.find_git_repos") as mock_find_repos, \
-         patch("git_mirror.services.g.Repo") as MockRepo:
+         patch("git_mirror.core.g.Repo") as MockRepo:
         
         repo_path = Path("/mock/repo")
         mock_find_repos.return_value = [repo_path]
@@ -87,7 +87,7 @@ def test_scan_local_changes():
 
 def test_scan_local_changes_error():
     with patch("git_mirror.manage_git.find_git_repos") as mock_find_repos, \
-         patch("git_mirror.services.g.Repo") as MockRepo:
+         patch("git_mirror.core.g.Repo") as MockRepo:
         
         repo_path = Path("/mock/repo")
         mock_find_repos.return_value = [repo_path]
@@ -132,8 +132,8 @@ def test_clone_all_repos_github():
         target_dir=Path("/mock/target")
     )
     with patch("git_mirror.manage_github.GithubRepoManager") as MockMgr, \
-         patch("git_mirror.services.g.Repo") as MockRepo, \
-         patch("git_mirror.services.Path.exists") as mock_exists:
+         patch("git_mirror.core.g.Repo") as MockRepo, \
+         patch("git_mirror.core.Path.exists") as mock_exists:
         
         mock_exists.return_value = False
         mock_mgr = MockMgr.return_value
@@ -147,7 +147,7 @@ def test_clone_all_repos_github():
 
 def test_pull_all_repos():
     with patch("git_mirror.manage_git.find_git_repos") as mock_find_repos, \
-         patch("git_mirror.services.g.Repo") as MockRepo:
+         patch("git_mirror.core.g.Repo") as MockRepo:
         
         mock_find_repos.return_value = [Path("/mock/repo")]
         mock_repo = MockRepo.return_value
@@ -161,8 +161,8 @@ def test_pull_all_repos():
         mock_remote.pull.assert_called_once()
 
 def test_find_non_repos():
-    with patch("git_mirror.services.Path.iterdir") as mock_iterdir, \
-         patch("git_mirror.services.Path.exists") as mock_exists:
+    with patch("git_mirror.core.Path.iterdir") as mock_iterdir, \
+         patch("git_mirror.core.Path.exists") as mock_exists:
         
         mock_exists.return_value = True
         mock_dir = MagicMock(spec=Path)
@@ -212,9 +212,7 @@ def test_get_build_statuses_github():
         assert builds[0].conclusion == "success"
 
 def test_get_token_for_host():
-    with patch("git_mirror.services.os.getenv") as mock_getenv:
-        mock_getenv.return_value = "secret-token"
-        
+    with patch("git_mirror.utils.credentials.get_token", return_value="secret-token"):
         config_gh = ConfigData(
             host_name="github",
             host_type="github",

@@ -48,6 +48,7 @@ class GithubRepoManager(SourceHost):
         host_domain: str = "https://api.github.com",
         dry_run: bool = False,
         prompt_for_changes: bool = True,
+        selection: Any = None,
     ):
         """
         Initializes the RepoManager with a GitHub token and a base directory for cloning repositories.
@@ -61,6 +62,7 @@ class GithubRepoManager(SourceHost):
             host_domain (str): The domain of the GitHub instance.
             dry_run (bool): Whether to perform a dry run.
             prompt_for_changes (bool): Whether to prompt for changes.
+            selection: Optional RepoSelection limiting which repos are acted on.
         """
         # self.client() = gh.Github(token)
         self.token = token
@@ -73,6 +75,7 @@ class GithubRepoManager(SourceHost):
         self.host_domain = host_domain
         self.dry_run = dry_run
         self.prompt_for_changes = prompt_for_changes
+        self.selection = selection
         LOGGER.debug(
             f"GithubRepoManager initialized with user_login: {user_login}, include_private: {include_private}, include_forks: {include_forks}"
         )
@@ -118,10 +121,22 @@ class GithubRepoManager(SourceHost):
                 ):
                     repos.append(repo)
 
+            # Apply config/CLI repo selection unless we are scanning for stray
+            # local folders (ignore_users_filters), where every remote name is
+            # needed to decide what counts as "not a repo".
+            if self.selection is not None and not ignore_users_filters:
+                repos = [r for r in repos if self.selection.is_selected(r.name)]
+
             return repos
         except gh.GithubException as e:
             console.print(f"Failed to fetch repositories: {e}", style="danger")
             return []
+
+    def _select_dirs(self, directories: list[Path]) -> list[Path]:
+        """Filter local repo directories through the active selection (by name)."""
+        if self.selection is None:
+            return directories
+        return [d for d in directories if self.selection.is_selected(Path(d).name)]
 
     @log_duration
     def clone_all(self, single_threaded: bool = False):
@@ -188,7 +203,7 @@ class GithubRepoManager(SourceHost):
     @log_duration
     def pull_all(self, single_threaded: bool = False):
         console = console_with_theme()
-        directories = mg.find_git_repos(self.base_dir)
+        directories = self._select_dirs(mg.find_git_repos(self.base_dir))
         console.print(f"Pulling {len(directories)} repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
@@ -414,7 +429,7 @@ class GithubRepoManager(SourceHost):
             prefer_rebase (bool): Whether to prefer rebasing instead of merging.
         """
         console = console_with_theme()
-        directories = mg.find_git_repos(self.base_dir)
+        directories = self._select_dirs(mg.find_git_repos(self.base_dir))
         console.print(f"Merging/rebasing {len(directories)} main to local repositories.")
         if single_threaded or len(directories) < 4:
             for repo_dir in directories:
@@ -487,7 +502,7 @@ class GithubRepoManager(SourceHost):
         Prunes all local branches that have been deleted on GitHub.
         """
         console = console_with_theme()
-        repos = mg.find_git_repos(self.base_dir)
+        repos = self._select_dirs(mg.find_git_repos(self.base_dir))
         console.print(f"Ready to Pruning {len(repos)} repositories of branches no longer on remote.")
         if self.prompt_for_changes:
             answer = inquirer.prompt(

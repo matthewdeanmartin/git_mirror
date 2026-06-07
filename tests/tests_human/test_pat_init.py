@@ -81,9 +81,9 @@ def test_save_pat_invalid():
 @patch("git_mirror.pat_init.find_dotenv")
 @patch("git_mirror.pat_init.load_dotenv")
 @patch("git_mirror.pat_init.check_pat_validity")
-@patch("os.getenv")
-def test_setup_github_pat_existing_valid(mock_getenv, mock_check_valid, mock_load, mock_find, mock_env_info):
-    mock_getenv.return_value = "existing_token"
+@patch("git_mirror.utils.credentials.get_token")
+def test_setup_github_pat_existing_valid(mock_get_token, mock_check_valid, mock_load, mock_find, mock_env_info):
+    mock_get_token.return_value = "existing_token"
     mock_check_valid.return_value = True
 
     result = setup_github_pat()
@@ -95,10 +95,10 @@ def test_setup_github_pat_existing_valid(mock_getenv, mock_check_valid, mock_loa
 @patch("git_mirror.pat_init.find_dotenv")
 @patch("git_mirror.pat_init.load_dotenv")
 @patch("git_mirror.pat_init.check_pat_validity")
-@patch("os.getenv")
+@patch("git_mirror.utils.credentials.get_token")
 @patch("getpass.getpass")
-def test_setup_github_pat_new_invalid(mock_getpass, mock_getenv, mock_check_valid, mock_load, mock_find, mock_env_info):
-    mock_getenv.return_value = None
+def test_setup_github_pat_new_invalid(mock_getpass, mock_get_token, mock_check_valid, mock_load, mock_find, mock_env_info):
+    mock_get_token.return_value = None
     mock_check_valid.return_value = False
     mock_getpass.return_value = "invalid_token"
 
@@ -109,12 +109,12 @@ def test_setup_github_pat_new_invalid(mock_getpass, mock_getenv, mock_check_vali
 @patch("git_mirror.pat_init.find_dotenv")
 @patch("git_mirror.pat_init.load_dotenv")
 @patch("git_mirror.pat_init.check_pat_validity")
-@patch("os.getenv")
+@patch("git_mirror.utils.credentials.get_token")
 @patch("getpass.getpass")
 @patch("builtins.input")
 @patch("git_mirror.pat_init._save_pat")
-def test_setup_github_pat_save_fails(mock_save, mock_input, mock_getpass, mock_getenv, mock_check_valid, mock_load, mock_find, mock_env_info):
-    mock_getenv.return_value = None
+def test_setup_github_pat_save_fails(mock_save, mock_input, mock_getpass, mock_get_token, mock_check_valid, mock_load, mock_find, mock_env_info):
+    mock_get_token.return_value = None
     mock_check_valid.side_effect = [False, True]
     mock_getpass.return_value = "new_token"
     mock_input.return_value = "g"

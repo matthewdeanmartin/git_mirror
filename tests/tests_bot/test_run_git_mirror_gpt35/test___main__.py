@@ -43,6 +43,10 @@ def test_handle_repos_routes_to_repo_handler():
         logging_level=1,
         dry_run=False,
         prompt_for_changes=True,
+        only=[],
+        tags=[],
+        exclude=[],
+        include_ignored=False,
     )
 
 

@@ -95,6 +95,10 @@ def route_repos(
     dry_run: bool = False,
     template_dir: Path | None = None,
     prompt_for_changes: bool = True,
+    only: list[str] | None = None,
+    tags: list[str] | None = None,
+    exclude: list[str] | None = None,
+    include_ignored: bool = False,
 ):
     """
     Main function to handle clone-all or pull-all operations, with an option to include forks.
@@ -113,18 +117,34 @@ def route_repos(
         dry_run (bool): Flag to determine whether the operation should be a dry run.
         template_dir (Path): The directory containing the templates to sync.
         prompt_for_changes (bool): Flag to determine whether to prompt for changes.
+        only (list[str]): Act only on these repo names.
+        tags (list[str]): Act only on repos carrying any of these tags.
+        exclude (list[str]): Skip these repo names.
+        include_ignored (bool): Include repos marked ignore = true in config.
     """
+    from git_mirror import core
     from git_mirror import manage_config as mc
 
     console = _get_console()
     if config_path is None:
         config_path = mc.default_config_path()
 
+    selection = core.build_selection(
+        host,
+        config_path=config_path,
+        only=only,
+        tags=tags,
+        exclude=exclude,
+        include_ignored=include_ignored,
+    )
+
     if command == "local-changes":
         from git_mirror import manage_git as mg
 
         base_path = Path(target_dir).expanduser()
-        git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes)
+        git_manager = mg.GitManager(
+            base_path, dry_run, prompt_for_changes=prompt_for_changes, selection=selection
+        )
         git_manager.check_for_uncommitted_or_unpushed_changes()
     elif host in ("github", "selfhosted"):
         resolved_domain = domain
@@ -136,18 +156,16 @@ def route_repos(
                 return
             resolved_domain = resolved_domain or config_data.host_url
 
-        from git_mirror import manage_github as mgh
-
-        base_path = Path(target_dir).expanduser()
-        manager: Any = mgh.GithubRepoManager(
+        manager: Any = core.build_manager(
             token,
-            base_path,
+            target_dir,
             user_name,
             include_private=include_private,
             include_forks=include_forks,
-            host_domain=resolved_domain or "https://api.github.com",
+            host_domain=resolved_domain,
             dry_run=dry_run,
             prompt_for_changes=prompt_for_changes,
+            selection=selection,
         )
 
         if command == "clone-all":

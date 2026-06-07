@@ -285,10 +285,10 @@ Exit criteria: lint + mypy clean; grep gate passes; docs match reality;
 | 0 | Guardrails | — | Human | ✅ done (baseline 186 passed) |
 | 1 | Drop GitLab | 0 | Human | ✅ done |
 | 2 | utils/ renamespace | 1 | Human (mechanical-ish) | ✅ done |
-| 3 | keyring credentials | 2 | Human | ⬜ next |
-| 4 | Merge router+services into core | 2 | Human | ⬜ |
-| 5 | Repo selection/filtering | 4 | Human | ⬜ |
-| 6 | Status dashboard | 4,5 | Human | ⬜ |
+| 3 | keyring credentials | 2 | Human | ✅ done |
+| 4 | Merge router+services into core | 2 | Human | ✅ done |
+| 5 | Repo selection/filtering | 4 | Human | ✅ done |
+| 6 | Status dashboard | 4,5 | Human | ⬜ next |
 | 7 | Harden mutations | 4,5 | Human | ⬜ |
 | 8 | Lint / mypy / dead code / docs / version | all | **Bot, LAST** | ⬜ |
 
@@ -300,7 +300,22 @@ Exit criteria: lint + mypy clean; grep gate passes; docs match reality;
   GitHub-Enterprise-only and old GitLab configs raise a clear migration error.
   Nine generic modules moved to `git_mirror/utils/*` with all imports updated.
   Suite: **159 passed, 6 skipped, 0 failed** (drop from 186 = deleted GitLab
-  tests). Phase 8 bot work (lint/mypy/dead-comment cleanup) still pending.
+  tests). Committed as `8d90816`.
+- **Phase 3 complete.** `keyring` added; new `git_mirror/utils/credentials.py`
+  `CredentialStore` with resolution order env → keychain → .env. All token reads
+  (config doctor, core, `__main__`, bug-reporter) go through it; `pat_init`
+  defaults new tokens to the keychain; `doctor` reports the token source and
+  offers to migrate a plaintext `.env` token. 9 credential tests added.
+- **Phase 4 complete.** `services.py` → `core.py` (single shared API); added
+  `build_manager` / `manager_from_config` factory used by both router and core
+  so manager construction can't drift; router is now a thin adapter; GUI + tests
+  repointed to `core`. `test_services.py` → `test_core.py`.
+- **Phase 5 complete.** Config-driven selection: `ConfigManager.load_repo_overrides`
+  reads `ignore`/`tags` from `[tool.git-mirror.<host>.repos]`; `core.RepoSelection`
+  + `build_selection` resolve the effective set; `--only/--tag/--exclude/--include-ignored`
+  flags plumb through router into both `GithubRepoManager` (remote + local ops)
+  and `GitManager` (local-changes). 10 selection tests added.
+- Phase 8 bot work (lint/mypy/dead-comment cleanup) still pending.
 
 ## Out of scope for now
 

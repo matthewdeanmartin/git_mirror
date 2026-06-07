@@ -242,7 +242,7 @@ class DashboardPanel(_BasePanel):
 
     @staticmethod
     def _fetch():
-        from git_mirror.services import load_all_configs
+        from git_mirror.core import load_all_configs
         return load_all_configs()
 
     def _display(self, configs: dict[str, Any]):
@@ -312,7 +312,7 @@ class LocalChangesPanel(_BasePanel):
 
     @staticmethod
     def _fetch(dirs: list[Path]):
-        from git_mirror.services import scan_local_changes
+        from git_mirror.core import scan_local_changes
         all_statuses = []
         for d in dirs:
             all_statuses.extend(scan_local_changes(d))
@@ -382,7 +382,7 @@ class ListReposPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -395,7 +395,7 @@ class ListReposPanel(_BasePanel):
 
     @staticmethod
     def _fetch(token: str, host: str, config: Any):
-        from git_mirror.services import list_repos_data
+        from git_mirror.core import list_repos_data
         return list_repos_data(token, host, config)
 
     def _display(self, repos: list[Any]):
@@ -448,7 +448,7 @@ class CloneAllPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -465,7 +465,7 @@ class CloneAllPanel(_BasePanel):
 
     @staticmethod
     def _do_clone(token: str, config: Any, dry_run: bool):
-        from git_mirror.services import clone_all_repos
+        from git_mirror.core import clone_all_repos
         return clone_all_repos(token, config, dry_run)
 
     def _display(self, result: Any):
@@ -519,7 +519,7 @@ class PullAllPanel(_BasePanel):
 
     @staticmethod
     def _do_pull(dirs: list[Path], dry_run: bool):
-        from git_mirror.services import pull_all_repos
+        from git_mirror.core import pull_all_repos
         all_results: dict[str, Any] = {"messages": [], "errors": []}
         for d in dirs:
             r = pull_all_repos(d, dry_run)
@@ -564,7 +564,7 @@ class NotRepoPanel(_BasePanel):
 
     @staticmethod
     def _fetch(dirs: list[Path]):
-        from git_mirror.services import find_non_repos
+        from git_mirror.core import find_non_repos
         results = []
         for d in dirs:
             results.extend(find_non_repos(d))
@@ -613,7 +613,7 @@ class BuildStatusPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -626,7 +626,7 @@ class BuildStatusPanel(_BasePanel):
 
     @staticmethod
     def _fetch(token: str, config: Any):
-        from git_mirror.services import get_build_statuses
+        from git_mirror.core import get_build_statuses
         return get_build_statuses(token, config)
 
     def _display(self, builds: list[Any]):
@@ -668,7 +668,7 @@ class DoctorPanel(_BasePanel):
 
     @staticmethod
     def _fetch():
-        from git_mirror.services import run_doctor
+        from git_mirror.core import run_doctor
         return run_doctor()
 
     def _display(self, results: list[tuple[str, list[Any]]]):
@@ -720,7 +720,7 @@ class ShowAccountPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -801,7 +801,7 @@ class UpdateFromMainPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -888,7 +888,7 @@ class PruneAllPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -964,7 +964,7 @@ class ConfigPanel(_BasePanel):
 
     @staticmethod
     def _fetch():
-        from git_mirror.services import load_all_configs
+        from git_mirror.core import load_all_configs
         from git_mirror.manage_config import default_config_path
         return load_all_configs(), default_config_path()
 
@@ -1042,7 +1042,7 @@ class SyncConfigPanel(_BasePanel):
         if not config:
             self._status.set(f"No configuration for {host}")
             return
-        from git_mirror.services import get_token_for_host
+        from git_mirror.core import get_token_for_host
         token = get_token_for_host(config)
         if not token:
             self._status.set(f"No access token for {host}")
@@ -1055,7 +1055,7 @@ class SyncConfigPanel(_BasePanel):
 
     @staticmethod
     def _do_sync(token: str, host: str, config: Any):
-        from git_mirror.services import list_repos_data
+        from git_mirror.core import list_repos_data
         from git_mirror.manage_config import ConfigManager, default_config_path
         repos = list_repos_data(token, host, config)
         repo_names = [f"{config.user_name}/{r.name}" for r in repos]
@@ -1279,7 +1279,7 @@ class GitMirrorApp:
     def get_configs(self) -> dict[str, Any]:
         """Get cached configs or load fresh."""
         if self._configs is None:
-            from git_mirror.services import load_all_configs
+            from git_mirror.core import load_all_configs
             self._configs = load_all_configs()
         return self._configs
 

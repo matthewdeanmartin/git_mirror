@@ -46,8 +46,26 @@ def check_pat_validity(token: str, api_url: str = DEFAULT_GITHUB_API_URL) -> boo
     return get_authenticated_user(token, api_url=api_url) is not None
 
 
+def _host_name_for_env_var(env_var: str) -> str:
+    return "selfhosted" if env_var == "SELFHOSTED_ACCESS_TOKEN" else "github"
+
+
 def _save_pat(choice: str, env_var: str, new_pat: str) -> bool:
-    if choice == "g":
+    if choice == "k":
+        from git_mirror.utils import credentials
+
+        host_name = _host_name_for_env_var(env_var)
+        if credentials.set_token(host_name, new_pat):
+            console.print("PAT saved to the OS keychain.")
+        else:
+            console.print(
+                "Could not save to the OS keychain; falling back to a global .env file.",
+                style="danger",
+            )
+            home_path = Path.home() / ".env"
+            set_key(home_path, env_var, new_pat)
+            console.print(f"PAT saved globally in {home_path}")
+    elif choice == "g":
         home_path = Path.home() / ".env"
         set_key(home_path, env_var, new_pat)
         console.print(f"PAT saved globally in {home_path}")
@@ -75,12 +93,15 @@ def setup_github_pat(
     Returns the valid token when setup succeeds so callers can continue without requiring
     the user to restart the command.
     """
+    from git_mirror.utils import credentials
+
     console.print("Checking environment...")
     env_info()
     console.print()
     dotenv_path = Path(find_dotenv())
     load_dotenv(dotenv_path)
-    existing_pat = os.getenv(env_var)
+    host_name = _host_name_for_env_var(env_var)
+    existing_pat = credentials.get_token(host_name)
 
     if existing_pat and check_pat_validity(existing_pat, api_url=api_url):
         console.print(f"Existing {host_label} PAT is valid.")
@@ -88,7 +109,7 @@ def setup_github_pat(
 
     console.print(f"No valid {host_label} PAT found.")
     console.print(docs_url)
-    console.print("Next we will create a local or global .env file to store the PAT.")
+    console.print("Next we will store the PAT. The OS keychain is recommended.")
     new_pat = getpass.getpass(f"Enter your new {host_label} PAT: ")
 
     if not check_pat_validity(new_pat, api_url=api_url):
@@ -96,10 +117,14 @@ def setup_github_pat(
         return None
 
     choice = (
-        input("Do you want to save the PAT globally or locally? [G/L]. If you don't know select globally. ")
+        input(
+            "Where do you want to save the PAT? "
+            "[K]eychain (recommended), [G]lobal .env, [L]ocal .env. "
+            "If you don't know, select keychain. "
+        )
         .strip()
         .lower()
-    )
+    ) or "k"
 
     if not _save_pat(choice, env_var, new_pat):
         return None

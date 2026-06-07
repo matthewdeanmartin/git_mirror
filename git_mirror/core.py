@@ -1,14 +1,15 @@
 """
-Orchestration helpers shared by CLI and GUI.
+Core orchestration API shared by the CLI (router) and the GUI.
 
-The GUI never touches the filesystem or network directly — it calls
-functions here and renders the returned data.
+This is the single home for batch operations over a folder of GitHub repos.
+Functions here return plain data (the dataclasses below) and never render; the
+CLI router and the GUI both call into this module so operation logic and host
+manager construction cannot drift between the two front ends.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -56,6 +57,126 @@ class ActionResult:
     success: bool
     messages: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+
+
+# ── Manager factory (single construction point for CLI + GUI) ────────
+
+
+def build_manager(
+    token: str,
+    base_dir: Path,
+    user_name: str,
+    *,
+    include_private: bool = False,
+    include_forks: bool = False,
+    host_domain: str | None = None,
+    dry_run: bool = False,
+    prompt_for_changes: bool = True,
+    selection: RepoSelection | None = None,
+):
+    """Construct the GitHub repo manager.
+
+    This is the single place that knows how to build a host manager, shared by
+    the CLI router and the GUI/core data functions so the construction logic
+    cannot drift.
+    """
+    from git_mirror import manage_github as mgh
+
+    return mgh.GithubRepoManager(
+        token,
+        Path(base_dir).expanduser(),
+        user_name,
+        include_private=include_private,
+        include_forks=include_forks,
+        host_domain=host_domain or "https://api.github.com",
+        dry_run=dry_run,
+        prompt_for_changes=prompt_for_changes,
+        selection=selection,
+    )
+
+
+def manager_from_config(
+    token: str,
+    config: ConfigData,
+    *,
+    dry_run: bool = False,
+    prompt_for_changes: bool = True,
+):
+    """Build a manager directly from a ConfigData."""
+    if not config.target_dir:
+        raise ValueError("No target directory configured")
+    return build_manager(
+        token,
+        config.target_dir,
+        config.user_name,
+        include_private=config.include_private,
+        include_forks=config.include_forks,
+        host_domain=config.host_url,
+        dry_run=dry_run,
+        prompt_for_changes=prompt_for_changes,
+    )
+
+
+# ── Repo selection / filtering ───────────────────────────────────────
+
+
+@dataclass
+class RepoSelection:
+    """An effective repo filter built from config overrides + CLI flags.
+
+    Resolution rules (applied per repo name):
+
+    - ``only`` set -> keep only those names (still subject to ``exclude``).
+    - ``tags`` set -> keep repos carrying at least one of those tags.
+    - ``exclude`` set -> drop those names.
+    - config ``ignore = true`` -> drop, unless ``include_ignored`` is set or the
+      repo was explicitly named in ``only``.
+    """
+
+    overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
+    only: set[str] = field(default_factory=set)
+    tags: set[str] = field(default_factory=set)
+    exclude: set[str] = field(default_factory=set)
+    include_ignored: bool = False
+
+    def is_selected(self, repo_name: str) -> bool:
+        if repo_name in self.exclude:
+            return False
+        explicitly_named = repo_name in self.only
+        if self.only and not explicitly_named:
+            return False
+        if self.tags:
+            repo_tags = set(self.overrides.get(repo_name, {}).get("tags", []))
+            if not (repo_tags & self.tags):
+                return False
+        if not self.include_ignored and not explicitly_named:
+            if self.overrides.get(repo_name, {}).get("ignore"):
+                return False
+        return True
+
+    def filter(self, repo_names: list[str]) -> list[str]:
+        return [name for name in repo_names if self.is_selected(name)]
+
+
+def build_selection(
+    host: str,
+    config_path: Path | None = None,
+    *,
+    only: list[str] | None = None,
+    tags: list[str] | None = None,
+    exclude: list[str] | None = None,
+    include_ignored: bool = False,
+) -> RepoSelection:
+    """Build a RepoSelection by reading config overrides and applying flags."""
+    cm = ConfigManager(config_path or default_config_path())
+    overrides = cm.load_repo_overrides(host)
+    return RepoSelection(
+        overrides=overrides,
+        only=set(only or []),
+        tags=set(tags or []),
+        exclude=set(exclude or []),
+        include_ignored=include_ignored,
+    )
 
 
 # ── Service functions (called from background threads) ───────────────
@@ -149,15 +270,7 @@ def clone_all_repos(token: str, config: ConfigData, dry_run: bool = False) -> Ac
         return ActionResult(success=False, errors=["No target directory configured"])
     base_path = config.target_dir.expanduser()
 
-    import git_mirror.manage_github as mgh
-
-    mgr = mgh.GithubRepoManager(
-        token, base_path, config.user_name,
-        include_private=config.include_private,
-        include_forks=config.include_forks,
-        host_domain=config.host_url or "https://api.github.com",
-        dry_run=dry_run, prompt_for_changes=False,
-    )
+    mgr = manager_from_config(token, config, dry_run=dry_run, prompt_for_changes=False)
     repos = mgr._get_user_repos()
     for repo_data in mgr._thread_safe_repos(repos):
         name = repo_data["name"]
@@ -249,7 +362,7 @@ def get_build_statuses(token: str, config: ConfigData) -> list[BuildInfo]:
 
 
 def get_token_for_host(config: ConfigData) -> str | None:
-    """Read token from environment for the given config."""
-    if config.host_name == "selfhosted":
-        return os.getenv("SELFHOSTED_ACCESS_TOKEN")
-    return os.getenv("GITHUB_ACCESS_TOKEN")
+    """Read the token for the given config (keychain, env, or .env)."""
+    from git_mirror.utils import credentials
+
+    return credentials.get_token(config.host_name)

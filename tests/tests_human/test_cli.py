@@ -44,6 +44,10 @@ def test_cli_clone_all(mock_main_github, cli_args):
         domain="",
         dry_run=False,
         prompt_for_changes=True,
+        only=[],
+        tags=[],
+        exclude=[],
+        include_ignored=False,
     )
 
 

@@ -275,27 +275,44 @@ class ConfigManager:
                 )
             )
 
+        from git_mirror.utils import credentials
+
         token_env_var = _token_env_var(config)
-        token = os.getenv(token_env_var)
+        token, source = credentials.resolve_token(config.host_name)
         if not token and attempt_token_setup:
             token = pat_init.setup_github_pat(
                 env_var=token_env_var,
                 api_url=config.host_url,
                 host_label=_host_label(config),
             )
+            if token:
+                token, source = credentials.resolve_token(config.host_name)
 
         if not token:
             checks.append(
                 SetupCheck(
                     "Access token",
                     False,
-                    f"Environment variable {token_env_var} is missing.",
-                    f"Create a PAT for {_host_label(config)} and set {token_env_var}, then rerun `git_mirror doctor --host {config.host_name}`.",
+                    f"No token found (checked OS keychain, {token_env_var}, and .env).",
+                    f"Run `git_mirror init` or set {token_env_var}, then rerun `git_mirror doctor --host {config.host_name}`.",
                 )
             )
             return checks
 
-        checks.append(SetupCheck("Access token", True, f"Environment variable {token_env_var} is set"))
+        warn_plaintext = source == credentials.TokenSource.DOTENV
+        if warn_plaintext and attempt_token_setup:
+            answer = input("Token is stored in plaintext .env. Move it into the OS keychain? (y/n): ")
+            if answer.strip().lower().startswith("y") and credentials.migrate_dotenv_to_keychain(config.host_name):
+                token, source = credentials.resolve_token(config.host_name)
+                warn_plaintext = source == credentials.TokenSource.DOTENV
+        checks.append(
+            SetupCheck(
+                "Access token",
+                True,
+                f"Token found in {source.value}.",
+                "Run `git_mirror init` to move it into the OS keychain." if warn_plaintext else None,
+            )
+        )
         authenticated_user = pat_init.get_authenticated_user(token, api_url=config.host_url)
         valid = authenticated_user is not None
         username = authenticated_user.get("login", "") if authenticated_user else ""
@@ -424,6 +441,28 @@ class ConfigManager:
                 global_template_dir=global_template_dir,
             )
         return None
+
+    def load_repo_overrides(self, host: str) -> dict[str, dict[str, Any]]:
+        """Return the per-repo override table for a host.
+
+        Shape: ``{repo_name: {"ignore": bool, "tags": [str, ...], ...}}`` read
+        from ``[tool.git-mirror.<host>.repos]``.  Missing or malformed sections
+        yield an empty dict.
+        """
+        if not self.config_path.exists():
+            return {}
+        config = tomlkit.loads(self.config_path.read_text(encoding="utf-8"))
+        repos = config.get("tool", {}).get("git-mirror", {}).get(host, {}).get("repos", {})
+        overrides: dict[str, dict[str, Any]] = {}
+        for name, data in dict(repos).items():
+            entry = dict(data) if hasattr(data, "items") else {}
+            tags = entry.get("tags", [])
+            overrides[name] = {
+                "ignore": bool(entry.get("ignore", False)),
+                "tags": [str(t) for t in tags] if isinstance(tags, (list, tuple)) else [],
+                "important": bool(entry.get("important", False)),
+            }
+        return overrides
 
     def _write_repos_to_toml(self, repos: list[str], existing_config: dict[str, Any]) -> None:
         """

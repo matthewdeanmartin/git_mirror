@@ -71,6 +71,7 @@ class GitManager:
         base_dir: Path,
         dry_run: bool = False,
         prompt_for_changes: bool = True,
+        selection=None,
     ):
         """
         Initializes base directory for git operations.
@@ -79,10 +80,12 @@ class GitManager:
             base_dir (Path): Base directory path where repositories will be cloned.
             dry_run (bool): Flag to determine whether the operation should be a dry run.
             prompt_for_changes (bool): Flag to determine whether the operation should prompt for changes.
+            selection: Optional RepoSelection limiting which local repos are acted on.
         """
         self.base_dir = base_dir
         self.dry_run = dry_run
         self.prompt_for_changes = prompt_for_changes
+        self.selection = selection
 
     def local_repos_with_file_in_root(self, file_name: str) -> list[Path]:
         """
@@ -110,6 +113,8 @@ class GitManager:
         """
         console = console_with_theme()
         repos = list(find_git_repos(self.base_dir))
+        if self.selection is not None:
+            repos = [r for r in repos if self.selection.is_selected(Path(r).name)]
         console.print(f"Checking {len(repos)} repositories for uncommitted changes and unpushed commits.")
         have_uncommitted = 0
         if single_threaded or len(repos) < 2:
