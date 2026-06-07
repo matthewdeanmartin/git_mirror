@@ -47,26 +47,24 @@ def test_validate_parse_args_populates_missing_values_from_config(tmp_path):
     config_path = tmp_path / "git_mirror.toml"
     config_path.write_text("", encoding="utf-8")
     config = ConfigData(
-        host_name="gitlab",
-        host_type="gitlab",
-        host_url="https://gitlab.example.com",
+        host_name="selfhosted",
+        host_type="github",
+        host_url="https://ghe.example.com/api/v3",
         user_name="octocat",
         target_dir=tmp_path / "repos",
         include_private=True,
         include_forks=True,
-        group_id=42,
         global_template_dir=tmp_path / "templates",
     )
     args = argparse.Namespace(
         command="list-repos",
-        host="gitlab",
+        host="selfhosted",
         user_name="",
         target_dir=None,
         include_private=False,
         include_forks=False,
         use_github=False,
         domain="",
-        group_id=0,
         first_time_init=False,
         config_path=config_path,
         global_template_dir=None,
@@ -74,11 +72,10 @@ def test_validate_parse_args_populates_missing_values_from_config(tmp_path):
 
     with patch("git_mirror.__main__._get_config_manager") as mock_manager_factory:
         mock_manager_factory.return_value.load_config.return_value = config
-        domain, group_id, status = validate_parse_args(args)
+        domain, status = validate_parse_args(args)
 
     assert status == 0
-    assert domain == "https://gitlab.example.com"
-    assert group_id == 42
+    assert domain == "https://ghe.example.com/api/v3"
     assert args.user_name == "octocat"
     assert args.target_dir == tmp_path / "repos"
     assert args.include_private is True
@@ -96,13 +93,14 @@ def test_validate_parse_args_requires_host_when_config_lookup_is_needed(tmp_path
         include_forks=False,
         use_github=False,
         domain="",
-        group_id=0,
         first_time_init=False,
         config_path=tmp_path / "git_mirror.toml",
     )
 
     with patch("git_mirror.__main__._get_console") as mock_console:
-        domain, group_id, status = validate_parse_args(args)
+        domain, status = validate_parse_args(args)
 
-    assert (domain, group_id, status) == ("", 0, 1)
-    mock_console.return_value.print.assert_called_once_with("Please specify a host, eg. --host github or --host gitlab.")
+    assert (domain, status) == ("", 1)
+    mock_console.return_value.print.assert_called_once_with(
+        "Please specify a host, eg. --host github or --host selfhosted."
+    )

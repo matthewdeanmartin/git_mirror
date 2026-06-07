@@ -43,7 +43,6 @@ def test_cli_clone_all(mock_main_github, cli_args):
         user_name="testuser",
         domain="",
         dry_run=False,
-        group_id=0,
         prompt_for_changes=True,
     )
 
@@ -51,11 +50,9 @@ def test_cli_clone_all(mock_main_github, cli_args):
 # Test missing GitHub token
 @patch("git_mirror.router.route_repos")
 @patch("git_mirror.pat_init.setup_github_pat")
-@patch("git_mirror.pat_init_gitlab.setup_gitlab_pat")
 @patch.dict(os.environ, clear=True)
-def test_cli_missing_github_token(pat1, pat2, mock_main_github, cli_args):
+def test_cli_missing_github_token(pat1, mock_main_github, cli_args):
     pat1.return_value = None
-    pat2.return_value = None
     argv = ["clone-all"] + cli_args
     with patch("sys.argv", ["prog"] + argv):
         assert main() == 1

@@ -4,7 +4,7 @@ from unittest.mock import ANY, patch
 import pytest
 from git import GitCommandError
 
-from git_mirror.dummies import Dummy
+from git_mirror.utils.dummies import Dummy
 from git_mirror.manage_github import GithubRepoManager
 
 LOGGER = logging.getLogger(__name__)

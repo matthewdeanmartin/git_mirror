@@ -26,10 +26,10 @@ from termcolor import colored
 
 import git_mirror.manage_git as mg
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
-from git_mirror.dummies import Dummy
-from git_mirror.performance import log_duration
-from git_mirror.safe_env import load_env
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.dummies import Dummy
+from git_mirror.utils.performance import log_duration
+from git_mirror.utils.safe_env import load_env
+from git_mirror.utils.ui import console_with_theme
 
 load_env()
 

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from github import GithubException
 
-from git_mirror.bug_report import BugReporter
+from git_mirror.utils.bug_report import BugReporter
 from tests.env_util import temporary_env_var
 
 

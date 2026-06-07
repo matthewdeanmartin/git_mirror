@@ -29,7 +29,6 @@ def test_route_repos_selfhosted_github_uses_github_manager():
     with (
         patch("git_mirror.manage_config.ConfigManager") as mock_config_manager,
         patch("git_mirror.manage_github.GithubRepoManager") as mock_github_manager,
-        patch("git_mirror.manage_gitlab.GitlabRepoManager") as mock_gitlab_manager,
     ):
         config_manager_instance = mock_config_manager.return_value
         config_manager_instance.load_config.return_value = MagicMock(
@@ -51,4 +50,3 @@ def test_route_repos_selfhosted_github_uses_github_manager():
 
     mock_github_manager.assert_called_once()
     github_manager_instance.list_repos.assert_called_once()
-    mock_gitlab_manager.assert_not_called()

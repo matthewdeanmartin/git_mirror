@@ -1,10 +1,10 @@
 from unittest.mock import MagicMock, patch
 
-from git_mirror.check_cli_deps import check_tool_availability
+from git_mirror.utils.check_cli_deps import check_tool_availability
 
 
-@patch("git_mirror.check_cli_deps.models.CliToolConfig")
-@patch("git_mirror.check_cli_deps.cta.process_tools")
+@patch("git_mirror.utils.check_cli_deps.models.CliToolConfig")
+@patch("git_mirror.utils.check_cli_deps.cta.process_tools")
 def test_check_tool_availability_uses_git_and_uv(mock_process_tools, mock_cli_tool_config):
     mock_process_tools.return_value = [
         MagicMock(tool="git", parsed_version="2.45.0", is_available=True, is_compatible=True),
@@ -18,7 +18,7 @@ def test_check_tool_availability_uses_git_and_uv(mock_process_tools, mock_cli_to
     assert requested_names == ["git", "uv"]
 
 
-@patch("git_mirror.check_cli_deps.cta.process_tools")
+@patch("git_mirror.utils.check_cli_deps.cta.process_tools")
 def test_check_tool_availability_handles_empty_results(mock_process_tools):
     mock_process_tools.return_value = []
 

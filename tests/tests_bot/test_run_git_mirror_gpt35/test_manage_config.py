@@ -59,7 +59,6 @@ def test_load_config_supports_legacy_keys_and_creates_missing_target_dir(tmp_pat
                             "target_dir": str(target_dir),
                             "include_private": True,
                             "include_forks": True,
-                            "group_id": 99,
                             "global_template_dir": str(global_template_dir),
                         }
                     }
@@ -81,7 +80,6 @@ def test_load_config_supports_legacy_keys_and_creates_missing_target_dir(tmp_pat
         target_dir=target_dir,
         include_private=True,
         include_forks=True,
-        group_id=99,
         global_template_dir=global_template_dir,
     )
     mock_makedirs.assert_called_once_with(target_dir, exist_ok=True)
@@ -172,7 +170,6 @@ def test_initialize_config_writes_config_and_runs_doctor(tmp_path):
         target_dir=target_dir,
         include_private=True,
         include_forks=False,
-        group_id=0,
         global_template_dir=tmp_path / "templates",
     )
     manager = ConfigManager(config_path=config_path)

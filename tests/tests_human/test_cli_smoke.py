@@ -14,11 +14,6 @@ ENTRYPOINT_RUNNERS = {
         "-c",
         "import sys; from git_mirror.__main__ import main_github; raise SystemExit(main_github(sys.argv[1:]))",
     ],
-    "gl_mirror": [
-        sys.executable,
-        "-c",
-        "import sys; from git_mirror.__main__ import main_gitlab; raise SystemExit(main_gitlab(sys.argv[1:]))",
-    ],
     "sh_mirror": [
         sys.executable,
         "-c",
@@ -35,14 +30,13 @@ def _smoke_env(tmp_path: Path) -> dict[str, str]:
     env["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
     env["PYTEST_CURRENT_TEST"] = "smoke"
     env.setdefault("GITHUB_ACCESS_TOKEN", "smoke-token")
-    env.setdefault("GITLAB_ACCESS_TOKEN", "smoke-token")
     env.setdefault("SELFHOSTED_ACCESS_TOKEN", "smoke-token")
     Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
     Path(env["XDG_CACHE_HOME"]).mkdir(parents=True, exist_ok=True)
     return env
 
 
-@pytest.mark.parametrize("entrypoint", ["git_mirror", "gh_mirror", "gl_mirror", "sh_mirror"])
+@pytest.mark.parametrize("entrypoint", ["git_mirror", "gh_mirror", "sh_mirror"])
 @pytest.mark.parametrize("args", [["--help"], ["--version"]])
 def test_entrypoint_smoke(entrypoint: str, args: list[str], tmp_path: Path):
     result = subprocess.run(

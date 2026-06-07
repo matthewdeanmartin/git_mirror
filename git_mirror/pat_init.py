@@ -9,8 +9,8 @@ from typing import Any
 import httpx
 from dotenv import find_dotenv, load_dotenv, set_key
 
-from git_mirror.safe_env import env_info
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.safe_env import env_info
+from git_mirror.utils.ui import console_with_theme
 
 LOGGER = logging.getLogger(__name__)
 

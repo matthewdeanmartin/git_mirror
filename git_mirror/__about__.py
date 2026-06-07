@@ -17,10 +17,10 @@ __all__ = [
 
 __title__ = "git_mirror"
 __version__ = "2.0.0"
-__description__ = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
+__description__ = "Batch git operations across a folder of GitHub repositories. See readme for how this differs from the many other multi-repo tools."
 __author__ = "Matthew Martin"
 __author_email__ = "matthewdeanmartin@gmail.com"
-__keywords__ = ["git", "gitlab", "github", "polyrepo"]
+__keywords__ = ["git", "github", "polyrepo"]
 __status__ = "4 - Beta"
 __license__ = "MIT"
 __readme__ = "README.md"

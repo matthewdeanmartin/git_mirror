@@ -1,8 +1,14 @@
 # git_mirror
 
-Make all your local git repos look like Github or Gitlab.
+Batch git operations across a whole folder of GitHub repositories.
+
+Point git_mirror at a folder full of GitHub repos and operate on all of them at once — see their
+combined state, keep them in sync, and clean them up — safely, in parallel, without 30 terminal tabs.
 
 (has nothing to do with keeping identical copies of repos on different remote servers, maybe I'll change the name.)
+
+> **Version 2.0 is a breaking change: GitLab support has been removed.** git_mirror now targets
+> GitHub and self-hosted GitHub Enterprise only. See `spec/refocus.md` for the rationale and roadmap.
 
 Supports
 
@@ -42,7 +48,6 @@ The setup wizard will help create or validate the right token, then tell you wha
 
 ```bash
 GITHUB_ACCESS_TOKEN=PAT
-GITLAB_ACCESS_TOKEN=PAT
 SELFHOSTED_ACCESS_TOKEN=PAT
 ```
 
@@ -67,7 +72,7 @@ usage: git_mirror [-h] [-V] [--menu MENU]
                   {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,menu,init}
                   ...
 
-Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools.
+Batch git operations across a folder of GitHub repositories. See readme for how this differs from the many other multi-repo tools.
 
 positional arguments:
   {show-account,list-repos,clone-all,pull-all,local-changes,not-repo,update-from-main,prune-all,sync-config,build-status,list-config,doctor,menu,init}
@@ -114,23 +119,16 @@ target_dir = "f:/github/"
 include_private = false
 include_forks = false
 
-[tool.git-mirror.gitlab]
-host_type = "gitlab"
-host_url = "https://gitlab.com"
-user_name = "matthewdeanmartin"
-target_dir = "f:/gitlab/"
-include_private = true
-include_forks = false
-group_id = 542
-
 [tool.git-mirror.selfhosted]
-host_type = "gitlab"
-host_url = "http://git.example.com"
+host_type = "github"
+host_url = "https://ghe.example.com/api/v3"
 user_name = "mmartin"
 target_dir = "e:/self/"
 include_private = true
 include_forks = false
 ```
+
+`selfhosted` is for GitHub Enterprise (a GitHub-compatible API). Its `host_type` must be `github`.
 
 ## Examples
 

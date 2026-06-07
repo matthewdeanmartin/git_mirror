@@ -262,7 +262,7 @@ class DashboardPanel(_BasePanel):
             lines.append(("No hosts configured. Use Init to set up a host.\n", "warn"))
 
         lines.append(("\nQuick start:\n", "heading"))
-        lines.append(("  1. Click Init to configure a host (GitHub, GitLab, or self-hosted)\n", "dim"))
+        lines.append(("  1. Click Init to configure a host (GitHub or self-hosted GitHub Enterprise)\n", "dim"))
         lines.append(("  2. Click Doctor to verify your setup\n", "dim"))
         lines.append(("  3. Use Clone All to pull down all your repos\n", "dim"))
         lines.append(("  4. Use Pull All to keep them up to date\n", "dim"))
@@ -359,7 +359,7 @@ class ListReposPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -424,7 +424,7 @@ class CloneAllPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -591,7 +591,7 @@ class BuildStatusPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -702,7 +702,7 @@ class ShowAccountPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -751,20 +751,6 @@ class ShowAccountPanel(_BasePanel):
                 "Company": gh_user.company or "N/A",
                 "URL": gh_user.html_url,
             }
-        elif config.host_type == "gitlab":
-            import gitlab
-            gl = gitlab.Gitlab(config.host_url, private_token=token)
-            gl.auth()
-            gl_user = gl.user
-            if gl_user is None:
-                return {"Error": "GitLab authentication failed"}
-            return {
-                "Username": gl_user.username,
-                "Name": gl_user.name or "N/A",
-                "Bio": getattr(gl_user, "bio", "") or "N/A",
-                "State": gl_user.state,
-                "URL": gl_user.web_url,
-            }
         return {"Error": "Unknown host type"}
 
     def _display(self, info: dict[str, str]):
@@ -791,7 +777,7 @@ class UpdateFromMainPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -878,7 +864,7 @@ class PruneAllPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -998,8 +984,6 @@ class ConfigPanel(_BasePanel):
                 self._output.insert(tk.END, f"    target_dir:      {config.target_dir}\n")
                 self._output.insert(tk.END, f"    include_private: {config.include_private}\n")
                 self._output.insert(tk.END, f"    include_forks:   {config.include_forks}\n")
-                if config.group_id:
-                    self._output.insert(tk.END, f"    group_id:        {config.group_id}\n")
                 self._output.insert(tk.END, "\n")
         if not found:
             self._output.insert(tk.END, "  No hosts configured.\n", "warn")
@@ -1040,7 +1024,7 @@ class SyncConfigPanel(_BasePanel):
 
         bar = _make_toolbar(self)
         self._host_var = tk.StringVar(value="github")
-        for host in ("github", "gitlab", "selfhosted"):
+        for host in ("github", "selfhosted"):
             tk.Radiobutton(
                 bar, text=host.title(), variable=self._host_var, value=host,
                 bg=_CLR_BG, fg=_CLR_FG, selectcolor=_CLR_BTN, activebackground=_CLR_BG,
@@ -1127,7 +1111,7 @@ class GitMirrorApp:
             font=("Segoe UI", 13, "bold"), anchor=tk.W,
         ).pack(side=tk.LEFT, padx=8)
         tk.Label(
-            top_bar, text="Multi-repo management for GitHub, GitLab & self-hosted",
+            top_bar, text="Multi-repo management for GitHub & self-hosted GitHub Enterprise",
             bg=_CLR_SIDEBAR, fg=_CLR_DIM, font=_FONT_UI, anchor=tk.W,
         ).pack(side=tk.LEFT, padx=16)
 

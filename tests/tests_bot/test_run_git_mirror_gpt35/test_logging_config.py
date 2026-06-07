@@ -1,7 +1,7 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from git_mirror import logging_config
+from git_mirror.utils import logging_config
 
 # ### Bug
 #
@@ -17,7 +17,7 @@ from git_mirror import logging_config
 
 
 def test_generate_config():
-    with patch("git_mirror.logging_config.github") as mock_github:
+    with patch("git_mirror.utils.logging_config.github") as mock_github:
         mock_github.enable_console_debug_logging = MagicMock()
 
         # Test case for logging_level = 1
@@ -83,7 +83,7 @@ def test_generate_config_with_environment_vars(tmp_path):
 
 
 def test_generate_config_calls_github_logging(tmp_path):
-    with patch("git_mirror.logging_config.github") as mock_github:
+    with patch("git_mirror.utils.logging_config.github") as mock_github:
         logging_config.generate_config(level="DEBUG", logging_level=2)
 
         mock_github.enable_console_debug_logging.assert_called_once()
@@ -106,7 +106,6 @@ def test_generate_config_loggers(tmp_path):
     assert config_logging_level_1["loggers"]["urllib3"]["level"] == "WARN"
     assert config_logging_level_1["loggers"]["httpx"]["level"] == "WARN"
     assert config_logging_level_1["loggers"]["git"]["level"] == "INFO"
-    assert config_logging_level_1["loggers"]["gitlab"]["level"] == "INFO"
     assert config_logging_level_1["loggers"]["github"]["level"] == "INFO"
     assert config_logging_level_1["loggers"]["requests_cache"]["level"] == "INFO"
 
@@ -115,7 +114,6 @@ def test_generate_config_loggers(tmp_path):
     assert config_logging_level_2["loggers"]["urllib3"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["httpx"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["git"]["level"] == "DEBUG"
-    assert config_logging_level_2["loggers"]["gitlab"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["github"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["requests_cache"]["level"] == "DEBUG"
 
@@ -138,7 +136,6 @@ def test_generate_config_logging_level_2(tmp_path):
     assert config["loggers"]["urllib3"]["level"] == "DEBUG"
     assert config["loggers"]["httpx"]["level"] == "DEBUG"
     assert config["loggers"]["git"]["level"] == "DEBUG"
-    assert config["loggers"]["gitlab"]["level"] == "DEBUG"
     assert config["loggers"]["github"]["level"] == "DEBUG"
     assert config["loggers"]["requests_cache"]["level"] == "DEBUG"
 
@@ -161,7 +158,6 @@ def test_generate_config_logger_propagation(tmp_path):
     assert not config["loggers"]["urllib3"]["propagate"]
     assert not config["loggers"]["httpx"]["propagate"]
     assert not config["loggers"]["git"]["propagate"]
-    assert not config["loggers"]["gitlab"]["propagate"]
     assert not config["loggers"]["github"]["propagate"]
     assert not config["loggers"]["requests_cache"]["propagate"]
 

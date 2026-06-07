@@ -25,7 +25,6 @@ def test_display_config(mock_console_class):
         target_dir=Path("/path/to/repo"),
         include_private=True,
         include_forks=False,
-        group_id=123,
         global_template_dir=None,
     )
 

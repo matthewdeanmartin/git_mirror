@@ -123,31 +123,6 @@ def test_list_repos_data_github():
         assert len(repos) == 1
         assert repos[0].name == "test-repo"
 
-def test_list_repos_data_gitlab():
-    config = ConfigData(
-        host_name="gitlab",
-        host_type="gitlab",
-        host_url="https://gitlab.com",
-        user_name="testuser",
-        target_dir=Path("/mock/target")
-    )
-    with patch("gitlab.Gitlab") as MockGitlab:
-        mock_gl = MockGitlab.return_value
-        mock_user = mock_gl.user = MagicMock()
-        
-        mock_project = MagicMock()
-        mock_project.name = "test-project"
-        mock_project.description = "desc"
-        mock_project.visibility = "public"
-        mock_project.web_url = "http://gitlab.com/testuser/test-project"
-        mock_project.forked_from_project = None
-        
-        mock_user.projects.list.return_value = [mock_project]
-        
-        repos = list_repos_data("token", "gitlab", config)
-        assert len(repos) == 1
-        assert repos[0].name == "test-project"
-
 def test_clone_all_repos_github():
     config = ConfigData(
         host_name="github",
@@ -248,15 +223,6 @@ def test_get_token_for_host():
             target_dir=Path("/mock/target")
         )
         assert get_token_for_host(config_gh) == "secret-token"
-        
-        config_gl = ConfigData(
-            host_name="gitlab",
-            host_type="gitlab",
-            host_url="https://gitlab.com",
-            user_name="testuser",
-            target_dir=Path("/mock/target")
-        )
-        assert get_token_for_host(config_gl) == "secret-token"
 
         config_sh = ConfigData(
             host_name="selfhosted",
@@ -267,48 +233,3 @@ def test_get_token_for_host():
         )
         assert get_token_for_host(config_sh) == "secret-token"
 
-def test_clone_all_repos_gitlab():
-    config = ConfigData(
-        host_name="gitlab",
-        host_type="gitlab",
-        host_url="https://gitlab.com",
-        user_name="testuser",
-        target_dir=Path("/mock/target")
-    )
-    with patch("git_mirror.manage_gitlab.GitlabRepoManager") as MockMgr, \
-         patch("git_mirror.services.g.Repo") as MockRepo, \
-         patch("git_mirror.services.Path.exists") as mock_exists:
-        
-        mock_exists.return_value = False
-        mock_mgr = MockMgr.return_value
-        mock_repo_data = MagicMock()
-        mock_repo_data.name = "repo1"
-        mock_repo_data.http_url_to_repo = "http://url"
-        mock_mgr._get_user_repos.return_value = [mock_repo_data]
-        
-        result = clone_all_repos("token", config)
-        assert result.success is True
-        assert "Cloned: repo1" in result.messages
-        MockRepo.clone_from.assert_called_once()
-
-def test_list_repos_data_unknown():
-    config = ConfigData(
-        host_name="unknown",
-        host_type="unknown",
-        host_url="http://unknown",
-        user_name="testuser",
-        target_dir=Path("/mock/target")
-    )
-    repos = list_repos_data("token", "unknown", config)
-    assert repos == []
-
-def test_get_build_statuses_non_github():
-    config = ConfigData(
-        host_name="gitlab",
-        host_type="gitlab",
-        host_url="https://gitlab.com",
-        user_name="testuser",
-        target_dir=Path("/mock/target")
-    )
-    builds = get_build_statuses("token", config)
-    assert builds == []

@@ -1,4 +1,4 @@
-from git_mirror.dummies import Dummy
+from git_mirror.utils.dummies import Dummy
 
 # ### Bugs
 #

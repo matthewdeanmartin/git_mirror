@@ -61,11 +61,6 @@ def generate_config(level: str = "DEBUG", logging_level: int = 1) -> dict[str, A
                 "level": "DEBUG" if logging_level >= 2 else "INFO",
                 "propagate": False,
             },
-            "gitlab": {
-                "handlers": ["default"],
-                "level": "DEBUG" if logging_level >= 2 else "INFO",
-                "propagate": False,
-            },
             "github": {
                 "handlers": ["default"],
                 "level": "DEBUG" if logging_level >= 2 else "INFO",

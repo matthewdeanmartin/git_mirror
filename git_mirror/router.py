@@ -16,7 +16,7 @@ _CONSOLE = None
 def _get_console():
     global _CONSOLE
     if _CONSOLE is None:
-        from git_mirror.ui import console_with_theme
+        from git_mirror.utils.ui import console_with_theme
 
         _CONSOLE = console_with_theme()
     return _CONSOLE
@@ -68,7 +68,7 @@ def route_config(
         config_path = mc.default_config_path()
 
     if command == "list-config":
-        from git_mirror.check_cli_deps import check_tool_availability
+        from git_mirror.utils.check_cli_deps import check_tool_availability
 
         config_manager = mc.ConfigManager(config_path=config_path)
         config_manager.list_config()
@@ -91,7 +91,6 @@ def route_repos(
     include_forks: bool,
     config_path: Path | None = None,
     domain: str | None = None,
-    group_id: int | None = None,
     logging_level: int = 1,
     dry_run: bool = False,
     template_dir: Path | None = None,
@@ -105,12 +104,11 @@ def route_repos(
         user_name (str): The GitHub username.
         target_dir (Path): The directory where repositories will be cloned or pulled.
         token (str): The GitHub access token.
-        host (str): The source host.
+        host (str): The source host (github or selfhosted GitHub Enterprise).
         include_private (bool): Flag to determine whether private repositories should be included.
         include_forks (bool): Flag to determine whether forked repositories should be included.
         config_path (Path): Path to the TOML config file.
-        domain (str): The GitLab domain.
-        group_id (int): The GitLab group id.
+        domain (str): The GitHub Enterprise API base URL.
         logging_level (int): The logging level.
         dry_run (bool): Flag to determine whether the operation should be a dry run.
         template_dir (Path): The directory containing the templates to sync.
@@ -128,8 +126,7 @@ def route_repos(
         base_path = Path(target_dir).expanduser()
         git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes)
         git_manager.check_for_uncommitted_or_unpushed_changes()
-    elif host in ("github", "gitlab", "selfhosted"):
-        backend_host = host
+    elif host in ("github", "selfhosted"):
         resolved_domain = domain
         if host == "selfhosted":
             config_manager = mc.ConfigManager(config_path=config_path)
@@ -137,57 +134,23 @@ def route_repos(
             if not config_data:
                 console.print("No self-hosted configuration found. Run `git_mirror init` first.")
                 return
-            backend_host = config_data.host_type
             resolved_domain = resolved_domain or config_data.host_url
 
-        if backend_host == "github":
-            from git_mirror import manage_github as mgh
+        from git_mirror import manage_github as mgh
 
-            base_path = Path(target_dir).expanduser()
-            manager: Any = mgh.GithubRepoManager(
-                token,
-                base_path,
-                user_name,
-                include_private=include_private,
-                include_forks=include_forks,
-                host_domain=resolved_domain or "https://api.github.com",
-                dry_run=dry_run,
-                prompt_for_changes=prompt_for_changes,
-            )
-        elif backend_host == "gitlab":
-            from git_mirror import manage_gitlab as mgl
+        base_path = Path(target_dir).expanduser()
+        manager: Any = mgh.GithubRepoManager(
+            token,
+            base_path,
+            user_name,
+            include_private=include_private,
+            include_forks=include_forks,
+            host_domain=resolved_domain or "https://api.github.com",
+            dry_run=dry_run,
+            prompt_for_changes=prompt_for_changes,
+        )
 
-            base_path = Path(target_dir).expanduser()
-            manager = mgl.GitlabRepoManager(
-                token,
-                base_path,
-                user_name,
-                include_private=include_private,
-                include_forks=include_forks,
-                host_domain=resolved_domain or "https://gitlab.com",
-                logging_level=logging_level,
-                dry_run=dry_run,
-                prompt_for_changes=prompt_for_changes,
-            )
-        else:
-            raise ValueError(f"Unknown host: {backend_host}")
-
-        if command == "clone-all" and backend_host == "gitlab" and group_id is not None and group_id != 0:
-            from git_mirror import manage_gitlab as mgl
-
-            gl_manager = mgl.GitlabRepoManager(
-                token,
-                base_path,
-                user_name,
-                include_private=include_private,
-                include_forks=include_forks,
-                host_domain=resolved_domain or "https://gitlab.com",
-                logging_level=logging_level,
-                dry_run=dry_run,
-                prompt_for_changes=prompt_for_changes,
-            )
-            gl_manager.clone_group(group_id)
-        elif command == "clone-all":
+        if command == "clone-all":
             manager.clone_all()
         elif command == "pull-all":
             manager.pull_all()

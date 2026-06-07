@@ -1,14 +1,14 @@
 [project]
 name = "git_mirror"
 version = "2.0.0"
-description = "Make your local git repos look like github or gitlab. See readme for how this differs from the many other multi-repo tools."
+description = "Batch git operations across a folder of GitHub repositories. See readme for how this differs from the many other multi-repo tools."
 authors = [
     {name = "Matthew Martin", email = "matthewdeanmartin@gmail.com"},
 ]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.9"
-keywords = ["git", "gitlab", "github", "polyrepo" ]
+keywords = ["git", "github", "polyrepo" ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -31,7 +31,6 @@ dependencies = [
     "colorama>=0.4.6,<1",
     "colorlog>=6.8.0,<7",
     "PyGithub>=2.2.0",
-    "python-gitlab>=4.4.0",
     "GitPython>=3.1.42",
     "httpx>=0.26.0,<1",
     "requests-cache>=1.2.0,<2",
@@ -46,7 +45,6 @@ dependencies = [
 
 [project.scripts]
 git_mirror = 'git_mirror.__main__:main'
-gl_mirror = 'git_mirror.__main__:main_gitlab'
 gh_mirror = 'git_mirror.__main__:main_github'
 sh_mirror = 'git_mirror.__main__:main_selfhosted'
 

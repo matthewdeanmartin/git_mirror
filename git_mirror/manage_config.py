@@ -20,9 +20,8 @@ from rich.text import Text
 from tomlkit import TOMLDocument
 
 import git_mirror.pat_init as pat_init
-import git_mirror.pat_init_gitlab as pat_init_gitlab
-from git_mirror.safe_env import load_env
-from git_mirror.ui import console_with_theme
+from git_mirror.utils.safe_env import load_env
+from git_mirror.utils.ui import console_with_theme
 
 load_env()
 
@@ -30,9 +29,8 @@ LOGGER = logging.getLogger(__name__)
 
 console = console_with_theme()
 
-SUPPORTED_HOSTS = ("github", "gitlab", "selfhosted")
+SUPPORTED_HOSTS = ("github", "selfhosted")
 PUBLIC_GITHUB_API_URL = "https://api.github.com"
-PUBLIC_GITLAB_URL = "https://gitlab.com"
 
 
 def default_config_path() -> Path:
@@ -100,37 +98,32 @@ def _coerce_path(value: str | Path | None) -> Path | None:
 
 def _default_host_url(section_name: str, host_type: str | None = None) -> str:
     provider = host_type or section_name
-    if provider == "github":
+    if provider in ("github", "selfhosted"):
         return PUBLIC_GITHUB_API_URL
-    if provider == "gitlab":
-        return PUBLIC_GITLAB_URL
     raise ValueError(f"Unknown host type: {provider}")
 
 
 def _token_env_var(config: ConfigData) -> str:
     if config.host_name == "selfhosted":
         return "SELFHOSTED_ACCESS_TOKEN"
-    if config.host_type == "github":
-        return "GITHUB_ACCESS_TOKEN"
-    return "GITLAB_ACCESS_TOKEN"
+    return "GITHUB_ACCESS_TOKEN"
 
 
 def _host_label(config: ConfigData) -> str:
     if config.host_name == "selfhosted":
-        return f"self-hosted {config.host_type}"
+        return "self-hosted GitHub"
     return config.host_type
 
 
 @dataclass
 class ConfigData:
-    host_name: str  # github, gitlab, selfhosted
-    host_type: str  # github or gitlab
-    host_url: str  # host URL or API base depending on provider
+    host_name: str  # github or selfhosted
+    host_type: str  # always "github" (selfhosted means GitHub Enterprise)
+    host_url: str  # API base URL (api.github.com or a GHE /api/v3 endpoint)
     user_name: str
     target_dir: Path | None
     include_private: bool = False
     include_forks: bool = False
-    group_id: int = 0
     global_template_dir: Path | None = None
 
 
@@ -175,7 +168,7 @@ def _prompt_for_target_dir(initial_value: str) -> Path:
 
 def ask_for_section(already_configured: list[str]) -> ConfigData | None:
     if len(already_configured) == len(SUPPORTED_HOSTS):
-        console.print("All Github, Gitlab and self-hosted are already configured.")
+        console.print("Both GitHub and self-hosted GitHub Enterprise are already configured.")
         return None
 
     choices = [host for host in SUPPORTED_HOSTS if host not in already_configured]
@@ -190,29 +183,15 @@ def ask_for_section(already_configured: list[str]) -> ConfigData | None:
 
     target_dir = _prompt_for_target_dir(answers["target_dir"])
     section_name = answers["host_name"]
-    host_type = section_name
-    host_url = ""
-    group_id = 0
+    host_type = "github"
 
     if section_name == "selfhosted":
-        host_type = inquirer.prompt(
-            [inquirer.List("host_type", message="Is this self-hosted GitHub or GitLab?", choices=["github", "gitlab"])]
-        )["host_type"]
-        entered_url = inquirer.prompt([inquirer.Text("host_url", message="Enter your self-hosted Git server URL")])[
-            "host_url"
-        ]
-        host_url = _normalize_github_url(entered_url) if host_type == "github" else _normalize_url(entered_url)
+        entered_url = inquirer.prompt(
+            [inquirer.Text("host_url", message="Enter your self-hosted GitHub Enterprise URL")]
+        )["host_url"]
+        host_url = _normalize_github_url(entered_url)
     else:
         host_url = _default_host_url(section_name)
-
-    if host_type == "gitlab":
-        group_id_answer = inquirer.prompt(
-            [inquirer.Text("group_id", message="Optional GitLab group id to clone a group instead of your personal namespace")]
-        )
-        try:
-            group_id = int(group_id_answer["group_id"]) if group_id_answer["group_id"] else 0
-        except ValueError:
-            group_id = 0
 
     data = ConfigData(
         host_name=section_name,
@@ -222,7 +201,6 @@ def ask_for_section(already_configured: list[str]) -> ConfigData | None:
         target_dir=target_dir,
         include_private=answers["include_private"],
         include_forks=answers["include_forks"],
-        group_id=group_id,
     )
     LOGGER.debug(f"Configuration data: {data}")
     return data
@@ -275,8 +253,6 @@ class ConfigManager:
             "include_forks": config_section.include_forks,
             "global_template_dir": str(config_section.global_template_dir) if config_section.global_template_dir else None,
         }
-        if config_section.group_id:
-            section["group_id"] = config_section.group_id
         toml_config["tool"]["git-mirror"][config_section.host_name] = section  # type: ignore[index]
         with open(self.config_path, "w", encoding="utf-8") as file:
             file.write(tomlkit.dumps(toml_config))
@@ -284,7 +260,7 @@ class ConfigManager:
     def _run_checks(self, config: ConfigData, attempt_token_setup: bool = False) -> list[SetupCheck]:
         checks = [
             SetupCheck("Config section", True, f"Configuration is stored under [tool.git-mirror.{config.host_name}]"),
-            SetupCheck("Host type", config.host_type in ("github", "gitlab"), f"Provider is {config.host_type}"),
+            SetupCheck("Host type", config.host_type == "github", f"Provider is {config.host_type}"),
         ]
 
         if config.target_dir and config.target_dir.exists() and config.target_dir.is_dir():
@@ -302,18 +278,11 @@ class ConfigManager:
         token_env_var = _token_env_var(config)
         token = os.getenv(token_env_var)
         if not token and attempt_token_setup:
-            if config.host_type == "github":
-                token = pat_init.setup_github_pat(
-                    env_var=token_env_var,
-                    api_url=config.host_url,
-                    host_label=_host_label(config),
-                )
-            else:
-                token = pat_init_gitlab.setup_gitlab_pat(
-                    env_var=token_env_var,
-                    host_url=config.host_url,
-                    host_label=_host_label(config),
-                )
+            token = pat_init.setup_github_pat(
+                env_var=token_env_var,
+                api_url=config.host_url,
+                host_label=_host_label(config),
+            )
 
         if not token:
             checks.append(
@@ -327,14 +296,9 @@ class ConfigManager:
             return checks
 
         checks.append(SetupCheck("Access token", True, f"Environment variable {token_env_var} is set"))
-        if config.host_type == "github":
-            authenticated_user = pat_init.get_authenticated_user(token, api_url=config.host_url)
-            valid = authenticated_user is not None
-            username = authenticated_user.get("login", "") if authenticated_user else ""
-        else:
-            authenticated_user = pat_init_gitlab.get_authenticated_user(token, host_url=config.host_url)
-            valid = authenticated_user is not None
-            username = authenticated_user.get("username", "") if authenticated_user else ""
+        authenticated_user = pat_init.get_authenticated_user(token, api_url=config.host_url)
+        valid = authenticated_user is not None
+        username = authenticated_user.get("login", "") if authenticated_user else ""
 
         checks.append(
             SetupCheck(
@@ -420,14 +384,14 @@ class ConfigManager:
         """
         Loads the configuration for the specified host from the TOML file.
         Args:
-            host (str): The host name (github, gitlab, selfhosted).
+            host (str): The host name (github, selfhosted).
 
         Returns:
             Optional[ConfigData]: The configuration data if found, else None.
         """
         LOGGER.debug(f"Loading configuration for {host} from {self.config_path.resolve()}")
         if not host:
-            raise ValueError("Host name (gitlab, github, selfhosted) is required.")
+            raise ValueError("Host name (github, selfhosted) is required.")
         if self.config_path.exists():
             config = tomlkit.loads(self.config_path.read_text(encoding="utf-8"))
             tool_config = config.get("tool", {}).get("git-mirror", {}).get(host, {})
@@ -441,7 +405,12 @@ class ConfigManager:
                 console.print(f"Creating directory {target_dir}")
                 os.makedirs(target_dir, exist_ok=True)
 
-            host_type = tool_config.get("host_type") or tool_config.get("type") or ("github" if host == "github" else "gitlab")
+            host_type = tool_config.get("host_type") or tool_config.get("type") or "github"
+            if host_type == "gitlab":
+                raise ValueError(
+                    f"GitLab support was removed in git_mirror 2.0. The [tool.git-mirror.{host}] section in "
+                    f"{self.config_path.resolve()} is configured for GitLab. Remove it or reconfigure it for GitHub."
+                )
             host_url = tool_config.get("host_url") or tool_config.get("url") or _default_host_url(host, host_type)
             global_template_dir = _coerce_path(tool_config.get("global_template_dir"))
             return ConfigData(
@@ -452,7 +421,6 @@ class ConfigManager:
                 target_dir=target_dir,
                 include_private=tool_config.get("include_private", False),
                 include_forks=tool_config.get("include_forks", False),
-                group_id=tool_config.get("group_id", 0),
                 global_template_dir=global_template_dir,
             )
         return None

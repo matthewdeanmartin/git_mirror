@@ -16,7 +16,7 @@ from typing import Any
 import git as g
 
 from git_mirror.manage_config import ConfigData, ConfigManager, default_config_path
-from git_mirror.safe_env import load_env
+from git_mirror.utils.safe_env import load_env
 
 load_env()
 
@@ -116,52 +116,30 @@ def scan_local_changes(target_dir: Path) -> list[RepoStatus]:
 
 def list_repos_data(token: str, host: str, config: ConfigData) -> list[RepoInfo]:
     """Fetch repo list and return as plain data."""
-    if config.host_type == "github":
-        import github as gh
+    import github as gh
 
-        if config.host_url and config.host_url != "https://api.github.com":
-            client = gh.Github(base_url=config.host_url, login_or_token=token)
-        else:
-            client = gh.Github(token)
-        gh_user = client.get_user()
-        repos = []
-        for repo in gh_user.get_repos():
-            if (
-                (config.include_private or not repo.private)
-                and (config.include_forks or not repo.fork)
-                and repo.owner.login == config.user_name
-            ):
-                repos.append(
-                    RepoInfo(
-                        name=repo.name,
-                        description=repo.description or "No description",
-                        private=repo.private,
-                        fork=repo.fork,
-                        html_url=repo.html_url,
-                    )
+    if config.host_url and config.host_url != "https://api.github.com":
+        client = gh.Github(base_url=config.host_url, login_or_token=token)
+    else:
+        client = gh.Github(token)
+    gh_user = client.get_user()
+    repos = []
+    for repo in gh_user.get_repos():
+        if (
+            (config.include_private or not repo.private)
+            and (config.include_forks or not repo.fork)
+            and repo.owner.login == config.user_name
+        ):
+            repos.append(
+                RepoInfo(
+                    name=repo.name,
+                    description=repo.description or "No description",
+                    private=repo.private,
+                    fork=repo.fork,
+                    html_url=repo.html_url,
                 )
-        return repos
-    elif config.host_type == "gitlab":
-        import gitlab
-
-        gl = gitlab.Gitlab(config.host_url, private_token=token)
-        gl.auth()
-        gl_user = gl.user
-        projects = gl_user.projects.list(all=True) if gl_user else []
-        repos = []
-        for p in projects:
-            if config.include_private or p.visibility != "private":
-                repos.append(
-                    RepoInfo(
-                        name=p.name,
-                        description=getattr(p, "description", "") or "No description",
-                        private=p.visibility == "private",
-                        fork=bool(getattr(p, "forked_from_project", None)),
-                        html_url=p.web_url,
-                    )
-                )
-        return repos
-    return []
+            )
+    return repos
 
 
 def clone_all_repos(token: str, config: ConfigData, dry_run: bool = False) -> ActionResult:
@@ -171,58 +149,31 @@ def clone_all_repos(token: str, config: ConfigData, dry_run: bool = False) -> Ac
         return ActionResult(success=False, errors=["No target directory configured"])
     base_path = config.target_dir.expanduser()
 
-    if config.host_type == "github":
-        import git_mirror.manage_github as mgh
+    import git_mirror.manage_github as mgh
 
-        mgr = mgh.GithubRepoManager(
-            token, base_path, config.user_name,
-            include_private=config.include_private,
-            include_forks=config.include_forks,
-            host_domain=config.host_url or "https://api.github.com",
-            dry_run=dry_run, prompt_for_changes=False,
-        )
-        repos = mgr._get_user_repos()
-        for repo_data in mgr._thread_safe_repos(repos):
-            name = repo_data["name"]
-            url = repo_data["html_url"]
-            dest = base_path / name
-            if dest.exists():
-                result.messages.append(f"Already exists: {name}")
-                continue
-            if dry_run:
-                result.messages.append(f"Would clone: {url}")
-                continue
-            try:
-                g.Repo.clone_from(f"{url}.git", dest)
-                result.messages.append(f"Cloned: {name}")
-            except g.GitCommandError as e:
-                result.errors.append(f"Failed to clone {name}: {e}")
-    elif config.host_type == "gitlab":
-        import git_mirror.manage_gitlab as mgl
-
-        mgr_gl = mgl.GitlabRepoManager(
-            token, base_path, config.user_name,
-            include_private=config.include_private,
-            include_forks=config.include_forks,
-            host_domain=config.host_url or "https://gitlab.com",
-            dry_run=dry_run, prompt_for_changes=False,
-        )
-        repos_gl = mgr_gl._get_user_repos()
-        for repo_data_gl in repos_gl:
-            name = repo_data_gl.name
-            url = repo_data_gl.http_url_to_repo
-            dest = base_path / name
-            if dest.exists():
-                result.messages.append(f"Already exists: {name}")
-                continue
-            if dry_run:
-                result.messages.append(f"Would clone: {url}")
-                continue
-            try:
-                g.Repo.clone_from(url, dest)
-                result.messages.append(f"Cloned: {name}")
-            except g.GitCommandError as e:
-                result.errors.append(f"Failed to clone {name}: {e}")
+    mgr = mgh.GithubRepoManager(
+        token, base_path, config.user_name,
+        include_private=config.include_private,
+        include_forks=config.include_forks,
+        host_domain=config.host_url or "https://api.github.com",
+        dry_run=dry_run, prompt_for_changes=False,
+    )
+    repos = mgr._get_user_repos()
+    for repo_data in mgr._thread_safe_repos(repos):
+        name = repo_data["name"]
+        url = repo_data["html_url"]
+        dest = base_path / name
+        if dest.exists():
+            result.messages.append(f"Already exists: {name}")
+            continue
+        if dry_run:
+            result.messages.append(f"Would clone: {url}")
+            continue
+        try:
+            g.Repo.clone_from(f"{url}.git", dest)
+            result.messages.append(f"Cloned: {name}")
+        except g.GitCommandError as e:
+            result.errors.append(f"Failed to clone {name}: {e}")
 
     if result.errors:
         result.success = False
@@ -268,8 +219,6 @@ def find_non_repos(target_dir: Path) -> list[tuple[str, str]]:
 
 def get_build_statuses(token: str, config: ConfigData) -> list[BuildInfo]:
     """Get build statuses as data."""
-    if config.host_type != "github":
-        return []
     import github as gh
 
     if config.host_url and config.host_url != "https://api.github.com":
@@ -303,6 +252,4 @@ def get_token_for_host(config: ConfigData) -> str | None:
     """Read token from environment for the given config."""
     if config.host_name == "selfhosted":
         return os.getenv("SELFHOSTED_ACCESS_TOKEN")
-    if config.host_type == "github":
-        return os.getenv("GITHUB_ACCESS_TOKEN")
-    return os.getenv("GITLAB_ACCESS_TOKEN")
+    return os.getenv("GITHUB_ACCESS_TOKEN")
