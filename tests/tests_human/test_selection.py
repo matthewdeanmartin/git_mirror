@@ -1,6 +1,3 @@
-from pathlib import Path
-from unittest.mock import patch
-
 import tomlkit
 
 from git_mirror.core import RepoSelection, build_selection

@@ -15,11 +15,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
@@ -41,6 +41,9 @@ dependencies = [
 ]
 
 [project.urls]
+"Documentation" = "https://git-mirror.readthedocs.io/"
+"Homepage" = "https://github.com/matthewdeanmartin/git_mirror"
+"Source" = "https://github.com/matthewdeanmartin/git_mirror"
 "Bug Tracker" = "https://github.com/matthewdeanmartin/git_mirror/issues"
 "Change Log" = "https://github.com/matthewdeanmartin/git_mirror/blob/main/CHANGELOG.md"
 
@@ -56,8 +59,11 @@ git_mirror_gui = 'git_mirror.gui.app:launch_gui'
 [dependency-groups]
 dev = [
     "jiggle-version>=2.1.0",
+    "keepachangelog-manager-fork>=6.1.1,<7",
     "dont-be-lazy>=0.1.2; python_version >= '3.10'",
     "pydoc-fork>=3.0.0; python_version >= '3.10'",
+    "mkdocs>=1.6.0",
+    "mkdocstrings[python]>=0.26.0",
 
     "ty",
     "pip-audit",
@@ -100,7 +106,8 @@ build-backend = "hatchling.build"
 #"templates" = "git_mirror/templates"
 
 [tool.hatch.build.targets.wheel]
-packages = ["git_mirror", "git_mirror/gui"]
+packages = ["git_mirror"]
+dev-mode-dirs = ["."]
 include = [
     "git_mirror/**/*.py",
     "git_mirror/py.typed",
@@ -222,6 +229,22 @@ convention = "google"
 version = "literal: pyproject.toml: tool.poetry.version"
 format = "md"
 main_branches = "master, main, develop, dev"
+
+[tool.changelogmanager.versioning]
+scheme = "semver"
+
+[tool.changelogmanager.validation]
+enforce_preamble = true
+format = "auto"
+
+[tool.changelogmanager.defaults]
+error_format = "github"
+commit_schema = "keepachangelog"
+schema_version = "current"
+
+[[tool.changelogmanager.components]]
+name = "default"
+changelog = "CHANGELOG.md"
 
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
