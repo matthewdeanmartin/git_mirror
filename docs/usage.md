@@ -47,11 +47,15 @@ git_mirror sync-config --host github
 ## Interactive modes
 
 ```bash
-git_mirror menu
-git_mirror gui
-git_mirror_gui
+git_mirror menu        # guided prompts in the terminal
+git_mirror_tui         # full-screen Textual TUI
+git_mirror gui         # or git_mirror_gui: tkinter desktop GUI
 ```
 
-The GUI is useful for scanning configured repositories without remembering the command names.
+These are alternatives to typing commands. The **menu** asks you which host and
+command to run; the **TUI** is a full-screen, keyboard-driven dashboard; the
+**GUI** is a windowed desktop app. All three are useful for scanning configured
+repositories without remembering command names.
 
-The GUI exposes configuration, local status, repository listing, clone, pull, local changes, build status, doctor, account summary, branch update, prune, and sync-config panels.
+See [Interfaces](interfaces.md) for a full description of each, including the
+TUI's Dashboard, Local Changes, Actions, and Doctor tabs.

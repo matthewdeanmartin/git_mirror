@@ -23,7 +23,8 @@ The installed command names are:
 - `git_mirror`: full CLI; pass `--host github` or `--host selfhosted` for repository commands.
 - `gh_mirror`: shortcut for the public GitHub host.
 - `sh_mirror`: shortcut for self-hosted GitHub Enterprise.
-- `git_mirror_gui`: desktop GUI.
+- `git_mirror_gui`: tkinter desktop GUI.
+- `git_mirror_tui`: full-screen terminal UI (Textual).
 
 Common commands:
 
@@ -39,7 +40,14 @@ git_mirror sync-config --host github
 git_mirror not-repo --host github
 ```
 
-Use `--dry-run` to preview supported mutating commands and `--yes` to skip confirmation prompts in automation. Use `git_mirror menu` for an interactive terminal menu or `git_mirror gui` / `git_mirror_gui` for the Tkinter desktop interface.
+Use `--dry-run` to preview supported mutating commands and `--yes` to skip confirmation prompts in automation.
+
+git_mirror can be driven four ways, all thin front ends over the same core:
+
+- **CLI** — the commands above (scripts, CI, power users).
+- **Interactive menu** — `git_mirror menu` (guided prompts in the terminal).
+- **TUI** — `git_mirror_tui`, a full-screen Textual app (dashboard, local changes, batch actions, doctor).
+- **Desktop GUI** — `git_mirror gui` / `git_mirror_gui` (tkinter).
 
 ## Typical Workflow
 

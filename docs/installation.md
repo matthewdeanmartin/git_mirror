@@ -13,7 +13,10 @@ The installed commands are:
 - `git_mirror`: full command surface; pass `--host github` or `--host selfhosted` for repository commands.
 - `gh_mirror`: GitHub shortcut; uses `github` as the host.
 - `sh_mirror`: self-hosted GitHub Enterprise shortcut; uses `selfhosted` as the host.
-- `git_mirror_gui`: starts the desktop GUI.
+- `git_mirror_tui`: starts the full-screen Textual terminal UI.
+- `git_mirror_gui`: starts the tkinter desktop GUI.
+
+See [Interfaces](interfaces.md) for when to use each.
 
 For local development, use `uv`:
 

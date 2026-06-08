@@ -296,25 +296,22 @@ class DashboardPanel(BasePanel):
         return rows
 
     def display(self, rows: list[Any]):
+        from git_mirror.core import build_state, dashboard_state
+
         for row in self.tree.get_children():
             self.tree.delete(row)
 
         attention = 0
         for r in rows:
-            if r.error:
-                tag, state = "error", "error"
-            elif r.needs_attention:
-                tag, state = "warn", "dirty" if r.dirty else "out of sync"
-            else:
-                tag, state = "ok", "clean"
+            tag, state = dashboard_state(r)
             if r.needs_attention:
                 attention += 1
 
             age = "" if r.last_commit_age_days is None else f"{r.last_commit_age_days}d ago"
-            ci = r.build or ("—" if r.has_remote else "no remote")
+            ci = build_state(r.build)[1] if r.build else ""
             branch = r.branch + ("*" if r.dirty else "")
             self.tree.insert("", tk.END, values=(
-                r.name, branch, r.error or state,
+                r.name, branch, state,
                 r.ahead or "", r.behind or "", r.untracked_branches or "",
                 age, ci,
             ), tags=(tag,))
@@ -607,18 +604,13 @@ class BuildStatusPanel(BasePanel):
         return get_build_statuses(token, config)
 
     def display(self, builds: list[Any]):
+        from git_mirror.core import build_state
+
         for row in self.tree.get_children():
             self.tree.delete(row)
         for b in builds:
-            if b.conclusion == "success":
-                tag = "ok"
-            elif b.conclusion == "failure":
-                tag = "error"
-            elif b.conclusion == "cancelled":
-                tag = "warn"
-            else:
-                tag = "dim"
-            self.tree.insert("", tk.END, values=(b.repo_name, b.conclusion or "pending", b.status_message), tags=(tag,))
+            tag, label = build_state(b.conclusion)
+            self.tree.insert("", tk.END, values=(b.repo_name, label, b.status_message), tags=(tag,))
         self.status.set(f"Found {len(builds)} build results")
 
     def on_error(self, exc: Exception):
@@ -720,34 +712,11 @@ class UpdateFromMainPanel(BasePanel):
 
     @staticmethod
     def do_update(token: str, config: Any, dry_run: bool):
-        if not config.target_dir:
-            return {"messages": [], "errors": ["No target directory configured"]}
-        import git_mirror.manage_github as mgh
+        from git_mirror.core import update_from_main_repos
+        return update_from_main_repos(token, config, dry_run)
 
-        base_path = config.target_dir.expanduser()
-        messages = []
-        errors = []
-
-        if config.host_type == "github":
-            mgr = mgh.GithubRepoManager(
-                token, base_path, config.user_name,
-                include_private=config.include_private,
-                include_forks=config.include_forks,
-                host_domain=config.host_url or "https://api.github.com",
-                dry_run=dry_run, prompt_for_changes=False,
-            )
-            try:
-                mgr.update_all_branches(single_threaded=True)
-                messages.append("Update complete.")
-            except Exception as e:
-                errors.append(str(e))
-        else:
-            messages.append("Update-from-main is currently GitHub-only in the GUI.")
-
-        return {"messages": messages, "errors": errors}
-
-    def display(self, result: dict[str, Any]):
-        lines = result["messages"] + [f"ERROR: {e}" for e in result["errors"]]
+    def display(self, result: Any):
+        lines = result.messages + [f"ERROR: {e}" for e in result.errors]
         output_set(self.output, "\n".join(lines) if lines else "Done.")
         self.status.set("Update complete")
 
@@ -807,34 +776,11 @@ class PruneAllPanel(BasePanel):
 
     @staticmethod
     def do_prune(token: str, config: Any, dry_run: bool):
-        if not config.target_dir:
-            return {"messages": [], "errors": ["No target directory configured"]}
-        import git_mirror.manage_github as mgh
+        from git_mirror.core import prune_all_repos
+        return prune_all_repos(token, config, dry_run)
 
-        base_path = config.target_dir.expanduser()
-        messages = []
-        errors = []
-
-        if config.host_type == "github":
-            mgr = mgh.GithubRepoManager(
-                token, base_path, config.user_name,
-                include_private=config.include_private,
-                include_forks=config.include_forks,
-                host_domain=config.host_url or "https://api.github.com",
-                dry_run=dry_run, prompt_for_changes=False,
-            )
-            try:
-                mgr.prune_all()
-                messages.append("Prune complete.")
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                errors.append(str(e))
-        else:
-            messages.append("Prune is currently GitHub-only in the GUI.")
-
-        return {"messages": messages, "errors": errors}
-
-    def display(self, result: dict[str, Any]):
-        lines = result["messages"] + [f"ERROR: {e}" for e in result["errors"]]
+    def display(self, result: Any):
+        lines = result.messages + [f"ERROR: {e}" for e in result.errors]
         output_set(self.output, "\n".join(lines) if lines else "Done.")
         self.status.set("Prune complete")
 

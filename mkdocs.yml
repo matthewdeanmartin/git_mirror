@@ -18,6 +18,9 @@ nav:
   - Installation: installation.md
   - Configuration: configuration.md
   - Usage: usage.md
+  - Interfaces: interfaces.md
+  - Architecture: architecture.md
+  - Change Log: changelog.md
 validation:
   nav:
     omitted_files: warn

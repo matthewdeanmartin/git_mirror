@@ -86,6 +86,50 @@ class DashboardRow:
         )
 
 
+# ── Shared status classification (one source of truth for every UI) ──
+#
+# Every front end (CLI/router, tkinter GUI, Textual TUI) needs to turn a repo's
+# state into "is this good / warning / bad" so it can colour a cell.  The colour
+# *values* differ per toolkit, but the *decision* must not.  These helpers
+# return a semantic tag — "ok" | "warn" | "error" | "dim" — plus a short label;
+# each UI maps the tag to its own styling (Rich markup, tk tag, Textual style).
+
+# Build conclusions that should read as failures / warnings.
+BUILD_BAD = ("failure", "timed_out", "startup_failure")
+BUILD_WARN = ("cancelled", "action_required", "stale", "skipped", "neutral")
+
+
+def dashboard_state(row: DashboardRow) -> tuple[str, str]:
+    """Classify a dashboard row's overall state → (tag, label).
+
+    tag is one of "ok" | "warn" | "error"; label is a human word for the cell.
+    """
+    if row.error:
+        return "error", row.error
+    if not row.has_remote:
+        return "error", "no remote"
+    if row.dirty:
+        return "warn", "dirty"
+    if row.ahead or row.behind:
+        return "warn", "out of sync"
+    return "ok", "clean"
+
+
+def build_state(conclusion: str | None) -> tuple[str, str]:
+    """Classify a CI conclusion → (tag, label).
+
+    Shared by the build-status views and the dashboard's Build column.
+    """
+    value = (conclusion or "").lower()
+    if value == "success":
+        return "ok", "success"
+    if value in BUILD_BAD:
+        return "error", value
+    if value in BUILD_WARN:
+        return "warn", value or "pending"
+    return "dim", value or "pending"
+
+
 # ── Manager factory (single construction point for CLI + GUI) ────────
 
 
@@ -417,6 +461,43 @@ def pull_all_repos(target_dir: Path, dry_run: bool = False) -> ActionResult:
             result.errors.append(f"Failed to pull {repo_dir.name}: {e}")
     if result.errors:
         result.success = False
+    return result
+
+
+def update_from_main_repos(token: str, config: ConfigData, dry_run: bool = False) -> ActionResult:
+    """Merge/rebase the default branch into every local branch, as data.
+
+    The single home for "update-from-main" wiring, shared by the CLI and every
+    GUI/TUI so the front ends never build a host manager themselves.
+    """
+    if not config.target_dir:
+        return ActionResult(success=False, errors=["No target directory configured"])
+    result = ActionResult(success=True)
+    mgr = manager_from_config(token, config, dry_run=dry_run, prompt_for_changes=False)
+    try:
+        mgr.update_all_branches(single_threaded=True)
+        result.messages.append("Update complete.")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        result.success = False
+        result.errors.append(str(e))
+    return result
+
+
+def prune_all_repos(token: str, config: ConfigData, dry_run: bool = False) -> ActionResult:
+    """Prune local branches deleted on the remote, as data.
+
+    The single home for "prune-all" wiring, shared by the CLI and every GUI/TUI.
+    """
+    if not config.target_dir:
+        return ActionResult(success=False, errors=["No target directory configured"])
+    result = ActionResult(success=True)
+    mgr = manager_from_config(token, config, dry_run=dry_run, prompt_for_changes=False)
+    try:
+        mgr.prune_all()
+        result.messages.append("Prune complete.")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        result.success = False
+        result.errors.append(str(e))
     return result
 
 

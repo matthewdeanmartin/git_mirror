@@ -22,7 +22,6 @@ import inquirer
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from termcolor import colored
 
 import git_mirror.manage_git as mg
 from git_mirror.custom_types import SourceHost, UpdateBranchArgs
@@ -321,6 +320,9 @@ class GithubRepoManager(SourceHost):
         return messages
 
     def loop_actions(self, statuses) -> list[tuple[str, str]]:
+        from git_mirror import core
+        from git_mirror.utils.ui import RICH_TAG_STYLE
+
         console = console_with_theme()
         actions_per_repo = 1
         status_count = 0
@@ -333,14 +335,8 @@ class GithubRepoManager(SourceHost):
             status_message = f"Date: {action.created_at} - {action.display_title} - Conclusion - {action.conclusion}  Status: {action.status} - URL: {action.html_url}"
             conclusion = (action.conclusion or "").lower()
             messages.append((conclusion, status_message))
-            if conclusion == "success":
-                console.print(colored(status_message, "green"))
-            elif conclusion == "failure":
-                console.print(colored(status_message, "red"))
-            elif conclusion == "cancelled":
-                console.print(colored(status_message, "yellow"))
-            else:
-                console.print(status_message)  # Default, no color
+            tag, _ = core.build_state(conclusion)
+            console.print(status_message, style=RICH_TAG_STYLE.get(tag))
         return messages
 
     @staticmethod

@@ -26,6 +26,9 @@ def render_dashboard(rows) -> None:
     """Render the fleet status dashboard as a single Rich table."""
     from rich.table import Table
 
+    from git_mirror import core
+    from git_mirror.utils.ui import rich_markup as _rich
+
     console = get_console()
     if not rows:
         console.print("No repositories found in the target directory.")
@@ -44,24 +47,19 @@ def render_dashboard(rows) -> None:
     for row in rows:
         if row.needs_attention:
             attention += 1
-        if row.error:
-            state = f"[red]{row.error}[/red]"
-        elif row.dirty:
-            state = "[yellow]dirty[/yellow]"
-        elif not row.has_remote:
-            state = "[red]no remote[/red]"
-        else:
-            state = "[green]clean[/green]"
+
+        state_tag, state_label = core.dashboard_state(row)
+        state = _rich(state_tag, state_label)
 
         ahead = f"[yellow]{row.ahead}[/yellow]" if row.ahead else "0"
         behind = f"[yellow]{row.behind}[/yellow]" if row.behind else "0"
         age = "-" if row.last_commit_age_days is None else f"{row.last_commit_age_days}d"
 
-        build = row.build or "-"
-        if row.build in ("failure", "cancelled", "timed_out"):
-            build = f"[red]{row.build}[/red]"
-        elif row.build == "success":
-            build = "[green]success[/green]"
+        if row.build:
+            build_tag, build_label = core.build_state(row.build)
+            build = _rich(build_tag, build_label)
+        else:
+            build = "-"
 
         table.add_row(row.name, row.branch or "-", state, ahead, behind, age, build)
 

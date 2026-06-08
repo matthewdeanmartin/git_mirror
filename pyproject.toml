@@ -23,20 +23,24 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+    # config
     "python-dotenv>=1.0.1,<2",
-    "rich>=13.7.0,<14",
-    "inquirer>=3.2.3,<4",
-    "termcolor",
-    "prettytable<4",
-    "colorama>=0.4.6,<1",
-    "colorlog>=6.8.0,<7",
-    "PyGithub>=2.2.0",
-    "GitPython>=3.1.42",
     "keyring>=24,<26",
-    "httpx>=0.26.0,<1",
-    "requests-cache>=1.2.0,<2",
     "toml>=0.10.2,<1",
     "tomlkit>=0.12.3,<1",
+    # ui
+    "rich>=14.2.0",
+    "inquirer>=3.2.3,<4",
+    "textual>=8",
+    # diagnostics
+    "colorlog>=6.8.0,<7",
+    # Git ergonomics
+    "PyGithub>=2.2.0",
+    "GitPython>=3.1.42",
+    # version check
+    "httpx>=0.26.0,<1",
+    "requests-cache>=1.2.0,<2",
+    # doctor tool
     "cli-tool-audit>=3.0.1",
 ]
 
@@ -51,6 +55,7 @@ dependencies = [
 git_mirror = 'git_mirror.__main__:main'
 gh_mirror = 'git_mirror.__main__:main_github'
 sh_mirror = 'git_mirror.__main__:main_selfhosted'
+git_mirror_tui = 'git_mirror.tui.app:launch_tui'
 
 [project.gui-scripts]
 git_mirror_gui = 'git_mirror.gui.app:launch_gui'
@@ -81,7 +86,6 @@ dev = [
     "ruff>=0.1.9",
     "mypy>=1.8.0",
     "types-toml",
-    "types-colorama",
     "types-tqdm",
     "pre-commit>=3.5.0",
     "metametameta",

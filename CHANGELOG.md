@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added Read the Docs and MkDocs documentation.
 - Added changelog-driven draft release and PyPI publishing workflows.
+- TUI interface
 
 ### Changed
 
 - Rewrote the README to describe the current GitHub-focused scope honestly.
+- Tkinter gui now supports all (remaining) features
 
 ## [2.0.0] - 2026-06-07
 
