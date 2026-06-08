@@ -1,6 +1,7 @@
 """
 git_mirror tkinter GUI.
 
+Point it at a folder of GitHub repos and operate on all of them at once.
 Layout: help/info on left, main panel in centre, action buttons on right.
 Dark theme (Catppuccin Mocha inspired).  See spec/CONTRIBUTING_TKINTER.md.
 """
@@ -225,62 +226,103 @@ class BasePanel(tk.Frame):
         self.status = app.status_var
 
 
-# ── Dashboard panel ──────────────────────────────────────────────────
+# ── Dashboard panel (fleet status) ───────────────────────────────────
 
 
 class DashboardPanel(BasePanel):
+    """The whole-fleet status table: one row per local repo, attention-first.
+
+    This is the heart of the app — "what is the state of ALL my repos?" in one
+    glance.  Local git state always loads; CI conclusions are merged in when a
+    token is available.
+    """
+
     def __init__(self, parent: tk.Widget, app: GitMirrorApp):
         super().__init__(parent, app)
-        make_heading(self, "Dashboard")
+        make_heading(self, "Dashboard — fleet status")
 
-        self.output = make_output(self, height=24)
+        bar = make_toolbar(self)
+        toolbar_btn(bar, "Refresh", self.load)
+        self.builds_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            bar, text="Include CI status (needs token)", variable=self.builds_var,
+            bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
+            font=FONT_UI,
+        ).pack(side=tk.LEFT, padx=12)
+
+        self.tree = make_tree(self, [
+            ("Repository", 220),
+            ("Branch", 130),
+            ("State", 90),
+            ("Ahead", 60),
+            ("Behind", 60),
+            ("Untracked", 80),
+            ("Last commit", 100),
+            ("CI", 100),
+        ], height=22)
         self.load()
 
     def load(self):
-        self.status.set("Loading configuration...")
-        self.runner.run(self.fetch, on_success=self.display, on_error=self.on_error)
+        configs = self.app.get_configs()
+        targets = [
+            (c.target_dir, c)
+            for c in configs.values()
+            if c and c.target_dir and c.target_dir.exists()
+        ]
+        if not targets:
+            for row in self.tree.get_children():
+                self.tree.delete(row)
+            self.status.set("No configured target directories. Run Doctor or Config to set one up.")
+            return
+        self.status.set("Scanning fleet status...")
+        self.runner.run(
+            self.fetch, args=(targets, self.builds_var.get()),
+            on_success=self.display, on_error=self.on_error,
+        )
 
     @staticmethod
-    def fetch():
-        from git_mirror.core import load_all_configs
-        return load_all_configs()
+    def fetch(targets: list[tuple[Path, Any]], include_builds: bool):
+        from git_mirror.core import get_token_for_host, repo_dashboard
+        rows: list[Any] = []
+        for target_dir, config in targets:
+            token = get_token_for_host(config) if include_builds else None
+            rows.extend(
+                repo_dashboard(
+                    target_dir,
+                    token=token,
+                    config=config if token else None,
+                )
+            )
+        return rows
 
-    def display(self, configs: dict[str, Any]):
-        lines: list[tuple[str, str | None]] = []
-        lines.append(("git_mirror v" + __version__ + "\n\n", "accent"))
-        found = False
-        for host, config in configs.items():
-            if config:
-                found = True
-                lines.append((f"  {host}\n", "heading"))
-                lines.append((f"    User:       {config.user_name}\n", None))
-                lines.append((f"    Target dir: {config.target_dir}\n", None))
-                lines.append((f"    Host URL:   {config.host_url}\n", None))
-                lines.append((f"    Private:    {'Yes' if config.include_private else 'No'}\n", None))
-                lines.append((f"    Forks:      {'Yes' if config.include_forks else 'No'}\n\n", None))
-        if not found:
-            lines.append(("No hosts configured. Use Init to set up a host.\n", "warn"))
+    def display(self, rows: list[Any]):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
 
-        lines.append(("\nQuick start:\n", "heading"))
-        lines.append(("  1. Click Init to configure a host (GitHub or self-hosted GitHub Enterprise)\n", "dim"))
-        lines.append(("  2. Click Doctor to verify your setup\n", "dim"))
-        lines.append(("  3. Use Clone All to pull down all your repos\n", "dim"))
-        lines.append(("  4. Use Pull All to keep them up to date\n", "dim"))
-        lines.append(("  5. Use Local Changes to see dirty repos and unpushed commits\n", "dim"))
-
-        self.output.configure(state=tk.NORMAL)
-        self.output.delete("1.0", tk.END)
-        for text, tag in lines:
-            if tag:
-                self.output.insert(tk.END, text, tag)
+        attention = 0
+        for r in rows:
+            if r.error:
+                tag, state = "error", "error"
+            elif r.needs_attention:
+                tag, state = "warn", "dirty" if r.dirty else "out of sync"
             else:
-                self.output.insert(tk.END, text)
-        self.output.configure(state=tk.DISABLED)
-        self.status.set("Ready")
+                tag, state = "ok", "clean"
+            if r.needs_attention:
+                attention += 1
+
+            age = "" if r.last_commit_age_days is None else f"{r.last_commit_age_days}d ago"
+            ci = r.build or ("—" if r.has_remote else "no remote")
+            branch = r.branch + ("*" if r.dirty else "")
+            self.tree.insert("", tk.END, values=(
+                r.name, branch, r.error or state,
+                r.ahead or "", r.behind or "", r.untracked_branches or "",
+                age, ci,
+            ), tags=(tag,))
+
+        self.status.set(f"{len(rows)} repos — {attention} need attention")
 
     def on_error(self, exc: Exception):
-        output_set(self.output, f"Error loading config: {exc}", "error")
-        self.status.set("Error loading configuration")
+        self.status.set(f"Error: {exc}")
 
 
 # ── Local Changes panel ──────────────────────────────────────────────
@@ -344,71 +386,6 @@ class LocalChangesPanel(BasePanel):
             self.tree.insert("", tk.END, values=(s.path.name, status_text, unpushed, untracked), tags=(tag,))
 
         self.status.set(f"Scanned {len(statuses)} repos, {dirty} need attention")
-
-    def on_error(self, exc: Exception):
-        self.status.set(f"Error: {exc}")
-
-
-# ── List Repos panel ─────────────────────────────────────────────────
-
-
-class ListReposPanel(BasePanel):
-    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
-        super().__init__(parent, app)
-        make_heading(self, "Repositories")
-
-        bar = make_toolbar(self)
-        self.host_var = tk.StringVar(value="github")
-        for host in ("github", "selfhosted"):
-            tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
-            ).pack(side=tk.LEFT, padx=2)
-        toolbar_btn(bar, "Fetch Repos", self.fetch_repos)
-
-        self.tree = make_tree(self, [
-            ("Name", 200),
-            ("Description", 350),
-            ("Private", 80),
-            ("Fork", 80),
-        ], height=22)
-
-    def fetch_repos(self):
-        host = self.host_var.get()
-        configs = self.app.get_configs()
-        config = configs.get(host)
-        if not config:
-            self.status.set(f"No configuration for {host}")
-            return
-        from git_mirror.core import get_token_for_host
-        token = get_token_for_host(config)
-        if not token:
-            self.status.set(f"No access token for {host}")
-            return
-        self.status.set(f"Fetching repos from {host}...")
-        self.runner.run(
-            self.fetch, args=(token, host, config),
-            on_success=self.display, on_error=self.on_error,
-        )
-
-    @staticmethod
-    def fetch(token: str, host: str, config: Any):
-        from git_mirror.core import list_repos_data
-        return list_repos_data(token, host, config)
-
-    def display(self, repos: list[Any]):
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-        for repo in repos:
-            tag = "dim" if repo.fork else ""
-            self.tree.insert("", tk.END, values=(
-                repo.name, repo.description,
-                "Yes" if repo.private else "No",
-                "Yes" if repo.fork else "No",
-            ), tags=(tag,) if tag else ())
-        self.status.set(f"Found {len(repos)} repositories")
 
     def on_error(self, exc: Exception):
         self.status.set(f"Error: {exc}")
@@ -692,81 +669,6 @@ class DoctorPanel(BasePanel):
         self.status.set(f"Error: {exc}")
 
 
-# ── Show Account panel ───────────────────────────────────────────────
-
-
-class ShowAccountPanel(BasePanel):
-    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
-        super().__init__(parent, app)
-        make_heading(self, "Account Information")
-
-        bar = make_toolbar(self)
-        self.host_var = tk.StringVar(value="github")
-        for host in ("github", "selfhosted"):
-            tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
-            ).pack(side=tk.LEFT, padx=2)
-        toolbar_btn(bar, "Fetch Account", self.fetch_account)
-
-        self.output = make_output(self, height=22)
-
-    def fetch_account(self):
-        host = self.host_var.get()
-        configs = self.app.get_configs()
-        config = configs.get(host)
-        if not config:
-            self.status.set(f"No configuration for {host}")
-            return
-        from git_mirror.core import get_token_for_host
-        token = get_token_for_host(config)
-        if not token:
-            self.status.set(f"No access token for {host}")
-            return
-        self.status.set(f"Fetching account info from {host}...")
-        self.runner.run(
-            self.fetch, args=(token, config),
-            on_success=self.display, on_error=self.on_error,
-        )
-
-    @staticmethod
-    def fetch(token: str, config: Any):
-        if config.host_type == "github":
-            import github as gh
-            if config.host_url and config.host_url != "https://api.github.com":
-                client = gh.Github(base_url=config.host_url, login_or_token=token)
-            else:
-                client = gh.Github(token)
-            gh_user = client.get_user(config.user_name)
-            return {
-                "Username": gh_user.login,
-                "Name": gh_user.name or "N/A",
-                "Bio": gh_user.bio or "N/A",
-                "Public repos": str(gh_user.public_repos),
-                "Followers": str(gh_user.followers),
-                "Following": str(gh_user.following),
-                "Location": gh_user.location or "N/A",
-                "Company": gh_user.company or "N/A",
-                "URL": gh_user.html_url,
-            }
-        return {"Error": "Unknown host type"}
-
-    def display(self, info: dict[str, str]):
-        self.output.configure(state=tk.NORMAL)
-        self.output.delete("1.0", tk.END)
-        for key, value in info.items():
-            self.output.insert(tk.END, f"  {key}: ", "accent")
-            self.output.insert(tk.END, f"{value}\n")
-        self.output.configure(state=tk.DISABLED)
-        self.status.set("Account info loaded")
-
-    def on_error(self, exc: Exception):
-        output_set(self.output, f"Error: {exc}", "error")
-        self.status.set(f"Error: {exc}")
-
-
 # ── Update From Main panel ───────────────────────────────────────────
 
 
@@ -955,6 +857,7 @@ class ConfigPanel(BasePanel):
         toolbar_btn(bar, "View Config", self.view_config)
         toolbar_btn(bar, "Open Config File", self.open_config)
         toolbar_btn(bar, "Init New Host", self.init_host)
+        toolbar_btn(bar, "Sync with Remote", self.sync_config)
 
         self.view_config()
 
@@ -1014,67 +917,42 @@ class ConfigPanel(BasePanel):
             "To initialize a new host interactively, run from the command line:\n\n"
             "  git_mirror init\n\n"
             "The init wizard requires terminal input and is not available in the GUI.\n"
-            "After initializing, click 'Refresh Dashboard' to see the new host.",
+            "After initializing, click 'View Config' to see the new host.",
         )
 
-    def on_error(self, exc: Exception):
-        output_set(self.output, f"Error: {exc}", "error")
-        self.status.set(f"Error: {exc}")
-
-
-
-# ── Sync Config panel ────────────────────────────────────────────────
-
-
-class SyncConfigPanel(BasePanel):
-    def __init__(self, parent: tk.Widget, app: GitMirrorApp):
-        super().__init__(parent, app)
-        make_heading(self, "Sync Config with Remote")
-
-        bar = make_toolbar(self)
-        self.host_var = tk.StringVar(value="github")
-        for host in ("github", "selfhosted"):
-            tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
-            ).pack(side=tk.LEFT, padx=2)
-        toolbar_btn(bar, "Sync Config", self.run_sync)
-
-        self.output = make_output(self, height=22)
-
-    def run_sync(self):
-        host = self.host_var.get()
+    def sync_config(self):
+        """Sync each configured host's repo list into the config file."""
         configs = self.app.get_configs()
-        config = configs.get(host)
-        if not config:
-            self.status.set(f"No configuration for {host}")
+        hosts = [(h, c) for h, c in configs.items() if c]
+        if not hosts:
+            self.status.set("No hosts configured to sync.")
             return
-        from git_mirror.core import get_token_for_host
-        token = get_token_for_host(config)
-        if not token:
-            self.status.set(f"No access token for {host}")
-            return
-        self.status.set(f"Syncing config with {host}...")
-        self.runner.run(
-            self.do_sync, args=(token, host, config),
-            on_success=self.display, on_error=self.on_error,
-        )
+        self.status.set("Syncing config with remote...")
+        self.runner.run(self.do_sync, args=(hosts,), on_success=self.after_sync, on_error=self.on_error)
 
     @staticmethod
-    def do_sync(token: str, host: str, config: Any):
-        from git_mirror.core import list_repos_data
+    def do_sync(hosts: list[tuple[str, Any]]) -> str:
+        from git_mirror.core import get_token_for_host, list_repos_data
         from git_mirror.manage_config import ConfigManager, default_config_path
-        repos = list_repos_data(token, host, config)
-        repo_names = [f"{config.user_name}/{r.name}" for r in repos]
         cm = ConfigManager(default_config_path())
-        cm.load_and_sync_config(host, repo_names)
-        return f"Synced {len(repo_names)} repos to config."
+        total = 0
+        synced_hosts = []
+        for host, config in hosts:
+            token = get_token_for_host(config)
+            if not token:
+                continue
+            repos = list_repos_data(token, host, config)
+            repo_names = [f"{config.user_name}/{r.name}" for r in repos]
+            cm.load_and_sync_config(host, repo_names)
+            total += len(repo_names)
+            synced_hosts.append(host)
+        if not synced_hosts:
+            return "No hosts had a usable token; nothing synced."
+        return f"Synced {total} repos across {', '.join(synced_hosts)}."
 
-    def display(self, message: str):
-        output_set(self.output, message, "ok")
-        self.status.set("Sync complete")
+    def after_sync(self, message: str):
+        self.status.set(message)
+        self.view_config()
 
     def on_error(self, exc: Exception):
         output_set(self.output, f"Error: {exc}", "error")
@@ -1120,7 +998,7 @@ class GitMirrorApp:
             font=("Segoe UI", 13, "bold"), anchor=tk.W,
         ).pack(side=tk.LEFT, padx=8)
         tk.Label(
-            top_bar, text="Multi-repo management for GitHub & self-hosted GitHub Enterprise",
+            top_bar, text="Operate on a whole folder of GitHub repos at once",
             bg=CLR_SIDEBAR, fg=CLR_DIM, font=FONT_UI, anchor=tk.W,
         ).pack(side=tk.LEFT, padx=16)
 
@@ -1163,19 +1041,16 @@ class GitMirrorApp:
         ).pack(fill=tk.X, padx=8, pady=(16, 8))
 
         help_items = [
-            ("Dashboard", "Overview of your config\nand quick-start guide."),
+            ("Dashboard", "Whole-fleet status: dirty,\nahead/behind, CI, at a glance."),
             ("Local Changes", "Find dirty repos and\nunpushed commits."),
-            ("List Repos", "Fetch repo list from\nyour configured host."),
             ("Clone All", "Clone all remote repos\ninto your target dir."),
             ("Pull All", "Pull latest changes in\nall local repos."),
-            ("Not Repo", "Find directories that\naren't git repos."),
             ("Build Status", "Check GitHub Actions\nworkflow run results."),
             ("Update Main", "Merge/rebase main into\nall local branches."),
             ("Prune", "Remove local branches\ndeleted on remote."),
-            ("Account", "View your source host\naccount information."),
+            ("Not Repo", "Find directories that\naren't git repos."),
             ("Doctor", "Verify config, tokens,\nand connectivity."),
-            ("Config", "View and manage your\nconfiguration file."),
-            ("Sync Config", "Sync config file repo\nlist with remote."),
+            ("Config", "View config, init a host,\nand sync the repo list."),
         ]
 
         for title, desc in help_items:
@@ -1194,62 +1069,68 @@ class GitMirrorApp:
             font=FONT_UI_BOLD, anchor=tk.W,
         ).pack(fill=tk.X, padx=8, pady=(16, 8))
 
-        items = [
-            ("dashboard", "Dashboard"),
-            (None, None),  # separator
-            ("local_changes", "Local Changes"),
-            ("list_repos", "List Repos"),
-            ("clone_all", "Clone All"),
-            ("pull_all", "Pull All"),
-            ("not_repo", "Not Repo"),
-            ("build_status", "Build Status"),
-            (None, None),
-            ("update_main", "Update Main"),
-            ("prune", "Prune"),
-            (None, None),
-            ("account", "Account"),
-            ("doctor", "Doctor"),
-            ("config", "Config"),
-            ("sync_config", "Sync Config"),
+        # (section header, [(panel_id, label), ...]) — grouped to match the
+        # narrowed scope: see the fleet, sync it, maintain it, set it up.
+        sections = [
+            ("STATUS", [
+                ("dashboard", "Dashboard"),
+                ("local_changes", "Local Changes"),
+                ("build_status", "Build Status"),
+            ]),
+            ("SYNC", [
+                ("clone_all", "Clone All"),
+                ("pull_all", "Pull All"),
+            ]),
+            ("MAINTAIN", [
+                ("update_main", "Update Main"),
+                ("prune", "Prune"),
+                ("not_repo", "Not Repo"),
+            ]),
+            ("SETUP", [
+                ("doctor", "Doctor"),
+                ("config", "Config"),
+            ]),
         ]
 
-        for item_id, label in items:
-            if item_id is None or label is None:
-                tk.Frame(parent, bg=CLR_BORDER, height=1).pack(fill=tk.X, padx=12, pady=6)
-                continue
-            
-            final_item_id: str = item_id
+        for section_title, entries in sections:
+            tk.Label(
+                parent, text=section_title, bg=CLR_SIDEBAR, fg=CLR_HEADER,
+                font=("Segoe UI", 8, "bold"), anchor=tk.W,
+            ).pack(fill=tk.X, padx=16, pady=(12, 2))
+            for item_id, label in entries:
+                self._sidebar_button(parent, item_id, label)
 
-            def show_panel_cmd(pid: str = final_item_id) -> None:
-                self.show_panel(pid)
+    def _sidebar_button(self, parent: tk.Frame, item_id: str, label: str) -> None:
+        def show_panel_cmd(pid: str = item_id) -> None:
+            self.show_panel(pid)
 
-            btn = tk.Button(
-                parent,
-                text=label,
-                command=show_panel_cmd,
-                bg=CLR_SIDEBAR,
-                fg=CLR_FG,
-                activebackground=CLR_BTN_ACTIVE,
-                activeforeground=CLR_FG,
-                font=FONT_UI,
-                relief=tk.FLAT,
-                cursor="hand2",
-                anchor=tk.W,
-                padx=16,
-                pady=5,
-            )
-            btn.pack(fill=tk.X, padx=4, pady=1)
+        btn = tk.Button(
+            parent,
+            text=label,
+            command=show_panel_cmd,
+            bg=CLR_SIDEBAR,
+            fg=CLR_FG,
+            activebackground=CLR_BTN_ACTIVE,
+            activeforeground=CLR_FG,
+            font=FONT_UI,
+            relief=tk.FLAT,
+            cursor="hand2",
+            anchor=tk.W,
+            padx=16,
+            pady=5,
+        )
+        btn.pack(fill=tk.X, padx=4, pady=1)
 
-            def on_enter(event: tk.Event, b: tk.Button = btn) -> None:
-                b.configure(bg=CLR_BTN)
+        def on_enter(event: tk.Event, b: tk.Button = btn) -> None:
+            b.configure(bg=CLR_BTN)
 
-            def on_leave(event: tk.Event, b: tk.Button = btn) -> None:
-                if b != self.sidebar_buttons.get("active"):
-                    b.configure(bg=CLR_SIDEBAR)
+        def on_leave(event: tk.Event, b: tk.Button = btn) -> None:
+            if b != self.sidebar_buttons.get("active"):
+                b.configure(bg=CLR_SIDEBAR)
 
-            btn.bind("<Enter>", on_enter)
-            btn.bind("<Leave>", on_leave)
-            self.sidebar_buttons[item_id] = btn
+        btn.bind("<Enter>", on_enter)
+        btn.bind("<Leave>", on_leave)
+        self.sidebar_buttons[item_id] = btn
 
     def show_panel(self, panel_id: str):
         # Destroy current panel
@@ -1267,17 +1148,14 @@ class GitMirrorApp:
         builders: dict[str, type[BasePanel]] = {
             "dashboard": DashboardPanel,
             "local_changes": LocalChangesPanel,
-            "list_repos": ListReposPanel,
             "clone_all": CloneAllPanel,
             "pull_all": PullAllPanel,
             "not_repo": NotRepoPanel,
             "build_status": BuildStatusPanel,
             "update_main": UpdateFromMainPanel,
             "prune": PruneAllPanel,
-            "account": ShowAccountPanel,
             "doctor": DoctorPanel,
             "config": ConfigPanel,
-            "sync_config": SyncConfigPanel,
         }
 
         panel_cls = builders.get(panel_id, DashboardPanel)
