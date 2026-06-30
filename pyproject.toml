@@ -64,7 +64,7 @@ git_mirror_gui = 'git_mirror.gui.app:launch_gui'
 [dependency-groups]
 dev = [
     "jiggle-version>=2.1.0",
-    "keepachangelog-manager-fork>=6.1.1,<7",
+    "keepachangelog-manager-fork[all]>=6.5.0",
     "dont-be-lazy>=0.1.2; python_version >= '3.10'",
     "pydoc-fork>=3.0.0; python_version >= '3.10'",
     "mkdocs>=1.6.0",
