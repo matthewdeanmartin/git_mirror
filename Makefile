@@ -168,7 +168,7 @@ check_spelling:
 
 .PHONY: check_changelog
 check_changelog:
-	$(UV_RUN) changelogmanager validate
+	$(UV_RUN) kaclm validate
 
 .PHONY: check_all
 check_all: check_docs check_md check_spelling check_changelog
