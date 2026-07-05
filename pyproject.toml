@@ -88,7 +88,7 @@ dev = [
     "types-toml",
     "types-tqdm",
     "pre-commit>=3.5.0",
-    "metametameta",
+    "metametameta>=0.1.14",
     "interrogate>=1.5.0",
     "pydoctest>=0.1.22",
     "pdoc3>=0.10.0",
