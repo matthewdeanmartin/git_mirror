@@ -203,3 +203,32 @@ dont-be-lazy:
 .PHONY: pydoc-docs
 pydoc-docs:
 	@uv run pydoc_fork git_mirror -o ./pydoc/
+
+# ── Python 3.15 trial (dedicated venv; never touches .venv) ──────────────────
+# See python315.md for the full procedure and rationale. hypothesis is pinned
+# separately because the locked 6.155.7 has no cp315 wheel; >=6.160.0 does.
+
+PY315 := 3.15.0rc2
+VENV315 := .venv315rc2
+PY315_EXE := $(VENV315)/Scripts/python.exe
+
+.PHONY: venv315
+venv315:
+	@echo "Creating Python $(PY315) trial venv at $(VENV315)"
+	@test -x $(PY315_EXE) || uv venv $(VENV315) --python $(PY315)
+	uv pip install -e . pytest pytest-cov pytest-timeout pytest-mock "hypothesis>=6.160.0" --python $(PY315_EXE)
+
+.PHONY: venv315-clean
+venv315-clean:
+	@echo "Recreating Python $(PY315) trial venv from scratch"
+	uv venv $(VENV315) --python $(PY315) --clear
+	@$(MAKE) venv315
+
+.PHONY: test315
+test315: venv315
+	@echo "Running unit tests on Python $(PY315)"
+	$(PY315_EXE) -m pytest tests -q --timeout=60 -p no:randomly
+
+.PHONY: check315
+check315: test315
+	@echo "Python $(PY315) checks passed."
