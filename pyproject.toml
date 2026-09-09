@@ -99,7 +99,10 @@ dev = [
     "codespell>=2.2.6",
     "pyenchant>=3.2.2",
     "zizmor>=1.4.1",
-    "check-jsonschema>=0.33.3; python_version < '3.15'",  # depends on regress, pinned to pyo3<=0.26 which caps at 3.14 (hard dep, no extra to trim)
+    # 3.15 OK: regress 2026.9.1 shipped pyo3 0.29 (was capped at 3.14).
+    # 0.38.0 requires >=3.10, so keep an older floor for 3.9.
+    "check-jsonschema>=0.38.0; python_version >= '3.10'",
+    "check-jsonschema>=0.30.0; python_version < '3.10'",
     "gha-update>=0.2.0,<0.3; python_version >= '3.12'",
 ]
 
