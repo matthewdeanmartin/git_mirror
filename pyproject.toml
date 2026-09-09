@@ -65,8 +65,8 @@ git_mirror_gui = 'git_mirror.gui.app:launch_gui'
 [dependency-groups]
 dev = [
     "jiggle-version>=2.1.0",
-    "keepachangelog-manager-fork[all]>=6.6.0; python_version < '3.15'",  # [all] pulls google-re2, no cp315 wheel/sdist build on Windows
-    "keepachangelog-manager-fork>=6.6.0; python_version >= '3.15'",  # pure-Python base still provides changelogmanager on 3.15
+    "keepachangelog-manager-fork[fast]>=6.8.0; python_version < '3.15'",  # [fast] adds orjson+re2; google-re2 has no cp315 wheel on Windows
+    "keepachangelog-manager-fork[stdlib]>=6.8.0; python_version >= '3.15'",  # [stdlib] is pure-Python: same features, no native wheels needed
     "dont-be-lazy>=0.1.2; python_version >= '3.10'",
     "pydoc-fork>=3.0.0; python_version >= '3.10'",
     "mkdocs>=1.6.0",
