@@ -198,9 +198,7 @@ def route_repos(
         from git_mirror import manage_git as mg
 
         base_path = Path(target_dir).expanduser()
-        git_manager = mg.GitManager(
-            base_path, dry_run, prompt_for_changes=prompt_for_changes, selection=selection
-        )
+        git_manager = mg.GitManager(base_path, dry_run, prompt_for_changes=prompt_for_changes, selection=selection)
         git_manager.check_for_uncommitted_or_unpushed_changes()
     elif host in ("github", "selfhosted"):
         resolved_domain = domain

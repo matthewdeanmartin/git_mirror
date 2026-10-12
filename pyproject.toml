@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 keywords = ["git", "github", "polyrepo" ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -15,8 +15,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -67,8 +65,8 @@ dev = [
     "jiggle-version>=2.1.0",
     "keepachangelog-manager-fork[fast]>=6.8.0; python_version < '3.15'",  # [fast] adds orjson+re2; google-re2 has no cp315 wheel on Windows
     "keepachangelog-manager-fork[stdlib]>=6.8.0; python_version >= '3.15'",  # [stdlib] is pure-Python: same features, no native wheels needed
-    "dont-be-lazy>=0.1.2; python_version >= '3.10'",
-    "pydoc-fork>=3.0.0; python_version >= '3.10'",
+    "dont-be-lazy>=0.1.2",
+    "pydoc-fork>=3.0.0",
     "mkdocs>=1.6.0",
     "mkdocstrings[python]>=0.26.0",
 
@@ -101,8 +99,7 @@ dev = [
     "zizmor>=1.4.1",
     # 3.15 OK: regress 2026.9.1 shipped pyo3 0.29 (was capped at 3.14).
     # 0.38.0 requires >=3.10, so keep an older floor for 3.9.
-    "check-jsonschema>=0.38.0; python_version >= '3.10'",
-    "check-jsonschema>=0.30.0; python_version < '3.10'",
+    "check-jsonschema>=0.38.0",
     "gha-update>=0.2.0,<0.3; python_version >= '3.12'",
 ]
 
@@ -129,7 +126,7 @@ include = ["/README.md", "/LICENSE", "/git_mirror"]
 
 [tool.black]
 line-length = 120
-target-version = ['py39']
+target-version = ['py311']
 include = '\.pyi?$'
 exclude = '''
 
@@ -183,7 +180,7 @@ use_parentheses = true
 
 [tool.ruff]
 line-length = 320
-target-version = "py39"
+target-version = "py311"
 # Exclude a variety of commonly ignored directories.
 exclude = [
     "dead_code",
@@ -215,7 +212,7 @@ select = ["E", "F",
     "UP", # pyupgrade
     "B", # bugbear
 ]
-ignore = [
+ignore = ["RUF100", "UP042", 
     "D301", # messes with doctests
     "E722",
     # only track structural problems with docstrings, not whitespace, nor missing

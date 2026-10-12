@@ -199,6 +199,7 @@ def handle_repos(args: argparse.Namespace) -> None:
     domain, return_value = validate_parse_args(args)
     if return_value != 0:
         sys.exit(return_value)
+
     def csv(value: str | None) -> list[str]:
         return [item.strip() for item in value.split(",") if item.strip()] if value else []
 

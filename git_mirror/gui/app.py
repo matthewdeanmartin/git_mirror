@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import threading
 import tkinter as tk
-import tkinter.ttk as ttk
 import tkinter.messagebox as messagebox
+import tkinter.ttk as ttk
 from pathlib import Path
 from typing import Any, Callable
 
@@ -245,30 +245,35 @@ class DashboardPanel(BasePanel):
         toolbar_btn(bar, "Refresh", self.load)
         self.builds_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
-            bar, text="Include CI status (needs token)", variable=self.builds_var,
-            bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
+            bar,
+            text="Include CI status (needs token)",
+            variable=self.builds_var,
+            bg=CLR_BG,
+            fg=CLR_FG,
+            selectcolor=CLR_BTN,
+            activebackground=CLR_BG,
             font=FONT_UI,
         ).pack(side=tk.LEFT, padx=12)
 
-        self.tree = make_tree(self, [
-            ("Repository", 220),
-            ("Branch", 130),
-            ("State", 90),
-            ("Ahead", 60),
-            ("Behind", 60),
-            ("Untracked", 80),
-            ("Last commit", 100),
-            ("CI", 100),
-        ], height=22)
+        self.tree = make_tree(
+            self,
+            [
+                ("Repository", 220),
+                ("Branch", 130),
+                ("State", 90),
+                ("Ahead", 60),
+                ("Behind", 60),
+                ("Untracked", 80),
+                ("Last commit", 100),
+                ("CI", 100),
+            ],
+            height=22,
+        )
         self.load()
 
     def load(self):
         configs = self.app.get_configs()
-        targets = [
-            (c.target_dir, c)
-            for c in configs.values()
-            if c and c.target_dir and c.target_dir.exists()
-        ]
+        targets = [(c.target_dir, c) for c in configs.values() if c and c.target_dir and c.target_dir.exists()]
         if not targets:
             for row in self.tree.get_children():
                 self.tree.delete(row)
@@ -276,13 +281,16 @@ class DashboardPanel(BasePanel):
             return
         self.status.set("Scanning fleet status...")
         self.runner.run(
-            self.fetch, args=(targets, self.builds_var.get()),
-            on_success=self.display, on_error=self.on_error,
+            self.fetch,
+            args=(targets, self.builds_var.get()),
+            on_success=self.display,
+            on_error=self.on_error,
         )
 
     @staticmethod
     def fetch(targets: list[tuple[Path, Any]], include_builds: bool):
         from git_mirror.core import get_token_for_host, repo_dashboard
+
         rows: list[Any] = []
         for target_dir, config in targets:
             token = get_token_for_host(config) if include_builds else None
@@ -310,11 +318,21 @@ class DashboardPanel(BasePanel):
             age = "" if r.last_commit_age_days is None else f"{r.last_commit_age_days}d ago"
             ci = build_state(r.build)[1] if r.build else ""
             branch = r.branch + ("*" if r.dirty else "")
-            self.tree.insert("", tk.END, values=(
-                r.name, branch, state,
-                r.ahead or "", r.behind or "", r.untracked_branches or "",
-                age, ci,
-            ), tags=(tag,))
+            self.tree.insert(
+                "",
+                tk.END,
+                values=(
+                    r.name,
+                    branch,
+                    state,
+                    r.ahead or "",
+                    r.behind or "",
+                    r.untracked_branches or "",
+                    age,
+                    ci,
+                ),
+                tags=(tag,),
+            )
 
         self.status.set(f"{len(rows)} repos — {attention} need attention")
 
@@ -333,12 +351,16 @@ class LocalChangesPanel(BasePanel):
         bar = make_toolbar(self)
         toolbar_btn(bar, "Scan All Hosts", self.scan_all)
 
-        self.tree = make_tree(self, [
-            ("Repository", 250),
-            ("Status", 100),
-            ("Unpushed", 200),
-            ("Untracked Branches", 200),
-        ], height=22)
+        self.tree = make_tree(
+            self,
+            [
+                ("Repository", 250),
+                ("Status", 100),
+                ("Unpushed", 200),
+                ("Untracked Branches", 200),
+            ],
+            height=22,
+        )
 
     def scan_all(self):
         self.status.set("Scanning for local changes...")
@@ -352,6 +374,7 @@ class LocalChangesPanel(BasePanel):
     @staticmethod
     def fetch(dirs: list[Path]):
         from git_mirror.core import scan_local_changes
+
         all_statuses = []
         for d in dirs:
             all_statuses.extend(scan_local_changes(d))
@@ -400,15 +423,31 @@ class CloneAllPanel(BasePanel):
         self.host_var = tk.StringVar(value="github")
         for host in ("github", "selfhosted"):
             tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
+                bar,
+                text=host.title(),
+                variable=self.host_var,
+                value=host,
+                bg=CLR_BG,
+                fg=CLR_FG,
+                selectcolor=CLR_BTN,
+                activebackground=CLR_BG,
+                activeforeground=CLR_ACCENT,
+                font=FONT_UI,
+                indicatoron=False,
+                padx=12,
+                pady=4,
+                relief=tk.FLAT,
+                cursor="hand2",
             ).pack(side=tk.LEFT, padx=2)
         self.dry_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
-            bar, text="Dry run", variable=self.dry_var,
-            bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
+            bar,
+            text="Dry run",
+            variable=self.dry_var,
+            bg=CLR_BG,
+            fg=CLR_FG,
+            selectcolor=CLR_BTN,
+            activebackground=CLR_BG,
             font=FONT_UI,
         ).pack(side=tk.LEFT, padx=12)
         toolbar_btn(bar, "Clone All", self.run_clone)
@@ -423,6 +462,7 @@ class CloneAllPanel(BasePanel):
             self.status.set(f"No configuration for {host}")
             return
         from git_mirror.core import get_token_for_host
+
         token = get_token_for_host(config)
         if not token:
             self.status.set(f"No access token for {host}")
@@ -433,13 +473,16 @@ class CloneAllPanel(BasePanel):
         self.status.set(f"Cloning repos from {host}...")
         output_set(self.output, "Cloning...\n")
         self.runner.run(
-            self.do_clone, args=(token, config, self.dry_var.get()),
-            on_success=self.display, on_error=self.on_error,
+            self.do_clone,
+            args=(token, config, self.dry_var.get()),
+            on_success=self.display,
+            on_error=self.on_error,
         )
 
     @staticmethod
     def do_clone(token: str, config: Any, dry_run: bool):
         from git_mirror.core import clone_all_repos
+
         return clone_all_repos(token, config, dry_run)
 
     def display(self, result: Any):
@@ -467,8 +510,13 @@ class PullAllPanel(BasePanel):
         bar = make_toolbar(self)
         self.dry_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
-            bar, text="Dry run", variable=self.dry_var,
-            bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
+            bar,
+            text="Dry run",
+            variable=self.dry_var,
+            bg=CLR_BG,
+            fg=CLR_FG,
+            selectcolor=CLR_BTN,
+            activebackground=CLR_BG,
             font=FONT_UI,
         ).pack(side=tk.LEFT, padx=12)
         toolbar_btn(bar, "Pull All Hosts", self.run_pull)
@@ -487,13 +535,16 @@ class PullAllPanel(BasePanel):
         self.status.set("Pulling all repos...")
         output_set(self.output, "Pulling...\n")
         self.runner.run(
-            self.do_pull, args=(dirs, self.dry_var.get()),
-            on_success=self.display, on_error=self.on_error,
+            self.do_pull,
+            args=(dirs, self.dry_var.get()),
+            on_success=self.display,
+            on_error=self.on_error,
         )
 
     @staticmethod
     def do_pull(dirs: list[Path], dry_run: bool):
         from git_mirror.core import pull_all_repos
+
         all_results: dict[str, Any] = {"messages": [], "errors": []}
         for d in dirs:
             r = pull_all_repos(d, dry_run)
@@ -522,10 +573,14 @@ class NotRepoPanel(BasePanel):
         bar = make_toolbar(self)
         toolbar_btn(bar, "Scan All Hosts", self.scan)
 
-        self.tree = make_tree(self, [
-            ("Path", 450),
-            ("Reason", 300),
-        ], height=22)
+        self.tree = make_tree(
+            self,
+            [
+                ("Path", 450),
+                ("Reason", 300),
+            ],
+            height=22,
+        )
 
     def scan(self):
         configs = self.app.get_configs()
@@ -539,6 +594,7 @@ class NotRepoPanel(BasePanel):
     @staticmethod
     def fetch(dirs: list[Path]):
         from git_mirror.core import find_non_repos
+
         results = []
         for d in dirs:
             results.extend(find_non_repos(d))
@@ -567,18 +623,33 @@ class BuildStatusPanel(BasePanel):
         self.host_var = tk.StringVar(value="github")
         for host in ("github", "selfhosted"):
             tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
+                bar,
+                text=host.title(),
+                variable=self.host_var,
+                value=host,
+                bg=CLR_BG,
+                fg=CLR_FG,
+                selectcolor=CLR_BTN,
+                activebackground=CLR_BG,
+                activeforeground=CLR_ACCENT,
+                font=FONT_UI,
+                indicatoron=False,
+                padx=12,
+                pady=4,
+                relief=tk.FLAT,
+                cursor="hand2",
             ).pack(side=tk.LEFT, padx=2)
         toolbar_btn(bar, "Fetch Builds", self.fetch_builds)
 
-        self.tree = make_tree(self, [
-            ("Repository", 180),
-            ("Conclusion", 100),
-            ("Details", 500),
-        ], height=22)
+        self.tree = make_tree(
+            self,
+            [
+                ("Repository", 180),
+                ("Conclusion", 100),
+                ("Details", 500),
+            ],
+            height=22,
+        )
 
     def fetch_builds(self):
         host = self.host_var.get()
@@ -588,19 +659,23 @@ class BuildStatusPanel(BasePanel):
             self.status.set(f"No configuration for {host}")
             return
         from git_mirror.core import get_token_for_host
+
         token = get_token_for_host(config)
         if not token:
             self.status.set(f"No access token for {host}")
             return
         self.status.set(f"Fetching build statuses from {host}...")
         self.runner.run(
-            self.fetch, args=(token, config),
-            on_success=self.display, on_error=self.on_error,
+            self.fetch,
+            args=(token, config),
+            on_success=self.display,
+            on_error=self.on_error,
         )
 
     @staticmethod
     def fetch(token: str, config: Any):
         from git_mirror.core import get_build_statuses
+
         return get_build_statuses(token, config)
 
     def display(self, builds: list[Any]):
@@ -638,6 +713,7 @@ class DoctorPanel(BasePanel):
     @staticmethod
     def fetch():
         from git_mirror.core import run_doctor
+
         return run_doctor()
 
     def display(self, results: list[tuple[str, list[Any]]]):
@@ -673,15 +749,31 @@ class UpdateFromMainPanel(BasePanel):
         self.host_var = tk.StringVar(value="github")
         for host in ("github", "selfhosted"):
             tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
+                bar,
+                text=host.title(),
+                variable=self.host_var,
+                value=host,
+                bg=CLR_BG,
+                fg=CLR_FG,
+                selectcolor=CLR_BTN,
+                activebackground=CLR_BG,
+                activeforeground=CLR_ACCENT,
+                font=FONT_UI,
+                indicatoron=False,
+                padx=12,
+                pady=4,
+                relief=tk.FLAT,
+                cursor="hand2",
             ).pack(side=tk.LEFT, padx=2)
         self.dry_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
-            bar, text="Dry run", variable=self.dry_var,
-            bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
+            bar,
+            text="Dry run",
+            variable=self.dry_var,
+            bg=CLR_BG,
+            fg=CLR_FG,
+            selectcolor=CLR_BTN,
+            activebackground=CLR_BG,
             font=FONT_UI,
         ).pack(side=tk.LEFT, padx=12)
         toolbar_btn(bar, "Update All", self.run_update)
@@ -696,6 +788,7 @@ class UpdateFromMainPanel(BasePanel):
             self.status.set(f"No configuration for {host}")
             return
         from git_mirror.core import get_token_for_host
+
         token = get_token_for_host(config)
         if not token:
             self.status.set(f"No access token for {host}")
@@ -706,13 +799,16 @@ class UpdateFromMainPanel(BasePanel):
         self.status.set("Updating branches...")
         output_set(self.output, "Updating...\n")
         self.runner.run(
-            self.do_update, args=(token, config, self.dry_var.get()),
-            on_success=self.display, on_error=self.on_error,
+            self.do_update,
+            args=(token, config, self.dry_var.get()),
+            on_success=self.display,
+            on_error=self.on_error,
         )
 
     @staticmethod
     def do_update(token: str, config: Any, dry_run: bool):
         from git_mirror.core import update_from_main_repos
+
         return update_from_main_repos(token, config, dry_run)
 
     def display(self, result: Any):
@@ -737,15 +833,31 @@ class PruneAllPanel(BasePanel):
         self.host_var = tk.StringVar(value="github")
         for host in ("github", "selfhosted"):
             tk.Radiobutton(
-                bar, text=host.title(), variable=self.host_var, value=host,
-                bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
-                activeforeground=CLR_ACCENT, font=FONT_UI, indicatoron=False,
-                padx=12, pady=4, relief=tk.FLAT, cursor="hand2",
+                bar,
+                text=host.title(),
+                variable=self.host_var,
+                value=host,
+                bg=CLR_BG,
+                fg=CLR_FG,
+                selectcolor=CLR_BTN,
+                activebackground=CLR_BG,
+                activeforeground=CLR_ACCENT,
+                font=FONT_UI,
+                indicatoron=False,
+                padx=12,
+                pady=4,
+                relief=tk.FLAT,
+                cursor="hand2",
             ).pack(side=tk.LEFT, padx=2)
         self.dry_var = tk.BooleanVar(value=True)
         tk.Checkbutton(
-            bar, text="Dry run", variable=self.dry_var,
-            bg=CLR_BG, fg=CLR_FG, selectcolor=CLR_BTN, activebackground=CLR_BG,
+            bar,
+            text="Dry run",
+            variable=self.dry_var,
+            bg=CLR_BG,
+            fg=CLR_FG,
+            selectcolor=CLR_BTN,
+            activebackground=CLR_BG,
             font=FONT_UI,
         ).pack(side=tk.LEFT, padx=12)
         toolbar_btn(bar, "Prune All", self.run_prune)
@@ -760,6 +872,7 @@ class PruneAllPanel(BasePanel):
             self.status.set(f"No configuration for {host}")
             return
         from git_mirror.core import get_token_for_host
+
         token = get_token_for_host(config)
         if not token:
             self.status.set(f"No access token for {host}")
@@ -770,13 +883,16 @@ class PruneAllPanel(BasePanel):
         self.status.set("Pruning branches...")
         output_set(self.output, "Pruning...\n")
         self.runner.run(
-            self.do_prune, args=(token, config, self.dry_var.get()),
-            on_success=self.display, on_error=self.on_error,
+            self.do_prune,
+            args=(token, config, self.dry_var.get()),
+            on_success=self.display,
+            on_error=self.on_error,
         )
 
     @staticmethod
     def do_prune(token: str, config: Any, dry_run: bool):
         from git_mirror.core import prune_all_repos
+
         return prune_all_repos(token, config, dry_run)
 
     def display(self, result: Any):
@@ -815,6 +931,7 @@ class ConfigPanel(BasePanel):
     def fetch():
         from git_mirror.core import load_all_configs
         from git_mirror.manage_config import default_config_path
+
         return load_all_configs(), default_config_path()
 
     def display(self, result: tuple[dict[str, Any], Path]):
@@ -860,10 +977,7 @@ class ConfigPanel(BasePanel):
     def init_host(self):
         messagebox.showinfo(
             "Init",
-            "To initialize a new host interactively, run from the command line:\n\n"
-            "  git_mirror init\n\n"
-            "The init wizard requires terminal input and is not available in the GUI.\n"
-            "After initializing, click 'View Config' to see the new host.",
+            "To initialize a new host interactively, run from the command line:\n\n  git_mirror init\n\nThe init wizard requires terminal input and is not available in the GUI.\nAfter initializing, click 'View Config' to see the new host.",
         )
 
     def sync_config(self):
@@ -880,6 +994,7 @@ class ConfigPanel(BasePanel):
     def do_sync(hosts: list[tuple[str, Any]]) -> str:
         from git_mirror.core import get_token_for_host, list_repos_data
         from git_mirror.manage_config import ConfigManager, default_config_path
+
         cm = ConfigManager(default_config_path())
         total = 0
         synced_hosts = []
@@ -940,12 +1055,20 @@ class GitMirrorApp:
         top_bar.pack(fill=tk.X, side=tk.TOP)
         top_bar.pack_propagate(False)
         tk.Label(
-            top_bar, text=f"  git_mirror v{__version__}", bg=CLR_SIDEBAR, fg=CLR_ACCENT,
-            font=("Segoe UI", 13, "bold"), anchor=tk.W,
+            top_bar,
+            text=f"  git_mirror v{__version__}",
+            bg=CLR_SIDEBAR,
+            fg=CLR_ACCENT,
+            font=("Segoe UI", 13, "bold"),
+            anchor=tk.W,
         ).pack(side=tk.LEFT, padx=8)
         tk.Label(
-            top_bar, text="Operate on a whole folder of GitHub repos at once",
-            bg=CLR_SIDEBAR, fg=CLR_DIM, font=FONT_UI, anchor=tk.W,
+            top_bar,
+            text="Operate on a whole folder of GitHub repos at once",
+            bg=CLR_SIDEBAR,
+            fg=CLR_DIM,
+            font=FONT_UI,
+            anchor=tk.W,
         ).pack(side=tk.LEFT, padx=16)
 
         # ── Main area: help | content | sidebar ─────────────────
@@ -973,8 +1096,12 @@ class GitMirrorApp:
         status_bar.pack(fill=tk.X, side=tk.BOTTOM)
         status_bar.pack_propagate(False)
         tk.Label(
-            status_bar, textvariable=self.status_var,
-            bg=CLR_SIDEBAR, fg=CLR_DIM, font=FONT_DATA_SMALL, anchor=tk.W,
+            status_bar,
+            textvariable=self.status_var,
+            bg=CLR_SIDEBAR,
+            fg=CLR_DIM,
+            font=FONT_DATA_SMALL,
+            anchor=tk.W,
         ).pack(side=tk.LEFT, padx=12)
 
         # Show dashboard on start
@@ -982,8 +1109,12 @@ class GitMirrorApp:
 
     def build_help_panel(self, parent: tk.Frame):
         tk.Label(
-            parent, text="  Quick Reference", bg=CLR_SIDEBAR, fg=CLR_ACCENT,
-            font=FONT_UI_BOLD, anchor=tk.W,
+            parent,
+            text="  Quick Reference",
+            bg=CLR_SIDEBAR,
+            fg=CLR_ACCENT,
+            font=FONT_UI_BOLD,
+            anchor=tk.W,
         ).pack(fill=tk.X, padx=8, pady=(16, 8))
 
         help_items = [
@@ -1001,47 +1132,76 @@ class GitMirrorApp:
 
         for title, desc in help_items:
             tk.Label(
-                parent, text=title, bg=CLR_SIDEBAR, fg=CLR_FG,
-                font=("Segoe UI", 9, "bold"), anchor=tk.W,
+                parent,
+                text=title,
+                bg=CLR_SIDEBAR,
+                fg=CLR_FG,
+                font=("Segoe UI", 9, "bold"),
+                anchor=tk.W,
             ).pack(fill=tk.X, padx=16, pady=(6, 0))
             tk.Label(
-                parent, text=desc, bg=CLR_SIDEBAR, fg=CLR_DIM,
-                font=("Segoe UI", 8), anchor=tk.W, justify=tk.LEFT,
+                parent,
+                text=desc,
+                bg=CLR_SIDEBAR,
+                fg=CLR_DIM,
+                font=("Segoe UI", 8),
+                anchor=tk.W,
+                justify=tk.LEFT,
             ).pack(fill=tk.X, padx=20, pady=(0, 2))
 
     def build_sidebar(self, parent: tk.Frame):
         tk.Label(
-            parent, text="  Actions", bg=CLR_SIDEBAR, fg=CLR_ACCENT,
-            font=FONT_UI_BOLD, anchor=tk.W,
+            parent,
+            text="  Actions",
+            bg=CLR_SIDEBAR,
+            fg=CLR_ACCENT,
+            font=FONT_UI_BOLD,
+            anchor=tk.W,
         ).pack(fill=tk.X, padx=8, pady=(16, 8))
 
         # (section header, [(panel_id, label), ...]) — grouped to match the
         # narrowed scope: see the fleet, sync it, maintain it, set it up.
         sections = [
-            ("STATUS", [
-                ("dashboard", "Dashboard"),
-                ("local_changes", "Local Changes"),
-                ("build_status", "Build Status"),
-            ]),
-            ("SYNC", [
-                ("clone_all", "Clone All"),
-                ("pull_all", "Pull All"),
-            ]),
-            ("MAINTAIN", [
-                ("update_main", "Update Main"),
-                ("prune", "Prune"),
-                ("not_repo", "Not Repo"),
-            ]),
-            ("SETUP", [
-                ("doctor", "Doctor"),
-                ("config", "Config"),
-            ]),
+            (
+                "STATUS",
+                [
+                    ("dashboard", "Dashboard"),
+                    ("local_changes", "Local Changes"),
+                    ("build_status", "Build Status"),
+                ],
+            ),
+            (
+                "SYNC",
+                [
+                    ("clone_all", "Clone All"),
+                    ("pull_all", "Pull All"),
+                ],
+            ),
+            (
+                "MAINTAIN",
+                [
+                    ("update_main", "Update Main"),
+                    ("prune", "Prune"),
+                    ("not_repo", "Not Repo"),
+                ],
+            ),
+            (
+                "SETUP",
+                [
+                    ("doctor", "Doctor"),
+                    ("config", "Config"),
+                ],
+            ),
         ]
 
         for section_title, entries in sections:
             tk.Label(
-                parent, text=section_title, bg=CLR_SIDEBAR, fg=CLR_HEADER,
-                font=("Segoe UI", 8, "bold"), anchor=tk.W,
+                parent,
+                text=section_title,
+                bg=CLR_SIDEBAR,
+                fg=CLR_HEADER,
+                font=("Segoe UI", 8, "bold"),
+                anchor=tk.W,
             ).pack(fill=tk.X, padx=16, pady=(12, 2))
             for item_id, label in entries:
                 self._sidebar_button(parent, item_id, label)
@@ -1113,6 +1273,7 @@ class GitMirrorApp:
         """Get cached configs or load fresh."""
         if self.configs is None:
             from git_mirror.core import load_all_configs
+
             self.configs = load_all_configs()
         return self.configs
 

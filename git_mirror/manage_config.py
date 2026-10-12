@@ -251,7 +251,9 @@ class ConfigManager:
             "target_dir": str(config_section.target_dir) if config_section.target_dir else "",
             "include_private": config_section.include_private,
             "include_forks": config_section.include_forks,
-            "global_template_dir": str(config_section.global_template_dir) if config_section.global_template_dir else None,
+            "global_template_dir": (
+                str(config_section.global_template_dir) if config_section.global_template_dir else None
+            ),
         }
         toml_config["tool"]["git-mirror"][config_section.host_name] = section  # type: ignore[index]
         with open(self.config_path, "w", encoding="utf-8") as file:
@@ -316,9 +318,11 @@ class ConfigManager:
                 "Token validity",
                 valid,
                 f"Authenticated as {username}" if valid else "Could not authenticate to the configured host.",
-                None
-                if valid
-                else f"Make sure {token_env_var} is valid for {config.host_url} and has the scopes required to list repositories.",
+                (
+                    None
+                    if valid
+                    else f"Make sure {token_env_var} is valid for {config.host_url} and has the scopes required to list repositories."
+                ),
             )
         )
         if valid and username and config.user_name and username.lower() != config.user_name.lower():
@@ -419,8 +423,7 @@ class ConfigManager:
             host_type = tool_config.get("host_type") or tool_config.get("type") or "github"
             if host_type == "gitlab":
                 raise ValueError(
-                    f"GitLab support was removed in git_mirror 2.0. The [tool.git-mirror.{host}] section in "
-                    f"{self.config_path.resolve()} is configured for GitLab. Remove it or reconfigure it for GitHub."
+                    f"GitLab support was removed in git_mirror 2.0. The [tool.git-mirror.{host}] section in {self.config_path.resolve()} is configured for GitLab. Remove it or reconfigure it for GitHub."
                 )
             host_url = tool_config.get("host_url") or tool_config.get("url") or default_host_url(host, host_type)
             global_template_dir = coerce_path(tool_config.get("global_template_dir"))

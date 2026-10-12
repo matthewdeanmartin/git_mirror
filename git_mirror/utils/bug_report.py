@@ -117,8 +117,7 @@ class BugReporter:
         console.print(Panel(summary, title="Github Issue"))
 
         response = input(
-            "An error occurred. Would you like to report this bug? "
-            "It will be posted as a public issue using your github token as credentials. (yes/no): "
+            "An error occurred. Would you like to report this bug? It will be posted as a public issue using your github token as credentials. (yes/no): "
         )
         if response.lower().startswith("y"):
             issue = self.report_issue(issue_title, issue_body)

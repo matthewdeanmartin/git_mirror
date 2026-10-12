@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -308,7 +309,7 @@ def scan_local_changes(target_dir: Path) -> list[RepoStatus]:
 
 def dashboard_row_for(repo_dir: Path) -> DashboardRow:
     """Compute the local state of a single repo (safe to run in a thread)."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     row = DashboardRow(name=repo_dir.name)
     try:
@@ -330,7 +331,7 @@ def dashboard_row_for(repo_dir: Path) -> DashboardRow:
                 row.behind = sum(1 for _ in repo.iter_commits(f"{branch}..{tracking}"))
         try:
             last = repo.head.commit.committed_datetime
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             row.last_commit_age_days = max(0, (now - last).days)
         except Exception:  # pylint: disable=broad-exception-caught
             row.last_commit_age_days = None

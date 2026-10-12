@@ -5,8 +5,8 @@ import pytest
 from git.exc import GitCommandError
 from github import Repository as ghRepository  # Assuming this import based on context
 
-from git_mirror.utils.dummies import Dummy
 from git_mirror.manage_github import GithubRepoManager
+from git_mirror.utils.dummies import Dummy
 
 
 @pytest.fixture

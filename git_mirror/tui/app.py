@@ -16,18 +16,7 @@ from typing import Any
 from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import (
-    Button,
-    Checkbox,
-    DataTable,
-    Footer,
-    Header,
-    Label,
-    RichLog,
-    Select,
-    TabbedContent,
-    TabPane,
-)
+from textual.widgets import Button, Checkbox, DataTable, Footer, Header, Label, RichLog, Select, TabbedContent, TabPane
 
 from git_mirror.__about__ import __version__
 
@@ -47,11 +36,7 @@ def _configured_targets() -> list[tuple[str, Any]]:
     from git_mirror.core import load_all_configs
 
     configs = load_all_configs()
-    return [
-        (host, c)
-        for host, c in configs.items()
-        if c and c.target_dir and c.target_dir.exists()
-    ]
+    return [(host, c) for host, c in configs.items() if c and c.target_dir and c.target_dir.exists()]
 
 
 def _host_choices() -> list[tuple[str, str]]:
@@ -77,8 +62,14 @@ class DashboardPane(VerticalScroll):
     def on_mount(self) -> None:
         table = self.query_one("#dash-table", DataTable)
         table.add_columns(
-            "Repository", "Branch", "State", "Ahead", "Behind",
-            "Untracked", "Last commit", "CI",
+            "Repository",
+            "Branch",
+            "State",
+            "Ahead",
+            "Behind",
+            "Untracked",
+            "Last commit",
+            "CI",
         )
         self.refresh_rows()
 
@@ -125,13 +116,16 @@ class DashboardPane(VerticalScroll):
                 ci = ""
             branch = (r.branch or "") + ("*" if r.dirty else "")
             table.add_row(
-                r.name, branch, _tag(tag, state),
-                str(r.ahead or ""), str(r.behind or ""),
-                str(r.untracked_branches or ""), age, ci,
+                r.name,
+                branch,
+                _tag(tag, state),
+                str(r.ahead or ""),
+                str(r.behind or ""),
+                str(r.untracked_branches or ""),
+                age,
+                ci,
             )
-        self.query_one("#dash-status", Label).update(
-            f"{len(rows)} repos — {attention} need attention"
-        )
+        self.query_one("#dash-status", Label).update(f"{len(rows)} repos — {attention} need attention")
 
 
 class LocalChangesPane(VerticalScroll):
@@ -147,7 +141,10 @@ class LocalChangesPane(VerticalScroll):
 
     def on_mount(self) -> None:
         self.query_one("#lc-table", DataTable).add_columns(
-            "Repository", "Status", "Unpushed", "Untracked branches",
+            "Repository",
+            "Status",
+            "Unpushed",
+            "Untracked branches",
         )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -178,13 +175,12 @@ class LocalChangesPane(VerticalScroll):
             else:
                 status = _tag("ok", "clean")
             table.add_row(
-                s.path.name, status,
+                s.path.name,
+                status,
                 ", ".join(s.unpushed_branches),
                 ", ".join(s.untracked_branches),
             )
-        self.query_one("#lc-status", Label).update(
-            f"Scanned {len(statuses)} repos — {attention} need attention"
-        )
+        self.query_one("#lc-status", Label).update(f"Scanned {len(statuses)} repos — {attention} need attention")
 
 
 class ActionsPane(VerticalScroll):
@@ -195,8 +191,7 @@ class ActionsPane(VerticalScroll):
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="act-bar"):
-            yield Select(_host_choices(), id="act-host", allow_blank=True,
-                         prompt="Host")
+            yield Select(_host_choices(), id="act-host", allow_blank=True, prompt="Host")
             yield Checkbox("Dry run", value=True, id="act-dry")
         with Horizontal(id="act-buttons"):
             yield Button("Clone All", id="act-clone", variant="primary")

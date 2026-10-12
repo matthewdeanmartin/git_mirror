@@ -118,9 +118,7 @@ def setup_github_pat(
 
     choice = (
         input(
-            "Where do you want to save the PAT? "
-            "[K]eychain (recommended), [G]lobal .env, [L]ocal .env. "
-            "If you don't know, select keychain. "
+            "Where do you want to save the PAT? [K]eychain (recommended), [G]lobal .env, [L]ocal .env. If you don't know, select keychain. "
         )
         .strip()
         .lower()

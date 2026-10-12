@@ -78,8 +78,9 @@ def keyring_get(host_name: str) -> str | None:
 def dotenv_get(env_var: str) -> str | None:
     """Read a value straight from the resolved .env file without mutating env."""
     try:
-        from dotenv import dotenv_values, find_dotenv
         from pathlib import Path
+
+        from dotenv import dotenv_values, find_dotenv
 
         values: dict[str, str | None] = {}
         home_env = Path.home() / ".env"
@@ -186,4 +187,3 @@ def keyring_available() -> bool:
         return type(backend).__name__ != "Keyring" or "null" not in type(backend).__module__
     except Exception:  # pragma: no cover - defensive # pylint: disable=broad-exception-caught
         return False
-

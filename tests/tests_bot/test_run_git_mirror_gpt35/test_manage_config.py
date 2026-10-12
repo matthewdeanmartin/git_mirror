@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
+import tomlkit
 from hypothesis import given
 from hypothesis import strategies as st
-import tomlkit
 
 from git_mirror.manage_config import (
     PUBLIC_GITHUB_API_URL,
@@ -118,7 +118,9 @@ def test_doctor_returns_true_for_valid_github_config(tmp_path):
 
     assert result is True
     mock_render_checks.assert_called_once()
-    mock_print.assert_called_with("Setup looks good. Try `git_mirror list-repos --host github` or the host you configured.")
+    mock_print.assert_called_with(
+        "Setup looks good. Try `git_mirror list-repos --host github` or the host you configured."
+    )
 
 
 def test_doctor_returns_false_when_token_username_differs_from_config(tmp_path):
@@ -156,7 +158,9 @@ def test_doctor_returns_false_when_token_username_differs_from_config(tmp_path):
 
     assert result is False
     assert any(check.name == "Configured username" and not check.ok for check in rendered_checks)
-    mock_print.assert_called_with("Setup needs attention. Fix the failing checks above, then rerun `git_mirror doctor`.")
+    mock_print.assert_called_with(
+        "Setup needs attention. Fix the failing checks above, then rerun `git_mirror doctor`."
+    )
 
 
 def test_initialize_config_writes_config_and_runs_doctor(tmp_path):
@@ -236,4 +240,3 @@ def test_coerce_path_returns_none_or_path_objects(raw_value):
     else:
         assert result is not None
         assert str(result)
-
