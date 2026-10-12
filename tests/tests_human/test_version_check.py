@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 
 from git_mirror.utils.version_check import call_pypi_with_version_check, display_version_check_message
@@ -14,27 +14,27 @@ def mock_response():
 
 
 def test_version_check_new_version_available(mock_response):
-    with patch("httpx.get", return_value=mock_response):
+    with patch("httpx2.get", return_value=mock_response):
         available, new_version = call_pypi_with_version_check("your_package", "1.0.0")
         assert available is True
         assert str(new_version) == "2.0.0"
 
 
 def test_version_check_current_version_is_latest(mock_response):
-    with patch("httpx.get", return_value=mock_response):
+    with patch("httpx2.get", return_value=mock_response):
         available, new_version = call_pypi_with_version_check("your_package", "2.0.0")
         assert available is False
         assert str(new_version) == "2.0.0"
 
 
 def test_http_error_handling():
-    with patch("httpx.get", side_effect=httpx.HTTPError("Mocked error")):
-        with pytest.raises(httpx.HTTPError):
+    with patch("httpx2.get", side_effect=httpx2.HTTPError("Mocked error")):
+        with pytest.raises(httpx2.HTTPError):
             call_pypi_with_version_check("your_package", "1.0.0")
 
 
 def test_display_version_check_message_new_version(capsys, mock_response):
-    with patch("httpx.get", return_value=mock_response):
+    with patch("httpx2.get", return_value=mock_response):
         with patch("git_mirror.utils.version_check.__version__", "1.0.0"):
             display_version_check_message()
             captured = capsys.readouterr()

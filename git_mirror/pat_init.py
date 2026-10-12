@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 from dotenv import find_dotenv, load_dotenv, set_key
 
 from git_mirror.utils.safe_env import env_info
@@ -23,11 +23,11 @@ def get_authenticated_user(token: str, api_url: str = DEFAULT_GITHUB_API_URL) ->
     """Return the authenticated GitHub user payload if the token is valid."""
     headers = {"Authorization": f"token {token}"}
     try:
-        response = httpx.get(f"{api_url.rstrip('/')}/user", headers=headers, timeout=10)
+        response = httpx2.get(f"{api_url.rstrip('/')}/user", headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json()
         return None
-    except httpx.RequestError as e:
+    except httpx2.RequestError as e:
         console.print(f"An error occurred while checking PAT validity: {e}", style="danger")
         return None
 

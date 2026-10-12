@@ -39,7 +39,7 @@ dependencies = [
     "PyGithub>=2.2.0",
     "GitPython>=3.1.42",
     # version check
-    "httpx>=0.26.0,<1",
+    "httpx2>=2.0,<3",
     "requests-cache>=1.2.0,<2",
     # doctor tool
     "cli-tool-audit>=3.0.1",

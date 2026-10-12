@@ -57,7 +57,7 @@ from git_mirror.manage_github import GithubRepoManager
 #
 # 10. Test the `version_info` method:
 #
-#     - Mock the `httpx.get` method to test the API call and return values based
+#     - Mock the `httpx2.get` method to test the API call and return values based
 #       on different scenarios.
 #
 # 11. Test the `merge_request` method:

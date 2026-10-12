@@ -104,7 +104,7 @@ def test_generate_config_loggers(tmp_path):
     # Test logging level less than 2
     config_logging_level_1 = logging_config.generate_config(level="DEBUG", logging_level=1)
     assert config_logging_level_1["loggers"]["urllib3"]["level"] == "WARN"
-    assert config_logging_level_1["loggers"]["httpx"]["level"] == "WARN"
+    assert config_logging_level_1["loggers"]["httpx2"]["level"] == "WARN"
     assert config_logging_level_1["loggers"]["git"]["level"] == "INFO"
     assert config_logging_level_1["loggers"]["github"]["level"] == "INFO"
     assert config_logging_level_1["loggers"]["requests_cache"]["level"] == "INFO"
@@ -112,7 +112,7 @@ def test_generate_config_loggers(tmp_path):
     # Test logging level equal to 2
     config_logging_level_2 = logging_config.generate_config(level="DEBUG", logging_level=2)
     assert config_logging_level_2["loggers"]["urllib3"]["level"] == "DEBUG"
-    assert config_logging_level_2["loggers"]["httpx"]["level"] == "DEBUG"
+    assert config_logging_level_2["loggers"]["httpx2"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["git"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["github"]["level"] == "DEBUG"
     assert config_logging_level_2["loggers"]["requests_cache"]["level"] == "DEBUG"
@@ -134,7 +134,7 @@ def test_generate_config_logging_level_2(tmp_path):
 
     assert config["handlers"]["default"]["formatter"] in ("colored", "standard")
     assert config["loggers"]["urllib3"]["level"] == "DEBUG"
-    assert config["loggers"]["httpx"]["level"] == "DEBUG"
+    assert config["loggers"]["httpx2"]["level"] == "DEBUG"
     assert config["loggers"]["git"]["level"] == "DEBUG"
     assert config["loggers"]["github"]["level"] == "DEBUG"
     assert config["loggers"]["requests_cache"]["level"] == "DEBUG"
@@ -156,7 +156,7 @@ def test_generate_config_logger_propagation(tmp_path):
 
     assert not config["loggers"]["git_mirror"]["propagate"]
     assert not config["loggers"]["urllib3"]["propagate"]
-    assert not config["loggers"]["httpx"]["propagate"]
+    assert not config["loggers"]["httpx2"]["propagate"]
     assert not config["loggers"]["git"]["propagate"]
     assert not config["loggers"]["github"]["propagate"]
     assert not config["loggers"]["requests_cache"]["propagate"]

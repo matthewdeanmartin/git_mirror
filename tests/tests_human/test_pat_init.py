@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 from git_mirror.pat_init import (
     get_authenticated_user,
@@ -13,7 +13,7 @@ from git_mirror.pat_init import (
 
 @pytest.fixture
 def mock_httpx_get():
-    with patch("httpx.get") as mock_get:
+    with patch("httpx2.get") as mock_get:
         yield mock_get
 
 def test_get_authenticated_user_success(mock_httpx_get):
@@ -35,7 +35,7 @@ def test_get_authenticated_user_failure(mock_httpx_get):
     assert result is None
 
 def test_get_authenticated_user_request_error(mock_httpx_get):
-    mock_httpx_get.side_effect = httpx.RequestError("error")
+    mock_httpx_get.side_effect = httpx2.RequestError("error")
 
     result = get_authenticated_user("token")
     assert result is None

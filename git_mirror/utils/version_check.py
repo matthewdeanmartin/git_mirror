@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 from packaging import version
 from packaging.version import Version
 
@@ -21,7 +21,7 @@ def call_pypi_with_version_check(package_name: str, current_version: str) -> tup
         bool: True if the latest version on PyPI is greater than the current version, False otherwise.
     """
     pypi_url = f"https://pypi.org/pypi/{package_name}/json"
-    response = httpx.get(pypi_url, timeout=10)
+    response = httpx2.get(pypi_url, timeout=10)
     response.raise_for_status()  # Raises an exception for 4XX/5XX responses
     data = response.json()
     latest_version = data["info"]["version"]
@@ -36,7 +36,7 @@ def display_version_check_message() -> None:
         available, new_version = call_pypi_with_version_check(package_name, __version__)
         if available:
             console.print(f"A newer version of {package_name} is available on PyPI. Upgrade to {new_version}.")
-    except httpx.HTTPError as e:
+    except httpx2.HTTPError as e:
         console.print(f"An error occurred while checking the latest version: {e}", style="danger")
 
 

@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replace direct HTTPX clients with HTTPX2; current releases use the OS trust store; Python 3.9 selects the older HTTPX2 2.0 release.
+
 - Rewrote the README to describe the current GitHub-focused scope honestly.
 - Tkinter gui now supports all (remaining) features
 

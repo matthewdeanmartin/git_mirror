@@ -17,7 +17,7 @@ import github as gh
 import github.AuthenticatedUser as ghau
 import github.NamedUser as ghnu
 import github.Repository as ghr
-import httpx
+import httpx2
 import inquirer
 from rich.panel import Panel
 from rich.table import Table
@@ -631,7 +631,7 @@ class GithubRepoManager(SourceHost):
         Return API version information.
         """
         # pygithub doesn't support this endpoint?
-        response = httpx.get(f"{self.host_domain}/versions", timeout=10)
+        response = httpx2.get(f"{self.host_domain}/versions", timeout=10)
         response.raise_for_status()  # Raises an exception for 4XX/5XX responses
         data = response.json()
         versions_supported = data["info"]["version"]

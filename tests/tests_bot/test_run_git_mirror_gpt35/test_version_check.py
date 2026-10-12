@@ -1,6 +1,6 @@
 from unittest.mock import Mock, patch
 
-import httpx
+import httpx2
 import pytest
 from packaging import version
 
@@ -18,7 +18,7 @@ def test_call_pypi_with_version_check_available_newer_version():
     httpx_response_mock.json.return_value = {"info": {"version": "2.0.0"}}
     httpx_get_mock = Mock(return_value=httpx_response_mock)
 
-    with patch("httpx.get", httpx_get_mock):
+    with patch("httpx2.get", httpx_get_mock):
         result, new_version = call_pypi_with_version_check("git_mirror", "1.0.0")
 
         assert result is True
@@ -31,7 +31,7 @@ def test_call_pypi_with_version_check_no_newer_version():
     httpx_response_mock.json.return_value = {"info": {"version": "1.0.0"}}
     httpx_get_mock = Mock(return_value=httpx_response_mock)
 
-    with patch("httpx.get", httpx_get_mock):
+    with patch("httpx2.get", httpx_get_mock):
         result, new_version = call_pypi_with_version_check("git_mirror", "2.0.0")
 
         assert result is False
@@ -41,9 +41,9 @@ def test_call_pypi_with_version_check_no_newer_version():
 
 def test_call_pypi_with_version_check_http_error():
     pytest.skip("Complex mocking failed.")
-    httpx_get_mock = Mock(side_effect=httpx.HTTPError)
+    httpx_get_mock = Mock(side_effect=httpx2.HTTPError)
 
-    with patch("httpx.get", httpx_get_mock):
+    with patch("httpx2.get", httpx_get_mock):
         display_version_check_message()
 
         # Since an HTTPError occurs, a message about the error should be displayed
