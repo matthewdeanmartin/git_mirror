@@ -82,6 +82,7 @@ through `console.print`. Replace:
 
 ```python
 from termcolor import colored
+
 ...
 console.print(colored(status_message, "green"))
 console.print(colored(status_message, "red"))

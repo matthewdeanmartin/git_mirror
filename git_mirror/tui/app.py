@@ -222,7 +222,7 @@ class ActionsPane(VerticalScroll):
             return
         from git_mirror.core import get_token_for_host, load_all_configs
 
-        config = load_all_configs().get(host)
+        config = load_all_configs().get(str(host))
         if not config:
             log.write(_tag("error", f"No configuration for {host}."))
             return

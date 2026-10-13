@@ -959,18 +959,20 @@ class ConfigPanel(BasePanel):
 
     def open_config(self):
         import os
+        import sys
 
         from git_mirror.manage_config import default_config_path
 
         path = default_config_path()
         if path.exists():
-            try:
+            if sys.platform == "win32":
                 os.startfile(path)  # nosec
-            except AttributeError:
+            else:
                 # Not on Windows, though this GUI is currently Windows-focused
                 import subprocess  # nosec
 
-                subprocess.Popen(["notepad", str(path)])  # nosec
+                opener = "open" if sys.platform == "darwin" else "xdg-open"
+                subprocess.Popen([opener, str(path)])  # nosec
         else:
             messagebox.showinfo("Config Not Found", f"No config file found at {path}")
 
