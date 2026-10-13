@@ -145,9 +145,10 @@ filesystem scans) must run off the UI thread.
 ```python
 class _BackgroundRunner:
     def run(self, func, *, args=(), on_success=None, on_error=None):
-# 1. Spawns a daemon thread
-# 2. Calls func(*args)
-# 3. Posts on_success(result) or on_error(exc) back via root.after()
+        # 1. Spawns a daemon thread
+        # 2. Calls func(*args)
+        # 3. Posts on_success(result) or on_error(exc) back via root.after()
+        ...
 ```
 
 Usage in a panel:
@@ -168,6 +169,7 @@ def _fetch(scope_str):
     # This method MUST NOT touch any tkinter widget.
     # It can only call core/services and return data.
     from pathkeeper.services import read_current_report
+
     return read_current_report(Scope.from_value(scope_str))
 
 
@@ -228,8 +230,7 @@ simple (no stale-state bugs) and construction is fast.
 
 ```python
 items = [
-    ...
-    ("my_panel", "My Panel"),
+    ...("my_panel", "My Panel"),
 ]
 ```
 
@@ -296,8 +297,10 @@ Panels call services in background threads. Tests mock the services to
 return fake data:
 
 ```python
-with patch("pathkeeper.services.read_current_report",
-           return_value=(_fake_snapshot(), _fake_report())):
+with patch(
+    "pathkeeper.services.read_current_report",
+    return_value=(_fake_snapshot(), _fake_report()),
+):
     panel = InspectPanel(root, runner, status)
     root.update()
     assert panel.winfo_exists()
