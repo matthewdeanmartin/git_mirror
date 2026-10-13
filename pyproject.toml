@@ -62,6 +62,7 @@ git_mirror_gui = 'git_mirror.gui.app:launch_gui'
 
 [dependency-groups]
 dev = [
+    "bandit>=1.8.0",
     "jiggle-version>=2.1.0",
     "keepachangelog-manager-fork[fast]>=6.8.0; python_version < '3.15'",  # [fast] adds orjson+re2; google-re2 has no cp315 wheel on Windows
     "keepachangelog-manager-fork[stdlib]>=6.8.0; python_version >= '3.15'",  # [stdlib] is pure-Python: same features, no native wheels needed
