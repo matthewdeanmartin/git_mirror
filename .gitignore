@@ -168,3 +168,6 @@ tmp_pytest_targeted
 .venv
 /tmp_pytest/
 tmp_pytest
+/landing/public/
+/landing/resources/
+/landing/.hugo_build.lock

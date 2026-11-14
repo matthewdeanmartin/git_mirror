@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#15382e"><title>git-mirror — one view across your repositories</title>
+<meta name="description" content="{{ .Site.Params.description }}"><meta property="og:type" content="website">
+<meta property="og:title" content="git-mirror — one view across your repositories"><meta property="og:description" content="{{ .Site.Params.description }}"><meta property="og:url" content="{{ .Site.BaseURL }}">
+{{ $css := resources.Get "css/site.css" | minify | fingerprint }}<link rel="stylesheet" href="{{ $css.RelPermalink }}">
+</head><body>{{ block "main" . }}{{ end }}</body></html>

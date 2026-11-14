@@ -1,0 +1,10 @@
+baseURL = "https://matthewdeanmartin.github.io/git_mirror/"
+locale = "en-us"
+title = "git-mirror"
+disableKinds = ["taxonomy", "term", "RSS"]
+
+[params]
+  description = "See and maintain a folder of local GitHub repositories from one place."
+  docs = "https://git-mirror.readthedocs.io/en/latest/"
+  github = "https://github.com/matthewdeanmartin/git_mirror"
+  pypi = "https://pypi.org/project/git-mirror/"

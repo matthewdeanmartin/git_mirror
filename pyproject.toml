@@ -45,7 +45,7 @@ dependencies = [
 
 [project.urls]
 "Documentation" = "https://git-mirror.readthedocs.io/"
-"Homepage" = "https://github.com/matthewdeanmartin/git_mirror"
+"Homepage" = "https://matthewdeanmartin.github.io/git_mirror/"
 "Source" = "https://github.com/matthewdeanmartin/git_mirror"
 "Bug Tracker" = "https://github.com/matthewdeanmartin/git_mirror/issues"
 "Change Log" = "https://github.com/matthewdeanmartin/git_mirror/blob/main/CHANGELOG.md"
@@ -80,7 +80,6 @@ dev = [
     "pytest-randomly>=3.15.0",
     "pytest-sugar>=0.9.7",
     "pytest-mock>=3.14.0",
-    "pytest-network",
     "hypothesis>=6.96.0",
     "tox",
     "pylint>=3.0.2",
@@ -94,7 +93,6 @@ dev = [
     "pydoctest>=0.1.22",
     "pdoc3>=0.10.0",
     "mdformat>=0.7.17",
-    "linkcheckmd>=1.4.0",
     "codespell>=2.2.6",
     "pyenchant>=3.2.2",
     "zizmor>=1.4.1",
